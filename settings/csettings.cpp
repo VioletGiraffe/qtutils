@@ -16,8 +16,8 @@ CSettings::CSettings()
 	if (_settings.get() == 0)
 	{
 		_settings = std::make_shared<QSettings>(QSettings::NativeFormat, QSettings::UserScope,
-												_organizationName.isEmpty() ? qApp->applicationName() : _organizationName,
-												_applicationName.isEmpty() ? qApp->organizationName() : _applicationName);
+												_organizationName.isEmpty() ? qApp->organizationName() : _organizationName,
+												_applicationName.isEmpty() ? qApp->applicationName() : _applicationName);
 	}
 }
 
