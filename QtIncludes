@@ -1,0 +1,27 @@
+#pragma once
+
+#ifdef _WIN32
+#pragma warning(push, 0) // set W0
+#endif
+
+#include <QProgressBar>
+#include <QString>
+#include <QVariant>
+#include <QMutex>
+#include <QSettings>
+#include <QApplication>
+#include <QDebug>
+#include <QApplication>
+
+#ifdef _WIN32
+	#include <qt_windows.h>
+	#include <QAbstractEventDispatcher>
+	#include <QWidget>
+	#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
+		#include <QAbstractNativeEventFilter>
+	#endif
+#endif
+
+#ifdef _WIN32
+#pragma warning(pop) // set W0
+#endif
