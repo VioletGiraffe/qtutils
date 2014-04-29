@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QApplication>
+#include <QLibrary>
 
 #ifdef _WIN32
 	#include <qt_windows.h>
