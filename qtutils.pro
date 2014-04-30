@@ -3,10 +3,10 @@ TEMPLATE = lib
 TARGET   = qtutils
 CONFIG += staticlib c++11
 
-OBJECTS_DIR = ../build
-MOC_DIR     = ../build
-UI_DIR      = ../build
-RCC_DIR     = ../build
+OBJECTS_DIR = ../build/qtutils
+MOC_DIR     = ../build/qtutils
+UI_DIR      = ../build/qtutils
+RCC_DIR     = ../build/qtutils
 
 QT = core gui
 
@@ -30,3 +30,7 @@ linux*{
 include(settings/settings.pri)
 include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
+
+win32*:!*msvc-2012:*msvc* {
+	QMAKE_CXXFLAGS += /FS
+}
