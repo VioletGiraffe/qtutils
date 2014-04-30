@@ -26,7 +26,7 @@ static bool naturalSortComparisonQt(const QString& s1, const QString& s2, Sortin
 			if(s2[k].isNumber())
 				return options._digitsAfterLetters;
 
-			return QString::compare(s1, s2, Qt::CaseSensitive) < 0;
+			return QString::compare(s1, s2, Qt::CaseInsensitive) < 0;
 		}
 
 		QString n;
