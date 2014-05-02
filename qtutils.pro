@@ -30,10 +30,11 @@ linux*{
 include(settings/settings.pri)
 include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
+include(settingsui/settingsui.pri)
 
 win32*:!*msvc2012:*msvc* {
 	QMAKE_CXXFLAGS += /FS
 }
 
 SOURCES += \
-    utils/naturalsorting/naturalsorting_qt.cpp
+	utils/naturalsorting/naturalsorting_qt.cpp
