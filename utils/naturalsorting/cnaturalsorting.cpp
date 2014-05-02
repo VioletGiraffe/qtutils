@@ -2,7 +2,7 @@
 #include "naturalsorting_qt.h"
 #include "../../QtIncludes"
 
-CNaturalSorting::CNaturalSorting(NaturalSortingAlgorithm algorithm, SortingOptions options) : _algorithm(algorithm), _options(options)
+CNaturalSorting::CNaturalSorting(NaturalSortingAlgorithm algorithm, SortingOptions options) : _options(options), _algorithm(algorithm)
 {
 }
 
