@@ -20,7 +20,7 @@ public:
 	CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
-	void linkToWidgetstaskbarButton (QWidget * widget);
+	void linkToWidgetsTaskbarButton (QWidget * widget);
 	void setProgress (int progress, int minValue = 0, int maxValue = 100);
 	void setState (ProgressState state);
 
@@ -53,7 +53,7 @@ public:
 	CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
-	void linkToWidgetstaskbarButton (QWidget * widget);
+	void linkToWidgetsTaskbarButton (QWidget * widget);
 	void setProgress (int progress, int minValue = 0, int maxValue = 100);
 	void setState (ProgressState state);
 };
