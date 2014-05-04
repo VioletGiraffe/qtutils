@@ -10,7 +10,7 @@
 CTaskBarProgress::CTaskBarProgress(QWidget *widget)
 {
 	if (widget)
-		linkToWidgetstaskbarButton(widget);
+		linkToWidgetsTaskbarButton(widget);
 }
 
 CTaskBarProgress::~CTaskBarProgress()
@@ -20,7 +20,7 @@ CTaskBarProgress::~CTaskBarProgress()
 		iface->Release();
 }
 
-void CTaskBarProgress::linkToWidgetstaskbarButton(QWidget *widget)
+void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 {
 	if (!widget)
 	{

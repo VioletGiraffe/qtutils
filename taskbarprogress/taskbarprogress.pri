@@ -1,13 +1,21 @@
 HEADERS += \
-	taskbarprogress/cprogressbartaskbar.h \
-	taskbarprogress/taskbarprogress/ctaskbarprogress.h
+    taskbarprogress/cprogressbartaskbar.h \
+    taskbarprogress/taskbarprogress/ctaskbarprogress.h
 
 SOURCES += taskbarprogress/cprogressbartaskbar.cpp
 
+
 win*{
-	SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_win.cpp \
+    SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_win.cpp \
+
 }
 
 mac*{
-	SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_mac.cpp \
+    SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_mac.cpp \
+
+}
+
+linux*{
+    SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_linux.cpp \
+
 }
