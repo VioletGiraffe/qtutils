@@ -15,6 +15,7 @@
 #include <QLibrary>
 #include <QDialog>
 #include <QListWidgetItem>
+#include <QScrollBar>
 
 #ifdef _WIN32
 	#include <qt_windows.h>
