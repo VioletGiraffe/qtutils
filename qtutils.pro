@@ -37,4 +37,5 @@ win32*:!*msvc2012:*msvc* {
 }
 
 SOURCES += \
-	utils/naturalsorting/naturalsorting_qt.cpp
+	utils/naturalsorting/naturalsorting_qt.cpp \
+    taskbarprogress/taskbarprogress/ctaskbarprogress_linux.cpp
