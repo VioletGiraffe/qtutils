@@ -4,23 +4,21 @@
 #pragma warning(push, 0) // set W0
 #endif
 
-#include <QProgressBar>
-#include <QString>
-#include <QVariant>
-#include <QMutex>
-#include <QSettings>
+#ifndef NO_QTUTILS_WIDGETS
 #include <QApplication>
-#include <QDebug>
-#include <QApplication>
-#include <QLibrary>
 #include <QDialog>
 #include <QListWidgetItem>
-#include <QScrollBar>
+#include <QProgressBar>
+#endif
+
+#include <QDebug>
+#include <QLibrary>
+#include <QMutex>
+#include <QSettings>
 
 #ifdef _WIN32
 	#include <qt_windows.h>
 	#include <QAbstractEventDispatcher>
-	#include <QWidget>
 	#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
 		#include <QAbstractNativeEventFilter>
 	#endif
