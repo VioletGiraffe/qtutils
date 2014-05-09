@@ -32,7 +32,7 @@ include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
 include(settingsui/settingsui.pri)
 
-win32*:!*msvc2012:*msvc* {
+win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 	QMAKE_CXXFLAGS += /FS
 }
 
