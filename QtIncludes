@@ -9,12 +9,14 @@
 #include <QDialog>
 #include <QListWidgetItem>
 #include <QProgressBar>
+#include <QMouseEvent>
 #endif
 
 #include <QDebug>
 #include <QLibrary>
 #include <QMutex>
 #include <QSettings>
+#include <QTimer>
 
 #ifdef _WIN32
 	#include <qt_windows.h>
