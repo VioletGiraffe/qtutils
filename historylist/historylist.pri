@@ -1,0 +1,2 @@
+HEADERS += \
+    historylist/chistorylist.h

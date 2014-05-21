@@ -39,6 +39,7 @@ include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
 include(settingsui/settingsui.pri)
 include(mouseclickdetector/mouseclickdetector.pri)
+include(historylist/historylist.pri)
 
 win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 	QMAKE_CXXFLAGS += /FS
