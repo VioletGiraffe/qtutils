@@ -24,16 +24,19 @@ public:
 
 	inline bool historyLocationSet() const {return _currentIndex <= _list.size();}
 
+	inline const std::vector<T>& list() const {return _list;}
+
 	size_t currentIndex() const;
 	const T& currentItem() const;
 
 // Actions
 	void addLatest(const T& item);
-	const T& navigateBack(); 
+	void addLatest(const std::vector<T>& items);
+	const T& navigateBack();
 	const T& navigateForward();
 
 private:
-	std::deque<T> _list;
+	std::vector<T> _list;
 	size_t         _currentIndex;
 };
 
@@ -79,6 +82,9 @@ size_t CHistoryList<T>::currentIndex() const
 template <typename T>
 void CHistoryList<T>::addLatest( const T& item )
 {
+	if (currentItem() == item)
+		return;
+
 	const auto currentPosition = std::find(_list.begin(), _list.end(), item);
 	if (currentPosition == _list.end())
 		_list.push_back(item);
@@ -99,4 +105,11 @@ void CHistoryList<T>::addLatest( const T& item )
 	}
 
 	_currentIndex = _list.size()-1;
+}
+
+template <typename T>
+void CHistoryList<T>::addLatest(const std::vector<T> & items)
+{
+	for(const auto& item: items)
+		addLatest(item);
 }
