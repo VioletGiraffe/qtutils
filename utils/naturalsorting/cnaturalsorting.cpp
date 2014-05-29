@@ -21,6 +21,21 @@ bool CNaturalSorting::lessThan(const QString &l, const QString &r) const
 	return lessThan(l, r, _algorithm, _options);
 }
 
+bool CNaturalSorting::equal(const QString & l, const QString & r) const
+{
+	return compare(l, r) == 0;
+}
+
+int CNaturalSorting::compare(const QString & l, const QString & r) const
+{
+	if (lessThan(l, r))
+		return -1;
+	else if (lessThan(r, l))
+		return 1;
+	else
+		return 0;
+}
+
 bool CNaturalSorting::lessThan(const QString &l, const QString &r, NaturalSortingAlgorithm algorithm, SortingOptions options)
 {
 	switch(algorithm)

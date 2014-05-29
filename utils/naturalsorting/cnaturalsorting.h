@@ -25,6 +25,8 @@ public:
 	void setSortingAlgorithm(NaturalSortingAlgorithm algorithm);
 
 	bool lessThan(const QString& l, const QString& r) const;
+	bool equal(const QString& l, const QString& r) const;
+	int compare (const QString& l, const QString& r) const;
 	static bool lessThan(const QString& l, const QString& r, NaturalSortingAlgorithm algorithm, SortingOptions options);
 
 private:
