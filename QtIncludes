@@ -8,11 +8,12 @@
 #include <QApplication>
 #include <QDialog>
 #include <QListWidgetItem>
-#include <QProgressBar>
 #include <QMouseEvent>
+#include <QProgressBar>
 #endif
 
 #include <QDebug>
+#include <QImage>
 #include <QLibrary>
 #include <QMutex>
 #include <QSettings>
