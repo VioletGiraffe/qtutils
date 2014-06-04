@@ -18,6 +18,7 @@
 #include <QMutex>
 #include <QSettings>
 #include <QTimer>
+#include <QColor>
 
 #ifdef _WIN32
 	#include <qt_windows.h>

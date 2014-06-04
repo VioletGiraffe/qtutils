@@ -14,7 +14,7 @@ public:
 
 	enum AspectRatio {
 		KeepAspectRatio,
-		IgnoreAspectRation
+		IgnoreAspectRatio
 	};
 
 	CImageResizer();

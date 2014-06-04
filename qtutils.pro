@@ -13,7 +13,8 @@ QT = core gui
 #check Qt version
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-HEADERS += QtIncludes
+HEADERS += QtIncludes \
+    imageprocessing/resize/cimageinterpolationkernel.h
 
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251
@@ -47,4 +48,5 @@ win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 }
 
 SOURCES += \
-	utils/naturalsorting/naturalsorting_qt.cpp
+	utils/naturalsorting/naturalsorting_qt.cpp \
+    imageprocessing/resize/cimageinterpolationkernel.cpp
