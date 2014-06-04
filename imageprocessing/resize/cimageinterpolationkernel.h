@@ -72,5 +72,5 @@ public:
 class CLanczosKernel : public CImageInterpolationKernel<float>
 {
 public:
-	CLanczosKernel(int a = 2);
+	CLanczosKernel(int s, int a = 2);
 };

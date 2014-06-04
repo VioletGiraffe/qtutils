@@ -4,7 +4,7 @@
 
 static float bicubic(int i, int size, float a)
 {
-	const float x = (((float)i/(size-1))*2.0f - 1.0f) * 1.95f;
+	const float x = ((float)i / size - 0.5f) * 2.0f * 2.0f; //[-2;+2]
 	const float fabsx = fabs(x);
 	if (fabsx <= 1.0f)
 		return (a+2)*fabsx*fabsx*fabsx - (a+3)*fabsx*fabsx + 1.0f;
@@ -25,13 +25,13 @@ CBicubicKernel::CBicubicKernel(int s, float a): CImageInterpolationKernel(s)
 
 static float triang(int i, int size)
 {
-	const float x = (((float)i-(float)size)/2.0f) / (size/2.0f);
+	const float x = ((float)i / size - 0.5f) * 2.0f; //[-1;+1]
 	return x <= 0 ? x + 1.0f : 1.0f - x;
 }
 
 static float bellBicubic(int i, int size)
 {
-	const float f = ((float)i / size - 0.5f) * 1.5f; //[-3/2;+3/2]
+	const float f = ((float)i / size - 0.5f) * 2.0f * 1.5f; //[-3/2;+3/2]
 	if( f > -1.5 && f < -0.5 )
 	{
 		return( 0.5 * pow(f + 1.5, 2.0));
@@ -50,7 +50,7 @@ static float bellBicubic(int i, int size)
 
 static float lanczos(int a, int i, int size)
 {
-	const float x = ((float)i / size - 0.5f) * a;
+	const float x = ((float)i / size - 0.5f) * 2.0f * a; //[-a; a]
 	if (fabs(x) < 0.0001f)
 		return 1.0f;
 	else if(fabs(x) < a && fabs(x) > 0)
@@ -77,11 +77,11 @@ CBellBicubicKernel::CBellBicubicKernel(int s): CImageInterpolationKernel(s)
 	normalizeKernel();
 }
 
-CLanczosKernel::CLanczosKernel(int a /*= 2*/): CImageInterpolationKernel(4)
+CLanczosKernel::CLanczosKernel(int s, int a /*= 2*/): CImageInterpolationKernel(s)
 {
 	for (int i = 0; i < size(); ++i)
 		for (int k = 0; k < size(); ++k)
-			_kernel[i][k] = lanczos(a, i, size())*lanczos(k, i, size());
+			_kernel[i][k] = lanczos(a, i, size())*lanczos(a, k, size());
 
 	normalizeKernel();
 }

@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <time.h>
 
+#define CLAMP_TO_255(x) if (x > 255.0f) x = 255.0f; else if (x < 0.0f) x = 0.0f;
+
 inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, const QImage& source, int x, int y)
 {
 	assert(x >= 0 && y >= 0);
@@ -37,6 +39,10 @@ inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, cons
 			}
 	}
 	
+	CLAMP_TO_255(r);
+	CLAMP_TO_255(g);
+	CLAMP_TO_255(b);
+	CLAMP_TO_255(a);
 	return qRgba((int)(r + 0.5f), (int)(g + 0.5f), (int)(b + 0.5f), (int)(a + 0.5f));
 }
 
@@ -85,7 +91,7 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 	QImage dest(actualTargetSize, source.format());
 	QImage upscaledSource(upscaledSourceSize == source.size() ? source : source.scaled(upscaledSourceSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 
-	CBicubicKernel kernel(upscaledSource.width() / actualTargetSize.width(), 0.5f);
+	CLanczosKernel kernel(upscaledSource.width() / actualTargetSize.width(), 3);
 	if (upscaledSource.depth() == 32)
 	{
 		for (int y = 0; y < actualTargetSize.height(); ++y)
