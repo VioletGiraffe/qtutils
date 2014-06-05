@@ -9,7 +9,7 @@ public:
 	enum ResizeMethod {
 		DefaultQimageFast,
 		DefaultQimageSmooth,
-		Bicubic
+		Smart
 	};
 
 	enum AspectRatio {
