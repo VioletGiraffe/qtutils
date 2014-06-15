@@ -26,23 +26,23 @@ CBicubicKernel::CBicubicKernel(int s, float a): CImageInterpolationKernel(s)
 static float triang(int i, int size)
 {
 	const float x = ((float)i / size - 0.5f) * 2.0f; //[-1;+1]
-	return x <= 0 ? x + 1.0f : 1.0f - x;
+	return x <= 0.0f ? x + 1.0f : 1.0f - x;
 }
 
 static float bellBicubic(int i, int size)
 {
 	const float f = ((float)i / size - 0.5f) * 2.0f * 1.5f; //[-3/2;+3/2]
-	if( f > -1.5 && f < -0.5 )
+	if( f > -1.5f && f < -0.5f )
 	{
-		return( 0.5 * pow(f + 1.5, 2.0));
+		return( 0.5f * (float)pow(f + 1.5, 2.0));
 	}
-	else if( f > -0.5 && f < 0.5 )
+	else if( f > -0.5f && f < 0.5f )
 	{
-		return 3.0 / 4.0 - ( f * f );
+		return 3.0f / 4.0f - ( f * f );
 	}
-	else if( ( f > 0.5 && f < 1.5 ) )
+	else if( ( f > 0.5f && f < 1.5f ) )
 	{
-		return( 0.5 * pow(f - 1.5, 2.0));
+		return( 0.5f * (float)pow(f - 1.5, 2.0));
 	}
 	else
 		return 0.0f;
@@ -54,7 +54,7 @@ static float lanczos(int a, int i, int size)
 	if (fabs(x) < 0.0001f)
 		return 1.0f;
 	else if(fabs(x) < a && fabs(x) > 0)
-		return a * sin(M_PI * x) * sin(M_PI * x / a) / M_PI / M_PI / x / x;
+		return (float)(a * sin(M_PI * x) * sin(M_PI * x / a) / M_PI / M_PI / x / x);
 	else
 		return 0.0f;
 }
