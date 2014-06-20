@@ -40,7 +40,7 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 				_lastClickTimestampForObject[object] = mouseEvent->timestamp();
 				QTimer * timer = new QTimer;
 				timer->setSingleShot(true);
-				QObject::connect(timer, &QTimer::timeout, this, [=](){
+				QObject::connect(timer, &QTimer::timeout, [=](){
 					if (_lastClickTimestampForObject[object] != 0)
 					{
 						_lastClickTimestampForObject[object] = 0;
