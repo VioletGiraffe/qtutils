@@ -7,6 +7,7 @@
 #ifndef NO_QTUTILS_WIDGETS
 #include <QApplication>
 #include <QDialog>
+#include <QLineEdit>
 #include <QListWidgetItem>
 #include <QMouseEvent>
 #include <QProgressBar>
