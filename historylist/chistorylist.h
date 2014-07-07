@@ -13,6 +13,7 @@ public:
 // Access and status
 	inline bool empty() const {return _list.empty();}
 	inline size_t size() const {return _list.size();}
+	inline void clear() {_list.clear();}
 
 	inline typename std::deque<T>::const_iterator begin() const {return _list.begin();}
 	inline typename std::deque<T>::const_iterator end() const {return _list.end();}
@@ -28,6 +29,9 @@ public:
 
 	size_t currentIndex() const;
 	const T& currentItem() const;
+
+	bool isAtEnd() const;
+	bool isAtBeginning() const;
 
 // Actions
 	void addLatest(const T& item);
@@ -66,6 +70,20 @@ const T& CHistoryList<T>::currentItem() const
 		static const T blank;
 		return blank;
 	}
+}
+
+template <typename T>
+bool CHistoryList<T>::isAtEnd() const
+{
+	assert(empty() || _currentIndex < size());
+	return !empty() && _currentIndex == size()-1;
+}
+
+template <typename T>
+bool CHistoryList<T>::isAtBeginning() const
+{
+	assert(empty() || _currentIndex < size());
+	return !empty() && _currentIndex == 0;
 }
 
 template <typename T>
