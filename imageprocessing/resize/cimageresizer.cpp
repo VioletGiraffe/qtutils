@@ -89,7 +89,7 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 	const QSize upscaledSourceSize = source.width() % actualTargetSize.width() != 0 ? source.size().scaled(actualTargetSize * (source.width() / actualTargetSize.width() + 1), Qt::KeepAspectRatio) : source.size();
 
 	QImage dest(actualTargetSize, source.format());
-	QImage upscaledSource(upscaledSourceSize == source.size() ? source : source.scaled(upscaledSourceSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+	QImage upscaledSource(upscaledSourceSize == source.size() ? source : source.scaled(upscaledSourceSize, Qt::IgnoreAspectRatio, source.depth() == 32 ? Qt::SmoothTransformation : Qt::FastTransformation));
 
 	std::shared_ptr<CImageInterpolationKernelBase<float>> kernel;
 	if (upscaledSourceSize.width() / actualTargetSize.width() >= 30) 
