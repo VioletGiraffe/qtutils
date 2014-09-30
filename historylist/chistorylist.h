@@ -8,6 +8,7 @@ template <typename T>
 class CHistoryList
 {
 public:
+	typedef std::vector<T> container_type;
 	CHistoryList(): _currentIndex(std::numeric_limits<size_t>::max()) {}
 
 // Access and status
@@ -15,8 +16,10 @@ public:
 	inline size_t size() const {return _list.size();}
 	inline void clear() {_list.clear();}
 
-	inline typename std::deque<T>::const_iterator begin() const {return _list.begin();}
-	inline typename std::deque<T>::const_iterator end() const {return _list.end();}
+	inline typename container_type::const_iterator begin() const {return _list.begin();}
+	inline typename container_type::const_iterator end() const {return _list.end();}
+	inline typename container_type::const_reverse_iterator rbegin() const {return _list.rbegin();}
+	inline typename container_type::const_reverse_iterator rend() const {return _list.rend();}
 
 	inline const T& front() const {return _list.front();}
 	inline const T& back() const {return _list.back();}
@@ -25,7 +28,7 @@ public:
 
 	inline bool historyLocationSet() const {return _currentIndex <= _list.size();}
 
-	inline const std::vector<T>& list() const {return _list;}
+	inline const container_type& list() const {return _list;}
 
 	size_t currentIndex() const;
 	const T& currentItem() const;
@@ -40,7 +43,7 @@ public:
 	const T& navigateForward();
 
 private:
-	std::vector<T> _list;
+	container_type _list;
 	size_t         _currentIndex;
 };
 
