@@ -5,6 +5,16 @@
 #include <time.h>
 #include <memory>
 
+QSize scaled(const QSize& source, const QSize& dest)
+{
+	const float xScaleFactor = source.width() / (float)dest.width();
+	const float yScaleFactor = source.height() / (float)dest.height();
+
+	const float actualFactor = (xScaleFactor > 1.0f && yScaleFactor > 1.0f) ? std::max(xScaleFactor, yScaleFactor) : std::min(xScaleFactor, yScaleFactor);
+
+	return source / actualFactor;
+}
+
 #define CLAMP_TO_255(x) if (x > 255.0f) x = 255.0f; else if (x < 0.0f) x = 0.0f;
 
 inline QRgb applyKernel(const CImageInterpolationKernelBase<float>* kernel, const QImage& source, int x, int y)
@@ -86,7 +96,12 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 	if (ratio(targetSize) != ratio(source.size()))
 		actualTargetSize = source.size().scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio);
 
-	const QSize upscaledSourceSize = source.width() % actualTargetSize.width() != 0 ? source.size().scaled(actualTargetSize * (source.width() / actualTargetSize.width() + 1), Qt::KeepAspectRatio) : source.size();
+	float scaleFactor = source.width() / (float)actualTargetSize.width();
+	if (scaleFactor < 1.0f)
+		scaleFactor = 1.0f / scaleFactor;
+
+	const int intScaleFactor = (int)(scaleFactor + 0.97f);
+	const QSize upscaledSourceSize = scaleFactor != 1 ? scaled(source.size(), actualTargetSize * intScaleFactor) : source.size();
 
 	QImage dest(actualTargetSize, source.format());
 	QImage upscaledSource(upscaledSourceSize == source.size() ? source : source.scaled(upscaledSourceSize, Qt::IgnoreAspectRatio, source.depth() == 32 ? Qt::SmoothTransformation : Qt::FastTransformation));
