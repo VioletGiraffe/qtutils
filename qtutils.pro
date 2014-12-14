@@ -14,8 +14,8 @@ QT = core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 HEADERS += QtIncludes \
-    imageprocessing/resize/cimageinterpolationkernel.h \
-    widgets/clineedit.h
+	imageprocessing/resize/cimageinterpolationkernel.h \
+	widgets/clineedit.h
 
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251
@@ -30,7 +30,6 @@ linux*{
 }
 
 linux*|mac*{
-	CONFIG += c++11
 	QMAKE_CXXFLAGS += -pedantic-errors
 	QMAKE_CFLAGS += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
@@ -50,5 +49,5 @@ win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 
 SOURCES += \
 	utils/naturalsorting/naturalsorting_qt.cpp \
-    imageprocessing/resize/cimageinterpolationkernel.cpp \
-    widgets/clineedit.cpp
+	imageprocessing/resize/cimageinterpolationkernel.cpp \
+	widgets/clineedit.cpp
