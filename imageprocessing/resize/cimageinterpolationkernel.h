@@ -17,7 +17,7 @@ template <typename CoeffType>
 class CImageInterpolationKernel : public CImageInterpolationKernelBase<CoeffType>
 {
 public:
-	CImageInterpolationKernel(int s): _size(s) {
+	explicit CImageInterpolationKernel(int s): _size(s) {
 		_kernel.resize(s);
 		for(int i = 0; i < size(); ++i)
 		{
@@ -66,7 +66,7 @@ public:
 class CBellBicubicKernel : public CImageInterpolationKernel<float>
 {
 public:
-	CBellBicubicKernel(int s);
+	explicit CBellBicubicKernel(int s);
 };
 
 class CLanczosKernel : public CImageInterpolationKernel<float>

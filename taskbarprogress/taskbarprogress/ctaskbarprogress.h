@@ -17,7 +17,7 @@ class CTaskBarProgress
 #endif
 {
 public:
-	CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
@@ -50,7 +50,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
@@ -65,7 +65,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton(QWidget * widget);
@@ -83,7 +83,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = 0);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton(QWidget * widget);
