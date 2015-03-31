@@ -23,14 +23,14 @@ win*{
 	QMAKE_CXXFLAGS_WARN_ON = -W4
 }
 mac*{
-
+	CONFIG += c++11
 }
 linux*{
 
 }
 
 linux*|mac*{
-	QMAKE_CXXFLAGS += -pedantic-errors
+	QMAKE_CXXFLAGS += -pedantic-errors -std=c++1y
 	QMAKE_CFLAGS += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
 }
