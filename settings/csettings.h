@@ -1,23 +1,23 @@
-#ifndef CSETTINGS_H
-#define CSETTINGS_H
+#pragma once
 
 #include "../QtIncludes"
-#include <memory>
 
 class CSettings
 {
 public:
-	static std::unique_ptr<QSettings> instance();
+	CSettings();
 
 	static void setApplicationName(const QString& name);
 	static void setOrganizationName(const QString& name);
 
-private:
-	CSettings();
+	void setValue(const QString& key, const QVariant& value);
+	QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const;
+
 
 private:
+	QSettings _impl;
+
 	static QString _applicationName;
 	static QString _organizationName;
 };
 
-#endif // CSETTINGS_H
