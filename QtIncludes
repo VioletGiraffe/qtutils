@@ -13,12 +13,13 @@
 #include <QProgressBar>
 #endif
 
+#include <QCollator>
+#include <QColor>
 #include <QDebug>
 #include <QImage>
 #include <QLibrary>
 #include <QSettings>
 #include <QTimer>
-#include <QColor>
 
 #ifdef _WIN32
 	#include <qt_windows.h>

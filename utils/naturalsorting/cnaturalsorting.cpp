@@ -18,7 +18,16 @@ void CNaturalSorting::setSortingAlgorithm(NaturalSortingAlgorithm algorithm)
 
 bool CNaturalSorting::lessThan(const QString &l, const QString &r) const
 {
-	return lessThan(l, r, _algorithm, _options);
+	switch (_algorithm)
+	{
+	case nsaQtForum:
+		return naturalSortComparisonQt(l, r, _options);
+	case nsaQCollator:
+		return _collatorSorter.compare(l, r, _options);
+	default:
+		Q_ASSERT(false);
+		return false;
+	}
 }
 
 bool CNaturalSorting::equal(const QString & l, const QString & r) const
@@ -34,16 +43,4 @@ int CNaturalSorting::compare(const QString & l, const QString & r) const
 		return 1;
 	else
 		return 0;
-}
-
-bool CNaturalSorting::lessThan(const QString &l, const QString &r, NaturalSortingAlgorithm algorithm, SortingOptions options)
-{
-	switch(algorithm)
-	{
-	case nsaQtForum:
-		return naturalSortComparisonQt(l, r, options);
-	default:
-		Q_ASSERT(false);
-		return false;
-	}
 }

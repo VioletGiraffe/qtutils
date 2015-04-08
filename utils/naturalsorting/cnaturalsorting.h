@@ -1,18 +1,13 @@
 #ifndef CNATURALSORTING_H
 #define CNATURALSORTING_H
 
-struct SortingOptions
-{
-	explicit SortingOptions(bool digitsAfterLetters = false) :
-		_digitsAfterLetters(digitsAfterLetters)
-	{}
-
-	bool _digitsAfterLetters;
-};
+#include "sortingoptions.h"
+#include "cnaturalsorterqcollator.h"
 
 enum NaturalSortingAlgorithm
 {
-	nsaQtForum
+	nsaQtForum,
+	nsaQCollator
 };
 
 class QString;
@@ -26,12 +21,13 @@ public:
 
 	bool lessThan(const QString& l, const QString& r) const;
 	bool equal(const QString& l, const QString& r) const;
-	int compare (const QString& l, const QString& r) const;
-	static bool lessThan(const QString& l, const QString& r, NaturalSortingAlgorithm algorithm, SortingOptions options);
+	int compare(const QString& l, const QString& r) const;
 
 private:
 	SortingOptions          _options;
 	NaturalSortingAlgorithm _algorithm;
+
+	CNaturalSorterQCollator _collatorSorter;
 };
 
 #endif // CNATURALSORTING_H
