@@ -14,8 +14,7 @@ QT = core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 HEADERS += QtIncludes \
-	imageprocessing/resize/cimageinterpolationkernel.h \
-	widgets/clineedit.h
+	imageprocessing/resize/cimageinterpolationkernel.h
 
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251
@@ -42,6 +41,7 @@ include(settingsui/settingsui.pri)
 include(mouseclickdetector/mouseclickdetector.pri)
 include(historylist/historylist.pri)
 include(imageprocessing/imageprocessing.pri)
+include(widgets/widgets.pri)
 
 win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 	QMAKE_CXXFLAGS += /FS
@@ -49,5 +49,5 @@ win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 
 SOURCES += \
 	utils/naturalsorting/naturalsorting_qt.cpp \
-	imageprocessing/resize/cimageinterpolationkernel.cpp \
-	widgets/clineedit.cpp
+	imageprocessing/resize/cimageinterpolationkernel.cpp
+
