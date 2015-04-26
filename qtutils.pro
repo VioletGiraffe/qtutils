@@ -43,6 +43,10 @@ include(historylist/historylist.pri)
 include(imageprocessing/imageprocessing.pri)
 include(widgets/widgets.pri)
 
+win*{
+	include(windows/windows.pri)
+}
+
 win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 	QMAKE_CXXFLAGS += /FS
 }
