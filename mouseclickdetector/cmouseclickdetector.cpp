@@ -38,18 +38,13 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 			else
 			{
 				_lastClickTimestampForObject[object] = mouseEvent->timestamp();
-				// TODO: replace this with the new QTimer::singleShot lambda syntax once it's available (presumably Qt 5.4)
-				QTimer * timer = new QTimer;
-				timer->setSingleShot(true);
-				QObject::connect(timer, &QTimer::timeout, [=](){
+				QTimer::singleShot(QApplication::doubleClickInterval() + 1, [this, object, pos](){
 					if (_lastClickTimestampForObject[object] != 0)
 					{
 						_lastClickTimestampForObject[object] = 0;
-						timer->deleteLater();
 						emit singleLeftClickDetected(object, pos);
 					}
 				});
-				timer->start(QApplication::doubleClickInterval()+1);
 			}
 		}
 	}
