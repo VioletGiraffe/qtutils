@@ -1,6 +1,6 @@
 #pragma once
 
-#include "QtIncludes"
+#include <QLabel>
 
 class CClickableLabel : public QLabel
 {

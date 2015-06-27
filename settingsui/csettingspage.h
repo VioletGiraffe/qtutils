@@ -1,7 +1,7 @@
 #ifndef CSETTINGSPAGE_H
 #define CSETTINGSPAGE_H
 
-#include "../QtIncludes"
+#include <QWidget>
 
 class CSettingsPage : public QWidget
 {

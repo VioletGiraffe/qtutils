@@ -1,10 +1,9 @@
 #ifndef CSETTINGSDIALOG_H
 #define CSETTINGSDIALOG_H
 
-#include "../QtIncludes"
+#include <QDialog>
+
 #include <vector>
-
-
 
 namespace Ui {
 class CSettingsDialog;

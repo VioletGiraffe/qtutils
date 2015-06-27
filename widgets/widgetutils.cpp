@@ -1,5 +1,8 @@
 #include "widgetutils.h"
 
+#include <QLayout>
+#include <QWidget>
+
 void WidgetUtils::setLayoutVisible(QLayout* layout, bool visible)
 {
 	if (!layout)

@@ -1,7 +1,9 @@
 #ifndef CMOUSECLICKDETECTOR_H
 #define CMOUSECLICKDETECTOR_H
 
-#include "../QtIncludes"
+#include <QObject>
+#include <QPoint>
+
 #include <map>
 
 class CMouseClickDetector : public QObject

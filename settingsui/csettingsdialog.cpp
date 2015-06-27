@@ -1,14 +1,6 @@
-#ifdef _WIN32
-#pragma warning(push, 0) // set W0
-#endif
-
 #include "csettingsdialog.h"
 #include "csettingspage.h"
 #include "ui_csettingsdialog.h"
-
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) :
 	QDialog(parent),

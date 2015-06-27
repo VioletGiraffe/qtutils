@@ -1,6 +1,6 @@
 #pragma once
 
-#include "QtIncludes"
+class QLayout;
 
 class WidgetUtils
 {

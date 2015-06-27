@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../QtIncludes"
 #include <functional>
 #include <set>
 #include <algorithm>

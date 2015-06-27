@@ -2,8 +2,10 @@
 #define CPROGRESSBARTASKBAR_H
 
 #include "taskbarprogress/ctaskbarprogress.h"
+
+#include <QProgressBar>
+
 #include <memory>
-#include "../QtIncludes"
 
 class CProgressBarTaskbar : public QProgressBar
 {

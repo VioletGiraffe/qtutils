@@ -1,7 +1,7 @@
 #ifndef CLINEEDIT_H
 #define CLINEEDIT_H
 
-#include "../QtIncludes"
+#include <QLineEdit>
 
 class CLineEdit : public QLineEdit
 {

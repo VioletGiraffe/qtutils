@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../QtIncludes"
+#include <QSettings>
 
 class CSettings
 {

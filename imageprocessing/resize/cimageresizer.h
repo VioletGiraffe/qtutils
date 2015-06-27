@@ -1,7 +1,7 @@
 #ifndef CIMAGERESIZER_H
 #define CIMAGERESIZER_H
 
-#include "../../QtIncludes"
+#include <QImage>
 
 class CImageResizer
 {

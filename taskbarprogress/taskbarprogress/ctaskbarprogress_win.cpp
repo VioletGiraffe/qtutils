@@ -1,4 +1,10 @@
 #include "ctaskbarprogress.h"
+#include "utils/compiler_warnings_control.h"
+
+DISABLE_COMPILER_WARNINGS
+#include <QApplication>
+#include <QDebug>
+RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 #include <Shobjidl.h>

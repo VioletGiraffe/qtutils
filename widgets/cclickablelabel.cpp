@@ -1,5 +1,7 @@
 #include "cclickablelabel.h"
 
+#include <QMouseEvent>
+
 CClickableLabel::CClickableLabel(QWidget* parent) : QLabel(parent)
 {
 }

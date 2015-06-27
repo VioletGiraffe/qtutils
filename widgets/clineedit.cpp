@@ -1,5 +1,7 @@
 #include "clineedit.h"
 
+#include <QTimer>
+
 CLineEdit::CLineEdit(QWidget *parent) :
 	QLineEdit(parent),
 	_bSelectAllOnFocus(true)

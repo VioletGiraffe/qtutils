@@ -1,6 +1,5 @@
 #include "cnaturalsorting.h"
 #include "naturalsorting_qt.h"
-#include "../../QtIncludes"
 
 CNaturalSorting::CNaturalSorting(NaturalSortingAlgorithm algorithm, SortingOptions options) : _options(options), _algorithm(algorithm)
 {

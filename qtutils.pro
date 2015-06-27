@@ -13,7 +13,7 @@ QT = core gui
 #check Qt version
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-HEADERS += QtIncludes \
+HEADERS += \
 	imageprocessing/resize/cimageinterpolationkernel.h
 
 win*{

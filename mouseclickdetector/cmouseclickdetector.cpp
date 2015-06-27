@@ -1,4 +1,9 @@
 #include "cmouseclickdetector.h"
+
+#include <QApplication>
+#include <QMouseEvent>
+#include <QTimer>
+
 #include <assert.h>
 
 CMouseClickDetector::CMouseClickDetector(QObject *parent) :

@@ -1,11 +1,17 @@
 #ifndef CTASKBARPROGRESS_H
 #define CTASKBARPROGRESS_H
 
-#include "../../QtIncludes"
-
 enum ProgressState { psNormal, psPaused, psStopped, psIndeterminate, psNoProgress };
 
 #if defined _WIN32
+
+#include <QWidget>
+#include <qt_windows.h>
+#include <QAbstractEventDispatcher>
+
+#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
+#include <QAbstractNativeEventFilter>
+#endif
 
 #include <map>
 

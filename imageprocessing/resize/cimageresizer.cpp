@@ -1,5 +1,8 @@
 #include "cimageresizer.h"
 #include "cimageinterpolationkernel.h"
+
+#include <QColor>
+
 #include <math.h>
 #include <assert.h>
 #include <time.h>

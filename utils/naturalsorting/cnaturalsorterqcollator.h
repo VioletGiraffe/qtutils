@@ -1,7 +1,8 @@
 #pragma once
 
 #include "sortingoptions.h"
-#include "QtIncludes"
+
+#include <QCollator>
 
 class CNaturalSorterQCollator
 {

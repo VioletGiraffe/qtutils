@@ -1,5 +1,7 @@
 #include "csettings.h"
 
+#include <QApplication>
+
 QString CSettings::_applicationName;
 QString CSettings::_organizationName;
 

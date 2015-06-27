@@ -1,5 +1,5 @@
 #pragma once
 
-#include "QtIncludes"
+#include <QString>
 
 QString ErrorStringFromLastError();
