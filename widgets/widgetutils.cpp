@@ -1,7 +1,10 @@
 #include "widgetutils.h"
+#include "utils/compiler_warnings_control.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QLayout>
 #include <QWidget>
+RESTORE_COMPILER_WARNINGS
 
 void WidgetUtils::setLayoutVisible(QLayout* layout, bool visible)
 {

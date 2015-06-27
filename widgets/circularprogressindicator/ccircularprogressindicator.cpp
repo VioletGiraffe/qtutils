@@ -2,7 +2,9 @@
 
 #include "ccircularprogressindicator.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QPainter>
+RESTORE_COMPILER_WARNINGS
 
 CCircularProgressIndicator::CCircularProgressIndicator(QWidget* parent)
 	: QWidget(parent),

@@ -1,10 +1,13 @@
 #ifndef CTASKBARPROGRESS_H
 #define CTASKBARPROGRESS_H
 
+#include "utils/compiler_warnings_control.h"
+
 enum ProgressState { psNormal, psPaused, psStopped, psIndeterminate, psNoProgress };
 
 #if defined _WIN32
 
+DISABLE_COMPILER_WARNINGS
 #include <QWidget>
 #include <qt_windows.h>
 #include <QAbstractEventDispatcher>
@@ -12,6 +15,7 @@ enum ProgressState { psNormal, psPaused, psStopped, psIndeterminate, psNoProgres
 #if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
 #include <QAbstractNativeEventFilter>
 #endif
+RESTORE_COMPILER_WARNINGS
 
 #include <map>
 
