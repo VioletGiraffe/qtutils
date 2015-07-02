@@ -1,8 +1,12 @@
 #ifndef CHISTORYCOMBOBOX_H
 #define CHISTORYCOMBOBOX_H
 
+#include "utils/compiler_warnings_control.h"
+
+DISABLE_COMPILER_WARNINGS
 #include <QComboBox>
 #include <QKeySequence>
+RESTORE_COMPILER_WARNINGS
 
 class CHistoryComboBox : public QComboBox
 {

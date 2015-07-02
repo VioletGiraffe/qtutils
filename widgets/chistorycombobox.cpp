@@ -1,8 +1,10 @@
 #include "chistorycombobox.h"
 #include "utils/utils.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QKeyEvent>
 #include <QLineEdit>
+RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 

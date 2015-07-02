@@ -1,6 +1,8 @@
 #include "cclickablelabel.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QMouseEvent>
+RESTORE_COMPILER_WARNINGS
 
 CClickableLabel::CClickableLabel(QWidget* parent) : QLabel(parent)
 {

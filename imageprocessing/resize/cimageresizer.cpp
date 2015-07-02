@@ -1,7 +1,9 @@
 #include "cimageresizer.h"
 #include "cimageinterpolationkernel.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QColor>
+RESTORE_COMPILER_WARNINGS
 
 #include <math.h>
 #include <assert.h>

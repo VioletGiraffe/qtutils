@@ -1,8 +1,10 @@
 #include "cmouseclickdetector.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QMouseEvent>
 #include <QTimer>
+RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
 

@@ -1,6 +1,8 @@
 #include "csettings.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+RESTORE_COMPILER_WARNINGS
 
 QString CSettings::_applicationName;
 QString CSettings::_organizationName;

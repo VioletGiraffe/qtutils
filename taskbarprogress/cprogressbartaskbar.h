@@ -3,7 +3,9 @@
 
 #include "taskbarprogress/ctaskbarprogress.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QProgressBar>
+RESTORE_COMPILER_WARNINGS
 
 #include <memory>
 
