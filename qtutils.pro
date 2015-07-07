@@ -1,7 +1,7 @@
 DESTDIR  = ../bin
 TEMPLATE = lib
 TARGET   = qtutils
-CONFIG += staticlib c++11
+CONFIG += staticlib c++14
 
 OBJECTS_DIR = ../build/qtutils
 MOC_DIR     = ../build/qtutils
@@ -16,20 +16,20 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 HEADERS += \
 	imageprocessing/resize/cimageinterpolationkernel.h
 
+INCLUDEPATH += ../cpputils
+
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
 	QMAKE_CXXFLAGS_WARN_ON = -W4
 }
-mac*{
-	CONFIG += c++11
-}
+
 linux*{
 
 }
 
 linux*|mac*{
-	QMAKE_CXXFLAGS += -pedantic-errors -std=c++1y
+	QMAKE_CXXFLAGS += -pedantic-errors
 	QMAKE_CFLAGS += -pedantic-errors
 	QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
 }

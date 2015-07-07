@@ -1,5 +1,5 @@
 #include "ctaskbarprogress.h"
-#include "utils/compiler_warnings_control.h"
+#include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>

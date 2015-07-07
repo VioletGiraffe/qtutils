@@ -1,7 +1,7 @@
 #ifndef CLINEEDIT_H
 #define CLINEEDIT_H
 
-#include "utils/compiler_warnings_control.h"
+#include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QLineEdit>

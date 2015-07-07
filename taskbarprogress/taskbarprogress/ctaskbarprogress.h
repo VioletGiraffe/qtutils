@@ -1,7 +1,7 @@
 #ifndef CTASKBARPROGRESS_H
 #define CTASKBARPROGRESS_H
 
-#include "utils/compiler_warnings_control.h"
+#include "compiler/compiler_warnings_control.h"
 
 enum ProgressState { psNormal, psPaused, psStopped, psIndeterminate, psNoProgress };
 
