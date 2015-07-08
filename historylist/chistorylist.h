@@ -2,7 +2,7 @@
 
 #include <deque>
 #include <limits>
-#include <assert.h>
+#include "assert/advanced_assert.h"
 
 template <typename T>
 class CHistoryList
@@ -78,14 +78,14 @@ const T& CHistoryList<T>::currentItem() const
 template <typename T>
 bool CHistoryList<T>::isAtEnd() const
 {
-	assert(empty() || _currentIndex < size());
+	assert_r(empty() || _currentIndex < size());
 	return !empty() && _currentIndex == size()-1;
 }
 
 template <typename T>
 bool CHistoryList<T>::isAtBeginning() const
 {
-	assert(empty() || _currentIndex < size());
+	assert_r(empty() || _currentIndex < size());
 	return !empty() && _currentIndex == 0;
 }
 
@@ -112,7 +112,7 @@ void CHistoryList<T>::addLatest( const T& item )
 	else if (size() > 1 && currentPosition != _list.end() - 1)
 		std::rotate(currentPosition, currentPosition + 1, _list.end());
 
-	assert(!empty());
+	assert_r(!empty());
 	if (size() > 1 && _currentIndex <= size()-2) // If we already were at the end of the list, just move the index to the newest element
 	{
 		// If we were not in the end, move and insert [0; _currentIndex] just before end

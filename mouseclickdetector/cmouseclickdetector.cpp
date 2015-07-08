@@ -1,12 +1,11 @@
 #include "cmouseclickdetector.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QMouseEvent>
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
-
-#include <assert.h>
 
 CMouseClickDetector::CMouseClickDetector(QObject *parent) :
 	QObject(parent)
@@ -29,7 +28,7 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 	if (event->type() == QEvent::MouseButtonRelease)
 	{
 		QMouseEvent * mouseEvent = dynamic_cast<QMouseEvent*>(event);
-		assert(mouseEvent);
+		assert_r(mouseEvent);
 		if (mouseEvent->buttons() == Qt::LeftButton)
 		{
 			const QPoint pos = mouseEvent->pos();

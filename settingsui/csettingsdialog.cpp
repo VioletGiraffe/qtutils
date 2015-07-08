@@ -1,6 +1,7 @@
 #include "csettingsdialog.h"
 #include "csettingspage.h"
 #include "ui_csettingsdialog.h"
+#include "assert/advanced_assert.h"
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) :
 	QDialog(parent),
@@ -46,7 +47,7 @@ void CSettingsDialog::accept()
 	for (int i = 0; i < ui->pages->count(); ++i)
 	{
 		CSettingsPage * page = dynamic_cast<CSettingsPage*>(ui->pages->widget(i));
-		Q_ASSERT(page);
+		assert_r(page);
 		page->acceptSettings();
 	}
 

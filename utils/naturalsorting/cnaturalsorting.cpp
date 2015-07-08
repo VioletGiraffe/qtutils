@@ -1,5 +1,6 @@
 #include "cnaturalsorting.h"
 #include "naturalsorting_qt.h"
+#include "assert/advanced_assert.h"
 
 CNaturalSorting::CNaturalSorting(NaturalSortingAlgorithm algorithm, SortingOptions options) : _options(options), _algorithm(algorithm)
 {
@@ -24,8 +25,7 @@ bool CNaturalSorting::lessThan(const QString &l, const QString &r) const
 	case nsaQCollator:
 		return _collatorSorter.compare(l, r, _options);
 	default:
-		Q_ASSERT(false);
-		return false;
+		assert_and_return_unconditional_r("Unknown algorithm", false);
 	}
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <assert.h>
+#include "assert/advanced_assert.h"
 #include <vector>
 
 template <typename CoeffType>
@@ -29,7 +29,7 @@ public:
 
 	CoeffType coeff(int x, int y) const override
 	{
-		assert(x < _size && y < _size);
+		assert_r(x < _size && y < _size);
 		return _kernel[x][y];
 	}
 

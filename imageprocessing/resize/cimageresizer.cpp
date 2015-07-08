@@ -1,12 +1,12 @@
 #include "cimageresizer.h"
 #include "cimageinterpolationkernel.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QColor>
 RESTORE_COMPILER_WARNINGS
 
 #include <math.h>
-#include <assert.h>
 #include <time.h>
 #include <memory>
 
@@ -24,7 +24,7 @@ QSize scaled(const QSize& source, const QSize& dest)
 
 inline QRgb applyKernel(const CImageInterpolationKernelBase<float>* kernel, const QImage& source, int x, int y)
 {
-	assert(x >= 0 && y >= 0);
+	assert_r(x >= 0 && y >= 0);
 
 	float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
 

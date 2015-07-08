@@ -1,12 +1,12 @@
 #include "ctaskbarprogress.h"
 #include "compiler/compiler_warnings_control.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QDebug>
 RESTORE_COMPILER_WARNINGS
 
-#include <assert.h>
 #include <Shobjidl.h>
 
 #if QT_VERSION < QT_VERSION_CHECK (5,0,0)
@@ -99,7 +99,7 @@ void CTaskBarProgress::setState(ProgressState state)
 
 bool CTaskBarProgress::eventFilter(void *msg)
 {
-	assert(msg);
+	assert_r(msg);
 	MSG * message = static_cast<MSG*>(msg);
 	if (_taskbarButtonCreatedMessageIdMap.count(WId(message->hwnd)) == 0)
 		return false;

@@ -6,7 +6,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QLineEdit>
 RESTORE_COMPILER_WARNINGS
 
-#include <assert.h>
+#include "assert/advanced_assert.h"
 
 CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	QComboBox(parent),
@@ -71,7 +71,7 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 	if (e->type() == QEvent::KeyPress)
 	{
 		QKeyEvent * keyEvent = dynamic_cast<QKeyEvent*>(e);
-		assert(keyEvent);
+		assert_r(keyEvent);
 
 		if (keyEvent->text().isEmpty())
 			return false;
