@@ -14,14 +14,14 @@ QT = core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 HEADERS += \
-	imageprocessing/resize/cimageinterpolationkernel.h
+    imageprocessing/resize/cimageinterpolationkernel.h
 
 INCLUDEPATH += ../cpputils
 
 win*{
-	QMAKE_CXXFLAGS += /MP /wd4251
-	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
-	QMAKE_CXXFLAGS_WARN_ON = -W4
+    QMAKE_CXXFLAGS += /MP /wd4251
+    DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
+    QMAKE_CXXFLAGS_WARN_ON = -W4
 }
 
 linux*{
@@ -29,9 +29,15 @@ linux*{
 }
 
 linux*|mac*{
-	QMAKE_CXXFLAGS += -pedantic-errors
-	QMAKE_CFLAGS += -pedantic-errors
-	QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
+    QMAKE_CXXFLAGS += -pedantic-errors
+    QMAKE_CFLAGS += -pedantic-errors
+    QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-c++11-extensions -Wno-local-type-template-args -Wno-deprecated-register
+
+    CONFIG(release, debug|release):CONFIG += Release
+    CONFIG(debug, debug|release):CONFIG += Debug
+
+    Release:DEFINES += NDEBUG=1
+    Debug:DEFINES += _DEBUG
 }
 
 include(settings/settings.pri)
@@ -44,14 +50,14 @@ include(imageprocessing/imageprocessing.pri)
 include(widgets/widgets.pri)
 
 win*{
-	include(windows/windows.pri)
+    include(windows/windows.pri)
 }
 
 win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
-	QMAKE_CXXFLAGS += /FS
+    QMAKE_CXXFLAGS += /FS
 }
 
 SOURCES += \
-	utils/naturalsorting/naturalsorting_qt.cpp \
-	imageprocessing/resize/cimageinterpolationkernel.cpp
+    utils/naturalsorting/naturalsorting_qt.cpp \
+    imageprocessing/resize/cimageinterpolationkernel.cpp
 
