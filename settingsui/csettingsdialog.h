@@ -28,9 +28,11 @@ public:
 signals:
 	void settingsChanged();
 
-private slots:
+private:
 	void pageChanged(QListWidgetItem *item);
-	virtual void accept() override;
+
+private slots:
+	void accept() override;
 
 private:
 	Ui::CSettingsDialog *ui;

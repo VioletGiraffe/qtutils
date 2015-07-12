@@ -21,8 +21,6 @@ public:
 
 private:
 	void updateState();
-
-private slots:
 	void progressChanged(int progress);
 
 private:

@@ -4,7 +4,7 @@ CProgressBarTaskbar::CProgressBarTaskbar(QWidget *parent) :
 	QProgressBar(parent),
 	_state(psNormal)
 {
-	connect (this, SIGNAL(valueChanged(int)), SLOT(progressChanged(int)));
+	connect (this, &CProgressBarTaskbar::valueChanged, this, &CProgressBarTaskbar::progressChanged);
 }
 
 void CProgressBarTaskbar::linkToWidgetstaskbarButton(QWidget *widget)

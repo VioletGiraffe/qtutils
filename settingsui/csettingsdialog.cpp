@@ -13,7 +13,7 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) :
 	ui->splitter->setStretchFactor(0, 0);
 	ui->splitter->setStretchFactor(1, 1);
 
-	connect(ui->pageList, SIGNAL(itemClicked(QListWidgetItem*)), SLOT(pageChanged(QListWidgetItem*)));
+	connect(ui->pageList, &QListWidget::itemClicked, this, &CSettingsDialog::pageChanged);
 	ui->pageList->setResizeMode(QListWidget::Adjust);
 }
 
