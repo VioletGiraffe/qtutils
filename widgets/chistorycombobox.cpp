@@ -1,5 +1,6 @@
 #include "chistorycombobox.h"
 #include "utils/utils.h"
+#include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QKeyEvent>
@@ -18,6 +19,19 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 
 	installEventFilter(this);
 	lineEdit()->installEventFilter(this);
+}
+
+CHistoryComboBox::~CHistoryComboBox()
+{
+	CSettings().setValue(_settingName, items());
+}
+
+void CHistoryComboBox::enableAutoSave(const QString& settingName)
+{
+	_settingName = settingName;
+
+	if (!settingName.isEmpty())
+		addItems(CSettings().value(settingName).toStringList());
 }
 
 void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
@@ -115,6 +129,8 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	}
 	else
 		QComboBox::keyPressEvent(e);
+
+	CSettings().setValue(_settingName, items());
 }
 
 // Moves the currently selected item to the top

@@ -14,6 +14,9 @@ class CHistoryComboBox : public QComboBox
 
 public:
 	explicit CHistoryComboBox(QWidget * parent);
+	~CHistoryComboBox();
+
+	void enableAutoSave(const QString& settingName);
 
 	void setClearEditorOnItemActivation(bool clear);
 	void setSelectPreviousItemShortcut(const QKeySequence& selectPreviousItemShortcut);
@@ -43,6 +46,7 @@ private slots:
 private:
 	// QShortcut doesn't work properly with this class for some reason, so here's a hack for creating a keyboard shortcut to selectPreviousItem
 	QKeySequence _selectPreviousItemShortcut;
+	QString _settingName;
 	bool _bHistoryMode;
 	bool _bClearEditorOnItemActivation;
 };
