@@ -23,7 +23,8 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 
 CHistoryComboBox::~CHistoryComboBox()
 {
-	CSettings().setValue(_settingName, items());
+	if (!_settingName.isEmpty())
+		CSettings().setValue(_settingName, items());
 }
 
 void CHistoryComboBox::enableAutoSave(const QString& settingName)
@@ -114,6 +115,9 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 QStringList CHistoryComboBox::items() const
 {
 	QStringList itemsList;
+	if (!currentText().isEmpty())
+		itemsList.push_back(currentText());
+
 	for (int i = 0; i < count(); ++i)
 		itemsList.push_back(itemText(i));
 
@@ -130,7 +134,8 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	else
 		QComboBox::keyPressEvent(e);
 
-	CSettings().setValue(_settingName, items());
+	if (!_settingName.isEmpty())
+		CSettings().setValue(_settingName, items());
 }
 
 // Moves the currently selected item to the top
