@@ -1,12 +1,20 @@
-DESTDIR  = ../bin
 TEMPLATE = lib
 TARGET   = qtutils
 CONFIG += staticlib c++11
 
-OBJECTS_DIR = ../build/qtutils
-MOC_DIR     = ../build/qtutils
-UI_DIR      = ../build/qtutils
-RCC_DIR     = ../build/qtutils
+mac* | linux*{
+    CONFIG(release, debug|release):CONFIG += Release
+    CONFIG(debug, debug|release):CONFIG += Debug
+}
+
+Release:OUTPUT_DIR=release
+Debug:OUTPUT_DIR=debug
+
+DESTDIR  = ../bin/$${OUTPUT_DIR}
+OBJECTS_DIR = ../build/$${OUTPUT_DIR}/qtutils
+MOC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
+UI_DIR      = ../build/$${OUTPUT_DIR}/qtutils
+RCC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
 
 QT = core gui
 
