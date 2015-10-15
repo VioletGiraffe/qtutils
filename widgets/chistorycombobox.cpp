@@ -10,9 +10,7 @@ RESTORE_COMPILER_WARNINGS
 #include "assert/advanced_assert.h"
 
 CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
-	QComboBox(parent),
-	_bHistoryMode(true),
-	_bClearEditorOnItemActivation(false)
+	QComboBox(parent)
 {
 	// without this call lineEdit is not created so it would be impossible to access it
 	setEditable(true);
@@ -24,7 +22,7 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 CHistoryComboBox::~CHistoryComboBox()
 {
 	if (!_settingName.isEmpty())
-		CSettings().setValue(_settingName, items());
+		CSettings().setValue(_settingName, itemsToSave());
 }
 
 void CHistoryComboBox::enableAutoSave(const QString& settingName)
@@ -38,6 +36,11 @@ void CHistoryComboBox::enableAutoSave(const QString& settingName)
 void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
 {
 	_bClearEditorOnItemActivation = clear;
+}
+
+void CHistoryComboBox::setSaveCurrentText(bool save)
+{
+	_bSaveCurrentText = save;
 }
 
 void CHistoryComboBox::setSelectPreviousItemShortcut(const QKeySequence& selectPreviousItemShortcut)
@@ -115,8 +118,9 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 QStringList CHistoryComboBox::items() const
 {
 	QStringList itemsList;
-	if (!currentText().isEmpty())
-		itemsList.push_back(currentText());
+	const QString currentItemText = currentText();
+	if (!currentItemText.isEmpty() && currentIndex() >= 0 && currentItemText != itemText(currentIndex()))
+		itemsList.push_back(currentItemText);
 
 	for (int i = 0; i < count(); ++i)
 		itemsList.push_back(itemText(i));
@@ -132,10 +136,10 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 		currentItemActivated();
 	}
 	else
-		QComboBox::keyPressEvent(e);
+		QComboBox::keyPressEvent(e); 
 
 	if (!_settingName.isEmpty())
-		CSettings().setValue(_settingName, items());
+		CSettings().setValue(_settingName, itemsToSave());
 }
 
 // Moves the currently selected item to the top
@@ -146,7 +150,7 @@ void CHistoryComboBox::currentItemActivated()
 
 	if (_bHistoryMode)
 	{
-// No longer neccessary as of Qt 5.4?..
+// No longer necessary as of Qt 5.4?..
 //		removeItem(currentIndex());
 
 		auto list = items();
@@ -161,4 +165,13 @@ void CHistoryComboBox::currentItemActivated()
 		if (_bClearEditorOnItemActivation)
 			lineEdit()->clear();
 	}
+}
+
+QStringList CHistoryComboBox::itemsToSave() const
+{
+	auto result = items();
+	if (_bSaveCurrentText)
+		result.push_front(currentText());
+
+	return result;
 }

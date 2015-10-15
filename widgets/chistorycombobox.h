@@ -17,8 +17,9 @@ public:
 	~CHistoryComboBox();
 
 	void enableAutoSave(const QString& settingName);
-
 	void setClearEditorOnItemActivation(bool clear);
+	void setSaveCurrentText(bool save);
+
 	void setSelectPreviousItemShortcut(const QKeySequence& selectPreviousItemShortcut);
 	bool eventFilter(QObject *, QEvent *) override;
 
@@ -39,16 +40,19 @@ signals:
 protected:
 	void keyPressEvent(QKeyEvent * e) override;
 
-private slots:
+private:
 	// Moves the currently selected item to the top
 	void currentItemActivated();
+
+	QStringList itemsToSave() const;
 
 private:
 	// QShortcut doesn't work properly with this class for some reason, so here's a hack for creating a keyboard shortcut to selectPreviousItem
 	QKeySequence _selectPreviousItemShortcut;
 	QString _settingName;
-	bool _bHistoryMode;
-	bool _bClearEditorOnItemActivation;
+	bool _bHistoryMode = true;
+	bool _bClearEditorOnItemActivation = false;
+	bool _bSaveCurrentText = false;
 };
 
 #endif // CHISTORYCOMBOBOX_H
