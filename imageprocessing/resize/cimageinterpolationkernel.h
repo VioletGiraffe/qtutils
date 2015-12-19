@@ -1,6 +1,6 @@
 #pragma once
 
-#include "assert/advanced_assert.h"
+#include <assert.h>
 #include <vector>
 
 template <typename CoeffType>
@@ -19,17 +19,17 @@ class CImageInterpolationKernel : public CImageInterpolationKernelBase<CoeffType
 public:
 	explicit CImageInterpolationKernel(int s): _size(s) {
 		_kernel.resize(s);
-		for(int i = 0; i < size(); ++i)
+		for(int i = 0; i < _size; ++i)
 		{
 			_kernel[i].resize(s);
-			for(int k = 0; k < size(); ++k)
+			for(int k = 0; k < _size; ++k)
 				_kernel[i][k] = 0.0f;
 		}
 	}
 
 	CoeffType coeff(int x, int y) const override
 	{
-		assert_r(x < _size && y < _size);
+		assert(x < _size && y < _size); // Affects the performance a whole lot! Don't change to assert_r
 		return _kernel[x][y];
 	}
 

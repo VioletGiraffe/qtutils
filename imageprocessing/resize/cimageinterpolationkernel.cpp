@@ -2,7 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-static float bicubic(int i, int size, float a)
+inline float bicubic(int i, int size, float a)
 {
 	const float x = ((float)i / size - 0.5f) * 2.0f * 2.0f; //[-2;+2]
 	const float fabsx = fabs(x);
@@ -23,13 +23,13 @@ CBicubicKernel::CBicubicKernel(int s, float a): CImageInterpolationKernel(s)
 	normalizeKernel();
 }
 
-static float triang(int i, int size)
+inline float triang(int i, int size)
 {
 	const float x = ((float)i / size - 0.5f) * 2.0f; //[-1;+1]
 	return x <= 0.0f ? x + 1.0f : 1.0f - x;
 }
 
-static float bellBicubic(int i, int size)
+inline float bellBicubic(int i, int size)
 {
 	const float f = ((float)i / size - 0.5f) * 2.0f * 1.5f; //[-3/2;+3/2]
 	if( f > -1.5f && f < -0.5f )
@@ -48,7 +48,7 @@ static float bellBicubic(int i, int size)
 		return 0.0f;
 }
 
-static float lanczos(int a, int i, int size)
+inline float lanczos(int a, int i, int size)
 {
 	const float x = ((float)i / size - 0.5f) * 2.0f * a; //[-a; a]
 	if (fabs(x) < 0.0001f)
