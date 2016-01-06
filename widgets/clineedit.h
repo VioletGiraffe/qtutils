@@ -9,7 +9,6 @@ RESTORE_COMPILER_WARNINGS
 
 class CLineEdit : public QLineEdit
 {
-	Q_OBJECT
 public:
 	explicit CLineEdit(QWidget * parent = 0);
 	void setSelectAllOnFocus(bool select);

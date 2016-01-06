@@ -17,7 +17,6 @@ RESTORE_COMPILER_WARNINGS
 */
 class CCircularProgressIndicator : public QWidget
 {
-	Q_OBJECT
 	Q_PROPERTY(int delay READ animationDelay WRITE setAnimationDelay)
 	Q_PROPERTY(bool displayedWhenStopped READ isDisplayedWhenStopped WRITE setDisplayedWhenStopped)
 	Q_PROPERTY(QColor color READ color WRITE setColor)
