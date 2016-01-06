@@ -9,7 +9,6 @@ RESTORE_COMPILER_WARNINGS
 
 class CSettingsPage : public QWidget
 {
-	Q_OBJECT
 public:
 	explicit CSettingsPage(QWidget *parent = 0);
 	virtual ~CSettingsPage();
