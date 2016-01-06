@@ -25,5 +25,5 @@ void CLineEdit::focusInEvent(QFocusEvent * event)
 	QLineEdit::focusInEvent(event);
 
 	if (_bSelectAllOnFocus)
-		QTimer::singleShot(0, this, SLOT(selectAll()));
+		QTimer::singleShot(0, this, &CLineEdit::selectAll);
 }
