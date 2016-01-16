@@ -24,7 +24,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 HEADERS += \
 	imageprocessing/resize/cimageinterpolationkernel.h
 
-INCLUDEPATH += ../cpputils
+INCLUDEPATH += ../cpputils ../cpp-template-utils
 
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251

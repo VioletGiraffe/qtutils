@@ -1,5 +1,5 @@
 #include "chistorycombobox.h"
-#include "utils/utils.h"
+#include "container/set_operations.h"
 #include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
@@ -156,7 +156,7 @@ void CHistoryComboBox::currentItemActivated()
 		auto list = items();
 		list.push_front(newItem);
 
-		list = uniqueElements(list);
+		list = SetOperations::uniqueElements(list);
 		clear();
 		for (int i = list.size() - 1; i >= 0; --i)
 			insertItem(0, list[i]);
