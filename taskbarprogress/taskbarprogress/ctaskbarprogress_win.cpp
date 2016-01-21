@@ -126,9 +126,10 @@ bool CTaskBarProgress::eventFilter(void *msg)
 
 bool CTaskBarProgress::widgetAlreadyLinked(const QWidget * widget)
 {
-	for (auto it = _registeredWidgetsList.begin(); it != _registeredWidgetsList.end(); ++it)
-		if (it->second == widget)
+	for (const auto& item: _registeredWidgetsList)
+		if (item.second == widget)
 			return true;
+
 	return false;
 }
 
