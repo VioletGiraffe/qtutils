@@ -29,7 +29,7 @@ INCLUDEPATH += ../cpputils ../cpp-template-utils
 win*{
 	QMAKE_CXXFLAGS += /MP /wd4251
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
-	QMAKE_CXXFLAGS_WARN_ON = -W4
+	QMAKE_CXXFLAGS_WARN_ON = /W4
 }
 
 linux*{
