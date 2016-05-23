@@ -28,7 +28,7 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 	if (event->type() == QEvent::MouseButtonRelease)
 	{
 		QMouseEvent * mouseEvent = dynamic_cast<QMouseEvent*>(event);
-		assert_r(mouseEvent);
+		assert_and_return_r(mouseEvent, false);
 		if (mouseEvent->buttons() == Qt::LeftButton)
 		{
 			const QPoint pos = mouseEvent->pos();

@@ -99,8 +99,8 @@ void CTaskBarProgress::setState(ProgressState state)
 
 bool CTaskBarProgress::eventFilter(void *msg)
 {
-	assert_r(msg);
 	MSG * message = static_cast<MSG*>(msg);
+	assert_and_return_r(message, false);
 	if (_taskbarButtonCreatedMessageIdMap.count(WId(message->hwnd)) == 0)
 		return false;
 

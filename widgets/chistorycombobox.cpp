@@ -89,7 +89,7 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 	if (e->type() == QEvent::KeyPress)
 	{
 		QKeyEvent * keyEvent = dynamic_cast<QKeyEvent*>(e);
-		assert_r(keyEvent);
+		assert_and_return_r(keyEvent, false);
 
 		if (keyEvent->text().isEmpty())
 			return false;
