@@ -23,7 +23,7 @@ public:
 	explicit CSettingsDialog(QWidget *parent = 0);
 	~CSettingsDialog();
 
-	void addSettingsPage(QWidget * page, const QString& pageName = QString());
+	CSettingsDialog& addSettingsPage(QWidget * page, const QString& pageName = QString());
 
 signals:
 	void settingsChanged();

@@ -22,8 +22,9 @@ CSettingsDialog::~CSettingsDialog()
 	delete ui;
 }
 
-void CSettingsDialog::addSettingsPage(QWidget *page, const QString &pageName)
+CSettingsDialog& CSettingsDialog::addSettingsPage(QWidget *page, const QString &pageName)
 {
+	page->setParent(this);
 	ui->pages->addWidget(page);
 
 	QListWidgetItem * item = new QListWidgetItem(pageName.isEmpty() ? page->windowTitle() : pageName);
@@ -34,6 +35,8 @@ void CSettingsDialog::addSettingsPage(QWidget *page, const QString &pageName)
 		ui->pageList->setCurrentRow(0);
 
 	ui->pageList->adjustSize();
+
+	return *this;
 }
 
 void CSettingsDialog::pageChanged(QListWidgetItem * item)
