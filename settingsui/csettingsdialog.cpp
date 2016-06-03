@@ -22,7 +22,7 @@ CSettingsDialog::~CSettingsDialog()
 	delete ui;
 }
 
-CSettingsDialog& CSettingsDialog::addSettingsPage(QWidget *page, const QString &pageName)
+CSettingsDialog& CSettingsDialog::addSettingsPage(CSettingsPage* page, const QString &pageName)
 {
 	page->setParent(this);
 	ui->pages->addWidget(page);

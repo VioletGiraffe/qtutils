@@ -13,6 +13,8 @@ namespace Ui {
 class CSettingsDialog;
 }
 
+class CSettingsPage;
+
 class QListWidgetItem;
 
 class CSettingsDialog : public QDialog
@@ -23,7 +25,7 @@ public:
 	explicit CSettingsDialog(QWidget *parent = 0);
 	~CSettingsDialog();
 
-	CSettingsDialog& addSettingsPage(QWidget * page, const QString& pageName = QString());
+	CSettingsDialog& addSettingsPage(CSettingsPage * page, const QString& pageName = QString());
 
 signals:
 	void settingsChanged();
