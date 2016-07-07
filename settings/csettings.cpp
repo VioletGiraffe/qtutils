@@ -38,3 +38,8 @@ QVariant CSettings::value(const QString & key, const QVariant & defaultValue) co
 {
 	return _impl.value(key, defaultValue);
 }
+
+void CSettings::clear()
+{
+	_impl.clear();
+}
