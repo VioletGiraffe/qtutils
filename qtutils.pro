@@ -1,10 +1,10 @@
 TEMPLATE = lib
 TARGET   = qtutils
-CONFIG += staticlib c++11
+CONFIG += staticlib c++14
 
 mac* | linux*{
-    CONFIG(release, debug|release):CONFIG += Release
-    CONFIG(debug, debug|release):CONFIG += Debug
+	CONFIG(release, debug|release):CONFIG += Release
+	CONFIG(debug, debug|release):CONFIG += Debug
 }
 
 Release:OUTPUT_DIR=release
