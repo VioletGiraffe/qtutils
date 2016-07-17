@@ -48,6 +48,7 @@ linux*|mac*{
 	Debug:DEFINES += _DEBUG
 }
 
+include(logger/logger.pri)
 include(aboutdialog/aboutdialog.pri)
 include(settings/settings.pri)
 include(taskbarprogress/taskbarprogress.pri)
