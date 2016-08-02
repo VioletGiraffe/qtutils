@@ -1,5 +1,5 @@
 #include "chistorycombobox.h"
-#include "container/set_operations.h"
+#include "container/set_operations.hpp"
 #include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
