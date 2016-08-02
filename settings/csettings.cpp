@@ -39,6 +39,11 @@ QVariant CSettings::value(const QString & key, const QVariant & defaultValue) co
 	return _impl.value(key, defaultValue);
 }
 
+QStringList CSettings::allKeys() const
+{
+	return _impl.allKeys();
+}
+
 void CSettings::clear()
 {
 	_impl.clear();
