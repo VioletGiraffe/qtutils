@@ -16,13 +16,10 @@ MOC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
 UI_DIR      = ../build/$${OUTPUT_DIR}/qtutils
 RCC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
 
-QT = core gui
+QT = core gui widgets
 
-#check Qt version
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
-HEADERS += \
-	imageprocessing/resize/cimageinterpolationkernel.h
+# Required for qDebug() to log function name, file and line in release build
+DEFINES += QT_MESSAGELOGCONTEXT
 
 INCLUDEPATH += ../cpputils ../cpp-template-utils
 
@@ -46,6 +43,8 @@ linux*|mac*{
 
 	Release:DEFINES += NDEBUG=1
 	Debug:DEFINES += _DEBUG
+
+	PRE_TARGETDEPS += $${DESTDIR}/libcpputils.a
 }
 
 include(logger/logger.pri)
@@ -66,6 +65,9 @@ win*{
 win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
 	QMAKE_CXXFLAGS += /FS
 }
+
+HEADERS += \
+	imageprocessing/resize/cimageinterpolationkernel.h
 
 SOURCES += \
 	utils/naturalsorting/naturalsorting_qt.cpp \
