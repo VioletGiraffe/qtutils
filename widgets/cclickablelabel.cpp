@@ -11,7 +11,11 @@ CClickableLabel::CClickableLabel(QWidget* parent) : QLabel(parent)
 void CClickableLabel::mouseDoubleClickEvent(QMouseEvent* e)
 {
 	QLabel::mouseDoubleClickEvent(e);
-	emit doubleClicked(e ? mapToGlobal(e->pos()) : QPoint());
+	emit doubleClicked(mapToGlobal(e->pos()));
 }
 
-
+void CClickableLabel::mouseReleaseEvent(QMouseEvent *ev)
+{
+	QLabel::mouseReleaseEvent(ev);
+	emit singleClicked(mapToGlobal(ev->pos()));
+}

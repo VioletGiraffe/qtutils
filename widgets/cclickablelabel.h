@@ -15,7 +15,9 @@ public:
 
 signals:
 	void doubleClicked(QPoint pos);
+	void singleClicked(QPoint pos);
 
 protected:
 	void mouseDoubleClickEvent(QMouseEvent* e) override;
+	void mouseReleaseEvent(QMouseEvent *ev) override;
 };
