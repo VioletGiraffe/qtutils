@@ -22,3 +22,14 @@ QString ErrorStringFromLastError()
 	else
 		return QString();
 }
+
+QString toUncPath(const QString& somePath)
+{
+	QString unc = somePath;
+	unc.replace('/', '\\');
+
+	if (somePath.contains(':')) // Quick and dirty test for absolute path
+		return QStringLiteral("\\\\?\\") + unc;
+	else
+		return unc;
+}

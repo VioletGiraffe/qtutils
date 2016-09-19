@@ -7,3 +7,4 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 QString ErrorStringFromLastError();
+QString toUncPath(const QString& somePath);
