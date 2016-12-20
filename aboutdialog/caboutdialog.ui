@@ -24,7 +24,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Primitive Camera Viewer</string>
+      <string>Application Name</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
