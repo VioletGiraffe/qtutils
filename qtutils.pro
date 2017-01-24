@@ -22,10 +22,10 @@ android {
 }
 
 DESTDIR  = ../bin/$${OUTPUT_DIR}
-OBJECTS_DIR = ../build/$${OUTPUT_DIR}/qtutils
-MOC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
-UI_DIR      = ../build/$${OUTPUT_DIR}/qtutils
-RCC_DIR     = ../build/$${OUTPUT_DIR}/qtutils
+OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
+MOC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
+UI_DIR      = ../build/$${OUTPUT_DIR}/$${TARGET}
+RCC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 
 QT = core gui widgets
 
