@@ -3,11 +3,13 @@ HEADERS += \
     $$PWD/cclickablelabel.h \
     $$PWD/widgetutils.h \
     $$PWD/circularprogressindicator/ccircularprogressindicator.h \
-    $$PWD/chistorycombobox.h
+    $$PWD/chistorycombobox.h \
+    $$PWD/layouts/coverlaylayout.h
 
 SOURCES += \
     $$PWD/clineedit.cpp \
     $$PWD/cclickablelabel.cpp \
     $$PWD/widgetutils.cpp \
     $$PWD/circularprogressindicator/ccircularprogressindicator.cpp \
-    $$PWD/chistorycombobox.cpp
+    $$PWD/chistorycombobox.cpp \
+    $$PWD/layouts/coverlaylayout.cpp
