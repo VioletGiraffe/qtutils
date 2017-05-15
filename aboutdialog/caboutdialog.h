@@ -14,7 +14,7 @@ class CAboutDialog : public QDialog
 {
 public:
 	explicit CAboutDialog(QWidget *parent = 0);
-	explicit CAboutDialog(const QString& versionString, QWidget *parent = 0);
+	explicit CAboutDialog(const QString& versionString, QWidget *parent = 0, const QString& copyrightOwner = "Violet Giraffe");
 	~CAboutDialog();
 
 private:
