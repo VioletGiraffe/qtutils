@@ -4,7 +4,6 @@ DISABLE_COMPILER_WARNINGS
 #include "ui_caboutdialog.h"
 
 #include <QApplication>
-#include <QDateTime>
 #include <QStringBuilder>
 RESTORE_COMPILER_WARNINGS
 
@@ -12,7 +11,7 @@ CAboutDialog::CAboutDialog(QWidget *parent /*= 0*/) : CAboutDialog(QString(), pa
 {
 }
 
-CAboutDialog::CAboutDialog(const QString& versionString, QWidget *parent, const QString& copyrightOwner) :
+CAboutDialog::CAboutDialog(const QString& versionString, QWidget *parent, const QString& inceptionYear, const QString& copyrightOwner) :
 	QDialog(parent),
 	ui(new Ui::CAboutDialog)
 {
@@ -26,7 +25,7 @@ CAboutDialog::CAboutDialog(const QString& versionString, QWidget *parent, const 
 	else
 		ui->lblVersion->setText(tr("Built on %1 at %2\nUsing Qt version %3").arg(__DATE__).arg(__TIME__).arg(QT_VERSION_STR));
 
-	ui->lblCopyright->setText("©" % QString::number(QDateTime::currentDateTime().date().year()) % ' ' % copyrightOwner);
+	ui->lblCopyright->setText("©" % inceptionYear % ' ' % copyrightOwner);
 }
 
 CAboutDialog::~CAboutDialog()
