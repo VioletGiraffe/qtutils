@@ -70,6 +70,7 @@ include(mouseclickdetector/mouseclickdetector.pri)
 include(historylist/historylist.pri)
 include(imageprocessing/imageprocessing.pri)
 include(widgets/widgets.pri)
+include(ui/ui.pri)
 
 win*{
 	include(windows/windows.pri)
