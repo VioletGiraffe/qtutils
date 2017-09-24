@@ -12,7 +12,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <Windows.h>
 
-static BOOL EnableNonClientDpiScaling(HWND hWnd) {
+static BOOL enableNonClientDpiScaling(HWND hWnd) {
 	typedef BOOL(WINAPI *EnableNonClientDpiScalingFunc) (HWND);
 
 	HMODULE hUser32 = LoadLibraryA("user32");
@@ -36,7 +36,7 @@ public:
 		auto winMsg = static_cast<MSG*>(message);
 		if (winMsg->message == WM_NCCREATE)
 		{
-			const auto r = EnableNonClientDpiScaling(winMsg->hwnd);
+			const auto r = enableNonClientDpiScaling(winMsg->hwnd);
 			if (r == FALSE)
 			{
 				WCHAR title[256] = {0};
