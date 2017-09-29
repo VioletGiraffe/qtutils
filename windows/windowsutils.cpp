@@ -29,7 +29,7 @@ QString toUncPath(const QString& somePath)
 	unc.replace('/', '\\');
 
 	if (somePath.contains(':')) // Quick and dirty test for absolute path
-		return QStringLiteral("\\\\?\\") + unc;
+		return QLatin1String("\\\\?\\") + unc;
 	else
 		return unc;
 }
