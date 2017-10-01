@@ -6,6 +6,7 @@
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
+#include <QDebug>
 RESTORE_COMPILER_WARNINGS
 
 #ifdef _WIN32
@@ -41,7 +42,7 @@ public:
 			{
 				WCHAR title[256] = {0};
 				GetWindowTextW(winMsg->hwnd, title, 255);
-				assert_unconditional_r((QString("EnableNonClientDpiScaling failed for window") + QString::fromWCharArray(title) + ", last error " + GetLastError()).toUtf8().data());
+				qDebug() << "EnableNonClientDpiScaling failed for window" << title << ", last error" << GetLastError();
 			}
 		}
 

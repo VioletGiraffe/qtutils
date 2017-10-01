@@ -84,6 +84,7 @@ void CHistoryComboBox::reset()
 	clearFocus();
 }
 
+// TODO: this does not belong inside this class
 bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 {
 	if (e->type() == QEvent::KeyPress)
@@ -104,12 +105,18 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 		if (keyEvent->modifiers() & Qt::MetaModifier)
 			modifierString = "Meta+";
 
-		QKeySequence fullSequence(modifierString+QKeySequence(keyEvent->key()).toString());
+		QKeySequence fullSequence(modifierString + QKeySequence(keyEvent->key()).toString());
 		if (!_selectPreviousItemShortcut.isEmpty() && fullSequence == _selectPreviousItemShortcut)
 		{
 			selectPreviousItem();
 			return true;
 		}
+	}
+
+	if (e->type() == QEvent::FocusOut)
+	{
+		lineEdit()->clear();
+		setCurrentIndex(currentIndex());
 	}
 
 	return false;
@@ -136,7 +143,7 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 		currentItemActivated();
 	}
 	else
-		QComboBox::keyPressEvent(e); 
+		QComboBox::keyPressEvent(e);
 
 	if (!_settingName.isEmpty())
 		CSettings().setValue(_settingName, itemsToSave());
@@ -150,8 +157,8 @@ void CHistoryComboBox::currentItemActivated()
 
 	if (_bHistoryMode)
 	{
-// No longer necessary as of Qt 5.4?..
-//		removeItem(currentIndex());
+		// No longer necessary as of Qt 5.4?..
+		//		removeItem(currentIndex());
 
 		auto list = items();
 		list.push_front(newItem);
