@@ -3,6 +3,7 @@
 #include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
 RESTORE_COMPILER_WARNINGS
@@ -85,7 +86,7 @@ void CHistoryComboBox::reset()
 }
 
 // TODO: this does not belong inside this class
-bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
+bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
 {
 	if (e->type() == QEvent::KeyPress)
 	{
@@ -113,11 +114,11 @@ bool CHistoryComboBox::eventFilter(QObject*, QEvent* e)
 		}
 	}
 
-	if (e->type() == QEvent::FocusOut)
-	{
-		lineEdit()->clear();
-		setCurrentIndex(currentIndex());
-	}
+// 	if (e->type() == QEvent::FocusOut)
+// 	{
+// 		lineEdit()->clear();
+// 		setCurrentIndex(currentIndex());
+// 	}
 
 	return false;
 }
