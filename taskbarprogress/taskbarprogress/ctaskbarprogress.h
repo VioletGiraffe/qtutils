@@ -12,19 +12,14 @@ DISABLE_COMPILER_WARNINGS
 #include <qt_windows.h>
 #include <QAbstractEventDispatcher>
 
-#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
 #include <QAbstractNativeEventFilter>
-#endif
 RESTORE_COMPILER_WARNINGS
 
 #include <map>
 
 struct ITaskbarList3;
 
-class CTaskBarProgress
-#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
-	: protected QAbstractNativeEventFilter
-#endif
+class CTaskBarProgress : protected QAbstractNativeEventFilter
 {
 public:
 	explicit CTaskBarProgress(QWidget * widget = 0);
@@ -38,15 +33,10 @@ private:
 	ITaskbarList3 * taskbarListInterface ();
 
 	static bool eventFilter (void * msg);
-#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
 	virtual bool nativeEventFilter(const QByteArray & eventType, void * message, long * result);
-#endif
 	static bool widgetAlreadyLinked (const QWidget * widget);
 
 private:
-#if QT_VERSION < QT_VERSION_CHECK (5,0,0)
-	static QAbstractEventDispatcher::EventFilter _qtEventFilter;
-#endif
 	static std::map<WId, quint32 /* "taskbar button created" message ID */> _taskbarButtonCreatedMessageIdMap;
 	static std::map<CTaskBarProgress*, QWidget*> _registeredWidgetsList; // List of the widgets with which linkWithWidgetstaskbarButton have already been called
 													  // is used to guard against linking different progress bar instances to the same taskbar button

@@ -9,10 +9,6 @@ RESTORE_COMPILER_WARNINGS
 
 #include <Shobjidl.h>
 
-#if QT_VERSION < QT_VERSION_CHECK (5,0,0)
-	QAbstractEventDispatcher::EventFilter CTaskBarProgress::_qtEventFilter = 0;
-#endif
-
 CTaskBarProgress::CTaskBarProgress(QWidget *widget)
 {
 	if (widget)
@@ -51,13 +47,7 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 	_taskbarButtonCreatedMessageIdMap[widget->winId()] = RegisterWindowMessageW(L"TaskbarButtonCreated");
 
 	// Care: creating winId leads to creating a window which leads to creating a Window which leads to window procedure starting up, so you should only register event filter afterwards
-#if QT_VERSION < QT_VERSION_CHECK (5,0,0)
-	if (!_qtEventFilter) // static variable holding a global application's QT event handler, should not be overridden by subsequent calls for different CProgressBarTaskbar instances
-		_qtEventFilter = dispatcher->setEventFilter(&CTaskBarProgress::eventFilter);
-#else
 	qApp->installNativeEventFilter(this);
-	//	dispatcher->installNativeEventFilter(&CTaskBarProgress::eventFilter);
-#endif
 }
 
 void CTaskBarProgress::setProgress(int progress, int minValue /* = 0*/, int maxValue /* = 100*/)
@@ -101,6 +91,7 @@ bool CTaskBarProgress::eventFilter(void *msg)
 {
 	MSG * message = static_cast<MSG*>(msg);
 	assert_and_return_r(message, false);
+
 	if (_taskbarButtonCreatedMessageIdMap.count(WId(message->hwnd)) == 0)
 		return false;
 
@@ -115,11 +106,6 @@ bool CTaskBarProgress::eventFilter(void *msg)
 			_taskbarListInterface[WId(message->hwnd)] = iface;
 		}
 	}
-
-#if QT_VERSION < QT_VERSION_CHECK (5,0,0)
-	if (_qtEventFilter)
-		return _qtEventFilter(msg);
-#endif
 
 	return false;
 }

@@ -18,7 +18,7 @@ protected:
 	void focusInEvent (QFocusEvent * event) override;
 
 private:
-	bool _bSelectAllOnFocus;
+	bool _bSelectAllOnFocus = true;
 };
 
 #endif // CLINEEDIT_H
