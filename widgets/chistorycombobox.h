@@ -31,8 +31,7 @@ public slots:
 	bool historyMode() const;
 	// Switch to the next combobox item (which means going back through the history if history mode is set)
 	void selectPreviousItem();
-	// Set current index to 0 and clear line edit
-	void reset();
+	void resetToLastSelected(bool clearLineEdit);
 
 signals:
 	void itemActivated(QString itemText);

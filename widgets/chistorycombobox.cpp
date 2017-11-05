@@ -3,6 +3,7 @@
 #include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QAbstractItemView>
 #include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
@@ -17,7 +18,6 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	setEditable(true);
 
 	installEventFilter(this);
-	lineEdit()->installEventFilter(this);
 }
 
 CHistoryComboBox::~CHistoryComboBox()
@@ -74,14 +74,13 @@ void CHistoryComboBox::selectPreviousItem()
 	lineEdit()->selectAll(); // Causes a bug
 }
 
-// Set current index to 0 and clear line edit
-void CHistoryComboBox::reset()
+void CHistoryComboBox::resetToLastSelected(bool clearLineEdit)
 {
-	if (!lineEdit() || count() <= 0)
-		return;
+	lineEdit()->clear(); // To clear any user input
+	setCurrentIndex(currentIndex());
+	if (clearLineEdit)
+		lineEdit()->clear(); // To clear the current item text set by setCurrentIndex() 
 
-	setCurrentIndex(0);
-	lineEdit()->clear();
 	clearFocus();
 }
 
@@ -90,11 +89,10 @@ bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
 {
 	if (e->type() == QEvent::KeyPress)
 	{
-		QKeyEvent * keyEvent = dynamic_cast<QKeyEvent*>(e);
-		assert_and_return_r(keyEvent, false);
+		QKeyEvent * keyEvent = static_cast<QKeyEvent*>(e);
 
 		if (keyEvent->text().isEmpty())
-			return false;
+			return QComboBox::eventFilter(receiver, e);
 
 		QString modifierString;
 		if (keyEvent->modifiers() & Qt::ShiftModifier)
@@ -114,13 +112,7 @@ bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
 		}
 	}
 
-// 	if (e->type() == QEvent::FocusOut)
-// 	{
-// 		lineEdit()->clear();
-// 		setCurrentIndex(currentIndex());
-// 	}
-
-	return false;
+	return QComboBox::eventFilter(receiver, e);
 }
 
 QStringList CHistoryComboBox::items() const
