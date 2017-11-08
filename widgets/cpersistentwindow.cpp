@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QMainWindow>
+#include <QStyle>
 
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
@@ -22,7 +23,7 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* event)
 		CSettings s;
 
 		if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) || !window || !window->restoreState(s.value(STATE_KEY).toByteArray()))
-			widget->resize(QApplication::desktop()->screenGeometry().size() / 2);
+			window->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, QApplication::desktop()->availableGeometry().size() / 2, QApplication::desktop()->availableGeometry()));
 	}
 	else if (event->type() == QEvent::Close)
 	{
