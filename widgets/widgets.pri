@@ -4,7 +4,8 @@ HEADERS += \
     $$PWD/widgetutils.h \
     $$PWD/circularprogressindicator/ccircularprogressindicator.h \
     $$PWD/chistorycombobox.h \
-    $$PWD/layouts/coverlaylayout.h
+    $$PWD/layouts/coverlaylayout.h \
+    $$PWD/cpersistentwindow.h
 
 SOURCES += \
     $$PWD/clineedit.cpp \
@@ -12,4 +13,5 @@ SOURCES += \
     $$PWD/widgetutils.cpp \
     $$PWD/circularprogressindicator/ccircularprogressindicator.cpp \
     $$PWD/chistorycombobox.cpp \
-    $$PWD/layouts/coverlaylayout.cpp
+    $$PWD/layouts/coverlaylayout.cpp \
+    $$PWD/cpersistentwindow.cpp
