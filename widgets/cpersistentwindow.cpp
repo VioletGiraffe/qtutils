@@ -2,10 +2,12 @@
 
 #include "../settings/csettings.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QMainWindow>
 #include <QStyle>
+RESTORE_COMPILER_WARNINGS
 
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
