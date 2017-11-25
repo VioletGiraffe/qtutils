@@ -16,10 +16,12 @@ CPersistenceEnabler::CPersistenceEnabler(const QString& widgetSettingsPath, QObj
 {
 }
 
-bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* event)
+bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 {
-	if (event->type() == QEvent::Show)
+	if (!_windowStateRestored && e->type() == QEvent::Show)
 	{
+		_windowStateRestored = true;
+
 		auto widget = static_cast<QWidget*>(watched);
 		auto window = dynamic_cast<QMainWindow*>(watched);
 		CSettings s;
@@ -27,7 +29,7 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* event)
 		if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) || !window || !window->restoreState(s.value(STATE_KEY).toByteArray()))
 			window->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, QApplication::desktop()->availableGeometry().size() / 2, QApplication::desktop()->availableGeometry()));
 	}
-	else if (event->type() == QEvent::Close)
+	else if (e->type() == QEvent::Close)
 	{
 		auto widget = static_cast<QWidget*>(watched);
 		auto window = dynamic_cast<QMainWindow*>(watched);
@@ -38,5 +40,5 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* event)
 			s.setValue(STATE_KEY, window->saveState());
 	}
 
-	return QObject::eventFilter(watched, event);
+	return QObject::eventFilter(watched, e);
 }

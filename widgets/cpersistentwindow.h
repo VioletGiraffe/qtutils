@@ -17,4 +17,5 @@ protected:
 
 private:
 	const QString _settingsPath;
+	bool _windowStateRestored = false;
 };
