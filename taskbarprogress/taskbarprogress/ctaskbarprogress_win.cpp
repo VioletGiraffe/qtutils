@@ -26,20 +26,20 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 {
 	if (!widget)
 	{
-		qDebug() << __FUNCTION__ << ": widget is null";
+		qInfo() << __FUNCTION__ << ": widget is null";
 		return;
 	}
 
 	QAbstractEventDispatcher * dispatcher = QAbstractEventDispatcher::instance();
 	if (!dispatcher)
 	{
-		qDebug() << __FUNCTION__ << ": QAbstractEventDispatcher is null";
+		qInfo() << __FUNCTION__ << ": QAbstractEventDispatcher is null";
 		return;
 	}
 
 	if (widgetAlreadyLinked(widget))
 	{
-		qDebug() << __FUNCTION__ << ": CProgressBarTaskbar instance" << hex << this << " is trying to link to QWidget " << hex << widget << ", whose taskbar button has already been linked to";
+		qInfo() << __FUNCTION__ << ": CProgressBarTaskbar instance" << hex << this << " is trying to link to QWidget " << hex << widget << ", whose taskbar button has already been linked to";
 		return;
 	}
 
@@ -100,7 +100,7 @@ bool CTaskBarProgress::eventFilter(void *msg)
 		ITaskbarList3 * iface = 0;
 		HRESULT result = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_ALL, IID_ITaskbarList3,(void**)&iface);
 		if (result != S_OK || !iface)
-			qDebug() << "ITaskbarList3 creation failed";
+			qInfo() << "ITaskbarList3 creation failed";
 		else
 		{
 			_taskbarListInterface[WId(message->hwnd)] = iface;

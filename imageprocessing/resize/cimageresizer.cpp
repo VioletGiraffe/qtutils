@@ -146,6 +146,6 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 				dest.setPixel(x, y, applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize));
 	}
 
-//	qDebug() << "Image resized from" << source.size() << "to" << dest.size() << "in" << ((uint64_t) clock() - start) * 1000 / CLOCKS_PER_SEC << "ms";
+//	qInfo() << "Image resized from" << source.size() << "to" << dest.size() << "in" << ((uint64_t) clock() - start) * 1000 / CLOCKS_PER_SEC << "ms";
 	return dest;
 }

@@ -42,7 +42,7 @@ public:
 			{
 				WCHAR title[256] = {0};
 				GetWindowTextW(winMsg->hwnd, title, 255);
-				qDebug() << "EnableNonClientDpiScaling failed for window" << title << ", last error" << GetLastError();
+				qInfo() << "EnableNonClientDpiScaling failed for window" << title << ", last error" << GetLastError();
 			}
 		}
 

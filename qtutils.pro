@@ -34,7 +34,7 @@ RCC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 
 QT = core gui widgets
 
-# Required for qDebug() to log function name, file and line in release build
+# Required for qInfo() to log function name, file and line in release build
 DEFINES += QT_MESSAGELOGCONTEXT
 
 INCLUDEPATH += ../cpputils ../cpp-template-utils
