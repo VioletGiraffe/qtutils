@@ -2,6 +2,7 @@
 #include "assert/advanced_assert.h"
 #include "compiler/compiler_warnings_control.h"
 #include "settings/csettings.h"
+#include "widgets/cpersistentwindow.h"
 
 DISABLE_COMPILER_WARNINGS
 #include "ui_cuiinspector.h"
@@ -14,6 +15,7 @@ RESTORE_COMPILER_WARNINGS
 #include <assert.h>
 
 #define KEY_IGNORED_CLASSES "Tools/UiInspector/IgnoredClasses"
+#define KEY_IGNORED_WINDOW_STATE "Tools/UiInspector/Window"
 
 struct WidgetHierarchy {
 	QWidget* widget = nullptr;
@@ -27,6 +29,8 @@ CUiInspector::CUiInspector(QWidget *parent) :
 	ui(new Ui::CUiInspector)
 {
 	ui->setupUi(this);
+
+	installEventFilter(new CPersistenceEnabler(KEY_IGNORED_WINDOW_STATE, this));
 
 	CSettings s;
 	_ignoredClasses = s.value(KEY_IGNORED_CLASSES, QStringList{"CUiInspector", "QMenu"}).toStringList();
@@ -58,7 +62,11 @@ inline QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, QTreeWi
 	QString description;
 	QDebug detailedInfoWriter(&description);
 	if (hierarchy.widget)
+	{
 		detailedInfoWriter << hierarchy.widget;
+		if (!hierarchy.widget->isVisible())
+			description += "- HIDDEN";
+	}
 	else if (hierarchy.layout)
 		detailedInfoWriter << hierarchy.layout;
 	else
