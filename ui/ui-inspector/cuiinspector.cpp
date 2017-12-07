@@ -8,7 +8,6 @@ DISABLE_COMPILER_WARNINGS
 
 #include <QDebug>
 #include <QLayout>
-#include <QSplitter>
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
 
@@ -43,60 +42,11 @@ CUiInspector::~CUiInspector()
 	delete ui;
 }
 
-void inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root);
-void inspectWidgetHierarchy(QLayout* widget, WidgetHierarchy& root);
-
-inline void inspectWidgetHierarchy(QLayout* layout, WidgetHierarchy& root)
-{
-	root.layout = layout;
-	for (int i = 0; true;++i)
-	{
-		const auto item = layout->itemAt(i);
-		if (!item)
-			break;
-
-		assert((item->layout() != nullptr) != (item->widget() != nullptr));
-
-		root.children.emplace_back();
-		if (item->layout())
-			inspectWidgetHierarchy(item->layout(), root.children.back());
-		else if (item->widget())
-			inspectWidgetHierarchy(item->widget(), root.children.back());
-	}
-}
-
-inline void inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root)
-{
-	root.widget = widget;
-	if (widget->layout())
-	{
-		root.children.emplace_back();
-		inspectWidgetHierarchy(widget->layout(), root.children.back());
-	}
-
-	if (auto splitter = dynamic_cast<QSplitter*>(widget))
-	{
-		for (int i = 0, n = splitter->count(); i < n; ++i)
-		{
-			root.children.emplace_back();
-
-			auto widget = splitter->widget(i);
-			inspectWidgetHierarchy(widget, root.children.back());
-		}
-	}
-}
-
 void CUiInspector::inspect()
 {
 	std::vector<WidgetHierarchy> hierarchy;
 	for (QWidget* widget : QApplication::topLevelWidgets())
-	{
-		if (_ignoredClasses.contains(widget->objectName()) || _ignoredClasses.contains(widget->metaObject()->className()))
-			continue;
-
-		hierarchy.emplace_back();
-		inspectWidgetHierarchy(widget, hierarchy.back());
-	}
+		inspectWidgetHierarchy(widget, hierarchy);
 
 	visualize(hierarchy);
 }
@@ -132,4 +82,45 @@ void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)
 
 	ui->treeWidget->clear();
 	ui->treeWidget->addTopLevelItems(items);
+}
+
+void CUiInspector::inspectWidgetHierarchy(QWidget* widget, std::vector<struct WidgetHierarchy>& root) const
+{
+	if (_ignoredClasses.contains(widget->objectName()) || _ignoredClasses.contains(widget->metaObject()->className()))
+		return;
+
+	root.emplace_back();
+	WidgetHierarchy& thisItem = root.back();
+	thisItem.widget = widget;
+	if (widget->layout())
+		inspectWidgetHierarchy(widget->layout(), thisItem.children);
+	else
+	{
+		for (QObject* child : widget->children())
+		{
+			if (auto childWidget = dynamic_cast<QWidget*>(child))
+				inspectWidgetHierarchy(childWidget, thisItem.children);
+		}
+	}
+}
+
+void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct WidgetHierarchy>& root) const
+{
+	root.emplace_back();
+	WidgetHierarchy& thisItem = root.back();
+
+	thisItem.layout = layout;
+	for (int i = 0; true; ++i)
+	{
+		const auto item = layout->itemAt(i);
+		if (!item)
+			break;
+
+		assert((item->layout() != nullptr) != (item->widget() != nullptr));
+
+		if (item->layout())
+			inspectWidgetHierarchy(item->layout(), thisItem.children);
+		else if (item->widget())
+			inspectWidgetHierarchy(item->widget(), thisItem.children);
+	}
 }

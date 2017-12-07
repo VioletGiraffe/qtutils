@@ -18,6 +18,9 @@ private:
 	void inspect();
 	void visualize(const std::vector<struct WidgetHierarchy>& hierarchy);
 
+	void inspectWidgetHierarchy(QWidget* widget, std::vector<struct WidgetHierarchy>& root) const;
+	void inspectWidgetHierarchy(QLayout* layout, std::vector<struct WidgetHierarchy>& root) const;
+
 private:
 	Ui::CUiInspector *ui;
 
