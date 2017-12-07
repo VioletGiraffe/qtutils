@@ -15,7 +15,6 @@ public:
 
 private:
 	void inspect();
-	void inspectWidget(QWidget* widget);
 
 private:
 	QTimer _timer;

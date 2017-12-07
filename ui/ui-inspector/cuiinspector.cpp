@@ -29,15 +29,18 @@ CUiInspector::~CUiInspector()
 	delete ui;
 }
 
-WidgetHierarchy inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root);
-WidgetHierarchy inspectWidgetHierarchy(QLayout* widget, WidgetHierarchy& root);
+void inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root);
+void inspectWidgetHierarchy(QLayout* widget, WidgetHierarchy& root);
 
-inline WidgetHierarchy inspectWidgetHierarchy(QLayout* layout, WidgetHierarchy& root)
+inline void inspectWidgetHierarchy(QLayout* layout, WidgetHierarchy& root)
 {
 	root.layout = layout;
-	for (int i = 0, numItems = layout->count(); i < numItems; ++i)
+	for (int i = 0; true;++i)
 	{
 		const auto item = layout->itemAt(i);
+		if (!item)
+			break;
+
 		assert((item->layout() != nullptr) != (item->widget() != nullptr));
 
 		root.children.emplace_back();
@@ -48,7 +51,7 @@ inline WidgetHierarchy inspectWidgetHierarchy(QLayout* layout, WidgetHierarchy& 
 	}
 }
 
-inline WidgetHierarchy inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root)
+inline void inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root)
 {
 	root.widget = widget;
 	if (widget->layout())
@@ -61,14 +64,10 @@ inline WidgetHierarchy inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& 
 
 void CUiInspector::inspect()
 {
-	WidgetHierarchy hierarchy;
+	std::vector<WidgetHierarchy> hierarchy;
 	for (QWidget* widget : QApplication::topLevelWidgets())
 	{
-
+		hierarchy.emplace_back();
+		inspectWidgetHierarchy(widget, hierarchy.back());
 	}
-}
-
-void CUiInspector::inspectWidget(QWidget* widget)
-{
-
 }
