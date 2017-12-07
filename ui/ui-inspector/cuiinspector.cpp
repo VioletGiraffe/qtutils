@@ -1,16 +1,20 @@
 #include "cuiinspector.h"
 #include "assert/advanced_assert.h"
 #include "compiler/compiler_warnings_control.h"
+#include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
 #include "ui_cuiinspector.h"
 
 #include <QDebug>
 #include <QLayout>
+#include <QSplitter>
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
+
+#define KEY_IGNORED_CLASSES "Tools/UiInspector/IgnoredClasses"
 
 struct WidgetHierarchy {
 	QWidget* widget = nullptr;
@@ -24,6 +28,9 @@ CUiInspector::CUiInspector(QWidget *parent) :
 	ui(new Ui::CUiInspector)
 {
 	ui->setupUi(this);
+
+	CSettings s;
+	_ignoredClasses = s.value(KEY_IGNORED_CLASSES, QStringList{"CUiInspector", "QMenu"}).toStringList();
 
 	QTimer::singleShot(500, this, &CUiInspector::inspect);
 
@@ -66,7 +73,17 @@ inline void inspectWidgetHierarchy(QWidget* widget, WidgetHierarchy& root)
 		root.children.emplace_back();
 		inspectWidgetHierarchy(widget->layout(), root.children.back());
 	}
-	
+
+	if (auto splitter = dynamic_cast<QSplitter*>(widget))
+	{
+		for (int i = 0, n = splitter->count(); i < n; ++i)
+		{
+			root.children.emplace_back();
+
+			auto widget = splitter->widget(i);
+			inspectWidgetHierarchy(widget, root.children.back());
+		}
+	}
 }
 
 void CUiInspector::inspect()
@@ -74,8 +91,8 @@ void CUiInspector::inspect()
 	std::vector<WidgetHierarchy> hierarchy;
 	for (QWidget* widget : QApplication::topLevelWidgets())
 	{
-		if (widget->objectName() == "CUiInspector")
-			continue; // Skip self
+		if (_ignoredClasses.contains(widget->objectName()) || _ignoredClasses.contains(widget->metaObject()->className()))
+			continue;
 
 		hierarchy.emplace_back();
 		inspectWidgetHierarchy(widget, hierarchy.back());

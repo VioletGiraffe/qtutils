@@ -20,5 +20,7 @@ private:
 
 private:
 	Ui::CUiInspector *ui;
+
+	QStringList _ignoredClasses;
 };
 
