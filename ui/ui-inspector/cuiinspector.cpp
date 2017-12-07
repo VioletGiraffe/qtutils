@@ -90,6 +90,7 @@ void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)
 
 	ui->treeWidget->clear();
 	ui->treeWidget->addTopLevelItems(items);
+	ui->treeWidget->expandAll();
 }
 
 void CUiInspector::inspectWidgetHierarchy(QWidget* widget, std::vector<struct WidgetHierarchy>& root) const
