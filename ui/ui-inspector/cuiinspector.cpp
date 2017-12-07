@@ -1,11 +1,16 @@
 #include "cuiinspector.h"
+#include "assert/advanced_assert.h"
+#include "compiler/compiler_warnings_control.h"
 
+DISABLE_COMPILER_WARNINGS
 #include "ui_cuiinspector.h"
 
+#include <QDebug>
 #include <QLayout>
+#include <QTimer>
+RESTORE_COMPILER_WARNINGS
 
 #include <assert.h>
-#include <vector>
 
 struct WidgetHierarchy {
 	QWidget* widget = nullptr;
@@ -20,8 +25,10 @@ CUiInspector::CUiInspector(QWidget *parent) :
 {
 	ui->setupUi(this);
 
-	connect(&_timer, &QTimer::timeout, this, &CUiInspector::inspect);
-	_timer.start(500);
+	QTimer::singleShot(500, this, &CUiInspector::inspect);
+
+	connect(ui->action_Close, &QAction::triggered, this, &CUiInspector::close);
+	connect(ui->action_Refresh, &QAction::triggered, this, &CUiInspector::inspect);
 }
 
 CUiInspector::~CUiInspector()
@@ -67,7 +74,45 @@ void CUiInspector::inspect()
 	std::vector<WidgetHierarchy> hierarchy;
 	for (QWidget* widget : QApplication::topLevelWidgets())
 	{
+		if (widget->objectName() == "CUiInspector")
+			continue; // Skip self
+
 		hierarchy.emplace_back();
 		inspectWidgetHierarchy(widget, hierarchy.back());
 	}
+
+	visualize(hierarchy);
+}
+
+inline QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, QTreeWidgetItem* parent = nullptr)
+{
+	auto item = new QTreeWidgetItem(parent);
+
+	QString description;
+	QDebug detailedInfoWriter(&description);
+	if (hierarchy.widget)
+		detailedInfoWriter << hierarchy.widget;
+	else if (hierarchy.layout)
+		detailedInfoWriter << hierarchy.layout;
+	else
+		assert_unconditional_r("Both widget and layout are nullptr");
+	
+	item->setText(0, description);
+	for (const auto& child : hierarchy.children)
+		createTreeItem(child, item);
+
+	return item;
+}
+
+void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)
+{
+	QList<QTreeWidgetItem*> items;
+	for (const auto& h : hierarchy)
+	{
+		auto item = createTreeItem(h);
+		items.push_back(item);
+	}
+
+	ui->treeWidget->clear();
+	ui->treeWidget->addTopLevelItems(items);
 }

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QTimer>
+
+#include <vector>
 
 namespace Ui {
 class CUiInspector;
@@ -10,15 +11,14 @@ class CUiInspector;
 class CUiInspector : public QMainWindow
 {
 public:
-	explicit CUiInspector(QWidget *parent = 0);
+	explicit CUiInspector(QWidget *parent = nullptr);
 	~CUiInspector();
 
 private:
 	void inspect();
+	void visualize(const std::vector<struct WidgetHierarchy>& hierarchy);
 
 private:
-	QTimer _timer;
-
 	Ui::CUiInspector *ui;
 };
 
