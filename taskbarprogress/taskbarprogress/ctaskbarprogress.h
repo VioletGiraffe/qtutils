@@ -73,7 +73,7 @@ public:
 	void setState(ProgressState state);
 
 private:
-	QWidget      * _parent;
+	QWidget      * _parent = 0;
 };
 
 #else
