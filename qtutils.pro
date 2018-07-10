@@ -1,10 +1,12 @@
 TEMPLATE = lib
 TARGET   = qtutils
-CONFIG += staticlib c++14
+CONFIG += staticlib
+
+CONFIG += strict_c++ c++14
 
 mac* | linux*{
-	CONFIG(release, debug|release):CONFIG += Release
-	CONFIG(debug, debug|release):CONFIG += Debug
+	CONFIG(release, debug|release):CONFIG *= Release optimize_full
+	CONFIG(debug, debug|release):CONFIG *= Debug
 }
 
 contains(QT_ARCH, x86_64) {
