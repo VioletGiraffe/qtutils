@@ -1,10 +1,13 @@
 #pragma once
 
 class QLayout;
+class QMainWindow;
+class QWidget;
 
-class WidgetUtils
+namespace WidgetUtils
 {
-public:
-	static void setLayoutVisible(QLayout* layout, bool visible);
+	void setLayoutVisible(QLayout* layout, bool visible);
+	QMainWindow* findParentMainWindow(QWidget* child);
+	QMainWindow* findTopLevelWindow();
 };
 
