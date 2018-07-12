@@ -9,5 +9,4 @@ namespace WidgetUtils
 	void setLayoutVisible(QLayout* layout, bool visible);
 	QMainWindow* findParentMainWindow(QWidget* child);
 	QMainWindow* findTopLevelWindow();
-};
-
+}
