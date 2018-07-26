@@ -44,3 +44,19 @@ QMainWindow* WidgetUtils::findTopLevelWindow()
 
 	return nullptr;
 }
+
+bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const hierarchy)
+{
+	if (widget == hierarchy)
+			return true;
+
+		const auto& children = hierarchy->children();
+		if (children.contains(widget))
+			return true;
+
+		for (const auto& child : children)
+			if (widgetBelongsToHierarchy(widget, child))
+				return true;
+
+		return false;
+}
