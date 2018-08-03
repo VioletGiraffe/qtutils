@@ -6,14 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>281</width>
-    <height>66</height>
+    <width>307</width>
+    <height>92</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="_label">
+     <property name="text">
+      <string>Making everything better, please wait...</string>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QProgressBar" name="_progressBar">
      <property name="value">

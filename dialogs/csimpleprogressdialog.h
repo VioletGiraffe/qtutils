@@ -15,6 +15,8 @@ public:
 	explicit CSimpleProgressDialog(QWidget *parent = nullptr);
 	~CSimpleProgressDialog() override;
 
+	void setLabelText(const QString& text);
+
 	void setValue(int value);
 	void setMinValue(int value);
 	void setMaxValue(int value);

@@ -18,6 +18,11 @@ CSimpleProgressDialog::~CSimpleProgressDialog()
 	delete ui;
 }
 
+void CSimpleProgressDialog::setLabelText(const QString &text)
+{
+	ui->_label->setText(text);
+}
+
 void CSimpleProgressDialog::setValue(int value)
 {
 	ui->_progressBar->setValue(value);
