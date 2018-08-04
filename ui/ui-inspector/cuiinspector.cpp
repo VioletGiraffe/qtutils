@@ -12,8 +12,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
 
-#include <assert.h>
-
 #define KEY_IGNORED_CLASSES "Tools/UiInspector/IgnoredClasses"
 #define KEY_IGNORED_WINDOW_STATE "Tools/UiInspector/Window"
 
@@ -71,7 +69,7 @@ inline QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, QTreeWi
 		detailedInfoWriter << hierarchy.layout;
 	else
 		assert_unconditional_r("Both widget and layout are nullptr");
-	
+
 	item->setText(0, description);
 	for (const auto& child : hierarchy.children)
 		createTreeItem(child, item);
@@ -125,7 +123,7 @@ void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct Wi
 		if (!item)
 			break;
 
-		assert((item->layout() != nullptr) != (item->widget() != nullptr));
+		assert_debug_only((item->layout() != nullptr) != (item->widget() != nullptr));
 
 		if (item->layout())
 			inspectWidgetHierarchy(item->layout(), thisItem.children);

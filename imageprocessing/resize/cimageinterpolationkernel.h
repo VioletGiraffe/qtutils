@@ -1,6 +1,6 @@
 #pragma once
+#include "assert/advanced_assert.h"
 
-#include <assert.h>
 #include <vector>
 
 template <typename CoeffType>
@@ -29,7 +29,7 @@ public:
 
 	CoeffType coeff(int x, int y) const override
 	{
-		assert(x < _size && y < _size); // Affects the performance a whole lot! Don't change to assert_r
+		assert_debug_only(x < _size && y < _size); // Affects the performance a whole lot! Don't change to assert_r
 		return _kernel[x][y];
 	}
 
