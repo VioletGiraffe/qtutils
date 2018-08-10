@@ -1,8 +1,9 @@
 #pragma once
-
-#include <deque>
-#include <limits>
 #include "assert/advanced_assert.h"
+
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 template <typename T>
 class CHistoryList

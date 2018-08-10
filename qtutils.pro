@@ -79,6 +79,7 @@ include(imageprocessing/imageprocessing.pri)
 include(widgets/widgets.pri)
 include(dialogs/dialogs.pri)
 include(ui/ui.pri)
+include(std_helpers/std_helpers.pri)
 
 win*{
 	include(windows/windows.pri)
@@ -94,4 +95,3 @@ HEADERS += \
 SOURCES += \
 	utils/naturalsorting/naturalsorting_qt.cpp \
 	imageprocessing/resize/cimageinterpolationkernel.cpp
-
