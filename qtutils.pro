@@ -80,6 +80,7 @@ include(widgets/widgets.pri)
 include(dialogs/dialogs.pri)
 include(ui/ui.pri)
 include(std_helpers/std_helpers.pri)
+include(qtcore_helpers/qtcore_helpers.pri)
 
 win*{
 	include(windows/windows.pri)
