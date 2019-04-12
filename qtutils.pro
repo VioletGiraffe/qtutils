@@ -50,6 +50,11 @@ win*{
 
 	Debug:QMAKE_LFLAGS += /INCREMENTAL
 	Release:QMAKE_LFLAGS += /OPT:REF /OPT:ICF
+
+	*msvc*{
+		QMAKE_CXXFLAGS += /FS
+	}
+
 }
 
 linux*{
@@ -84,10 +89,6 @@ include(qtcore_helpers/qtcore_helpers.pri)
 
 win*{
 	include(windows/windows.pri)
-}
-
-win32*:!*msvc2012:*msvc*:!*msvc2010:*msvc* {
-	QMAKE_CXXFLAGS += /FS
 }
 
 HEADERS += \
