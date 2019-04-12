@@ -6,8 +6,3 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #include <string>
-
-inline QString qStrFromStdStrU8(const std::string& str)
-{
-	return QString::fromUtf8(str.data(), (int)str.size());
-}
