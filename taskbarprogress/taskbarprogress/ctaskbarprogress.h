@@ -58,7 +58,7 @@ public:
 	void setState (ProgressState state);
 };
 
-#elif defined __linux__
+#elif defined __linux__ || defined __FreeBSD__
 
 class QWidget;
 
