@@ -19,3 +19,7 @@ linux*{
     SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_linux.cpp \
 
 }
+freebsd{
+    SOURCES += taskbarprogress/taskbarprogress/ctaskbarprogress_freebsd.cpp \
+
+}
