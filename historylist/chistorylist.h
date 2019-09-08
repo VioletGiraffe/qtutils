@@ -1,5 +1,6 @@
 #pragma once
 #include "assert/advanced_assert.h"
+#include "container/set_operations.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -9,7 +10,7 @@ template <typename T>
 class CHistoryList
 {
 public:
-	typedef std::vector<T> container_type;
+	using container_type = std::vector<T>;
 	CHistoryList(): _currentIndex(std::numeric_limits<size_t>::max()) {}
 
 // Access and status
@@ -131,7 +132,7 @@ void CHistoryList<T>::addLatest( const T& item )
 
 template <typename T>
 void CHistoryList<T>::addLatest(const std::vector<T> & items)
-{
-	for(const auto& item: items)
-		addLatest(item);
+{	
+	_list = SetOperations::uniqueElements<SetOperations::ItemOrder::KeepLastOccurrence>(items);
+	_currentIndex = _list.size() - 1;
 }

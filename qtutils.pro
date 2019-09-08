@@ -2,7 +2,7 @@ TEMPLATE = lib
 TARGET   = qtutils
 CONFIG += staticlib
 
-CONFIG += strict_c++ c++14
+CONFIG += strict_c++ c++17
 
 mac* | linux* | freebsd{
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
@@ -54,7 +54,6 @@ win*{
 	*msvc*{
 		QMAKE_CXXFLAGS += /FS
 	}
-
 }
 
 linux*{

@@ -79,7 +79,7 @@ void CHistoryComboBox::resetToLastSelected(bool clearLineEdit)
 	lineEdit()->clear(); // To clear any user input
 	setCurrentIndex(currentIndex());
 	if (clearLineEdit)
-		lineEdit()->clear(); // To clear the current item text set by setCurrentIndex() 
+		lineEdit()->clear(); // To clear the current item text set by setCurrentIndex()
 
 	clearFocus();
 }
