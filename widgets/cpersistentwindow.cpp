@@ -1,11 +1,12 @@
 #include "cpersistentwindow.h"
 
 #include "../settings/csettings.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QMainWindow>
+#include <QScreen>
 #include <QStyle>
 RESTORE_COMPILER_WARNINGS
 
@@ -23,11 +24,17 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 		_windowStateRestored = true;
 
 		auto widget = static_cast<QWidget*>(watched);
+		assert_and_return_r(widget, QObject::eventFilter(watched, e));
 		auto window = dynamic_cast<QMainWindow*>(watched);
+
 		CSettings s;
 
 		if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) || !window || !window->restoreState(s.value(STATE_KEY).toByteArray()))
-			window->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, QApplication::desktop()->availableGeometry().size() / 2, QApplication::desktop()->availableGeometry()));
+		{
+			const auto * const currentScreen = QApplication::screenAt(widget->geometry().center());
+			const auto availableGeometry = currentScreen ? currentScreen->availableGeometry() : QApplication::primaryScreen()->availableGeometry();
+			widget->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, availableGeometry.size() / 2, availableGeometry));
+		}
 	}
 	else if (e->type() == QEvent::Close)
 	{
