@@ -13,6 +13,18 @@ std::vector<T> to_vector(const Container<T>& qtContainer)
 	return v;
 }
 
+template <typename T, template<typename> class Container>
+std::vector<T> to_vector(Container<T>&& qtContainer)
+{
+	std::vector<T> v;
+	const size_t size = static_cast<size_t>(qtContainer.size());
+	v.reserve(size);
+	for (int i = 0; i < size; ++i)
+		v.emplace_back(std::move(qtContainer[i]));
+
+	return v;
+}
+
 template <typename T, class Container>
 std::vector<T> to_vector(const Container& qtContainer)
 {
