@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <iterator>
 #include <vector>
+#include <utility>
 
 template <typename T, template<typename> class Container>
 std::vector<T> to_vector(const Container<T>& qtContainer)
