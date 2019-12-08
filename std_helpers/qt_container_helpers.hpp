@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <iterator>
-#include <vector>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
-template <typename T, template<typename> class Container>
-std::vector<T> to_vector(const Container<T>& qtContainer)
+template <class Container>
+std::vector<typename Container::value_type> to_vector(const Container& qtContainer)
 {
+	using T = typename Container::value_type;
 	std::vector<T> v;
 	v.reserve((size_t)qtContainer.size());
 
@@ -15,13 +17,15 @@ std::vector<T> to_vector(const Container<T>& qtContainer)
 	return v;
 }
 
-template <typename T, template<typename> class Container>
-std::vector<T> to_vector(Container<T>&& qtContainer)
+template <class Container>
+std::vector<typename Container::value_type> to_vector(Container&& qtContainer)
 {
+	static_assert (std::is_rvalue_reference_v<decltype(qtContainer)>);
+	using T = typename Container::value_type;
 	std::vector<T> v;
 	const size_t size = static_cast<size_t>(qtContainer.size());
 	v.reserve(size);
-	for (int i = 0; i < size; ++i)
+	for (int i = 0; i < static_cast<int>(size); ++i)
 		v.emplace_back(std::move(qtContainer[i]));
 
 	return v;
