@@ -9,11 +9,10 @@ RESTORE_COMPILER_WARNINGS
 class CLoggerInterface
 {
 public:
-	virtual ~CLoggerInterface();
+	virtual ~CLoggerInterface() = default;
 
 	virtual void log(const QString& message) = 0;
-
-	virtual QStringList contents() const;
+	virtual QStringList contents() const = 0;
 };
 
 template <class LoggerType>
