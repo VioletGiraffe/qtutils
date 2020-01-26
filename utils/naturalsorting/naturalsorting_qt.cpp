@@ -18,10 +18,10 @@ bool naturalSortComparisonQt(const QString& s1, const QString& s2, SortingOption
 		{
 			//Two next lines
 			//E.g. 1_... < 12_...
-			if(s1[k].isNumber())
-				return !options._digitsAfterLetters;
+			if (s1[k].isNumber())
+				return !options.optionEnabled(SortingOptions::DigitsAfterLetters);
 			if(s2[k].isNumber())
-				return options._digitsAfterLetters;
+				return options.optionEnabled(SortingOptions::DigitsAfterLetters);
 
 			return QString::compare(s1, s2, Qt::CaseInsensitive) < 0;
 		}
@@ -60,9 +60,9 @@ bool naturalSortComparisonQt(const QString& s1, const QString& s2, SortingOption
 		{
 			// not a number has to win over a number.. number could have ended earlier... same prefix..
 			if (!n1.isEmpty())
-				return options._digitsAfterLetters;
+				return options.optionEnabled(SortingOptions::DigitsAfterLetters);
 			if (!n2.isEmpty())
-				return !options._digitsAfterLetters;
+				return !options.optionEnabled(SortingOptions::DigitsAfterLetters);
 			return s1[i] < s2[i];
 		}
 	}
