@@ -2,7 +2,7 @@
 
 struct SortingOptions
 {
-	explicit SortingOptions(bool digitsAfterLetters = false) :
+	inline explicit SortingOptions(bool digitsAfterLetters = false) :
 		_digitsAfterLetters(digitsAfterLetters)
 	{}
 
