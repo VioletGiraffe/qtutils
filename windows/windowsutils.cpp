@@ -1,5 +1,9 @@
 #include "windowsutils.h"
 
+DISABLE_COMPILER_WARNINGS
+#include <QString>
+RESTORE_COMPILER_WARNINGS
+
 #include <Windows.h>
 
 QString ErrorStringFromLastError()
