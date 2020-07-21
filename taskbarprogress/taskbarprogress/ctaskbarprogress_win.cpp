@@ -39,7 +39,7 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 
 	if (widgetAlreadyLinked(widget))
 	{
-		qInfo() << __FUNCTION__ << ": CProgressBarTaskbar instance" << hex << this << " is trying to link to QWidget " << hex << widget << ", whose taskbar button has already been linked to";
+		qInfo() << __FUNCTION__ << ": CProgressBarTaskbar instance" << Qt::hex << this << " is trying to link to QWidget " << Qt::hex << widget << ", whose taskbar button has already been linked to";
 		return;
 	}
 
