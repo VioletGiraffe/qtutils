@@ -1,9 +1,9 @@
 #pragma once
 #include "assert/advanced_assert.h"
 #include "container/set_operations.hpp"
+#include "lang/type_traits_fast.hpp"
 
 #include <algorithm>
-#include <limits>
 #include <vector>
 
 template <typename T>
@@ -11,7 +11,8 @@ class CHistoryList
 {
 public:
 	using container_type = std::vector<T>;
-	CHistoryList(): _currentIndex(std::numeric_limits<size_t>::max()) {}
+	CHistoryList() : _currentIndex{ size_t_max }
+	{}
 
 // Access and status
 	inline bool empty() const {return _list.empty();}
