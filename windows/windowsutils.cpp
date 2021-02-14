@@ -1,31 +1,9 @@
 #include "windowsutils.h"
+#include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QString>
 RESTORE_COMPILER_WARNINGS
-
-#include <Windows.h>
-
-QString ErrorStringFromLastError()
-{
-	WCHAR* lpMsgBuf = nullptr;
-	if (FormatMessageW(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |
-		FORMAT_MESSAGE_FROM_SYSTEM |
-		FORMAT_MESSAGE_IGNORE_INSERTS,
-		nullptr,
-		GetLastError(),
-		MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
-		(LPWSTR) &lpMsgBuf,
-		0, nullptr ) > 0)
-	{
-		QString msg = QString::fromWCharArray(lpMsgBuf);
-		LocalFree(lpMsgBuf);
-		return msg;
-	}
-	else
-		return QString();
-}
 
 QString toUncPath(const QString& somePath)
 {
