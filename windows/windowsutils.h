@@ -2,4 +2,4 @@
 
 class QString;
 
-QString toUncPath(const QString& somePath);
+QString toUncPath(QString somePath);

@@ -5,13 +5,12 @@ DISABLE_COMPILER_WARNINGS
 #include <QString>
 RESTORE_COMPILER_WARNINGS
 
-QString toUncPath(const QString& somePath)
+QString toUncPath(QString somePath)
 {
-	QString unc = somePath;
-	unc.replace('/', '\\');
+	somePath.replace('/', '\\');
 
 	if (somePath.contains(':')) // Quick and dirty test for absolute path
-		return QLatin1String("\\\\?\\") + unc;
+		return somePath.prepend(R"(\\?\)");
 	else
-		return unc;
+		return somePath;
 }
