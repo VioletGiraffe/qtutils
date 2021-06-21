@@ -1,5 +1,5 @@
 #include "cimageresizer.h"
-#include "cimageinterpolationkernel.h"
+#include "resize/cimageinterpolationkernel.h"
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS

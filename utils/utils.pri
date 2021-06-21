@@ -1,9 +1,10 @@
 HEADERS += \
-	utils/naturalsorting/cnaturalsorting.h \
-	utils/naturalsorting/naturalsorting_qt.h \
-    $$PWD/naturalsorting/cnaturalsorterqcollator.h \
-    $$PWD/naturalsorting/sortingoptions.h
+	$$PWD/naturalsorting/cnaturalsorterqcollator.h \
+	$$PWD/naturalsorting/cnaturalsorting.h \
+	$$PWD/naturalsorting/naturalsorting_qt.h \
+	$$PWD/naturalsorting/sortingoptions.h
 
 SOURCES += \
-	utils/naturalsorting/cnaturalsorting.cpp \
-    $$PWD/naturalsorting/cnaturalsorterqcollator.cpp
+	$$PWD/naturalsorting/cnaturalsorterqcollator.cpp \
+	$$PWD/naturalsorting/cnaturalsorting.cpp \
+	$$PWD/naturalsorting/naturalsorting_qt.cpp

@@ -39,7 +39,10 @@ QT = core gui widgets
 # Required for qInfo() to log function name, file and line in release build
 DEFINES += QT_MESSAGELOGCONTEXT
 
-INCLUDEPATH += ../cpputils ../cpp-template-utils
+INCLUDEPATH += \
+	../image-processing \
+	../cpputils \
+	../cpp-template-utils \
 
 win*{
 	QMAKE_CXXFLAGS += /MP /Zi /wd4251 /JMC
@@ -71,6 +74,7 @@ linux*|mac*|freebsd{
 	PRE_TARGETDEPS += $${DESTDIR}/libcpputils.a
 }
 
+include(imageprocessing/imageprocessing.pri)
 include(logger/logger.pri)
 include(aboutdialog/aboutdialog.pri)
 include(settings/settings.pri)
@@ -79,20 +83,10 @@ include(utils/utils.pri)
 include(settingsui/settingsui.pri)
 include(mouseclickdetector/mouseclickdetector.pri)
 include(historylist/historylist.pri)
-include(imageprocessing/imageprocessing.pri)
 include(widgets/widgets.pri)
 include(dialogs/dialogs.pri)
 include(ui/ui.pri)
 include(std_helpers/std_helpers.pri)
 include(qtcore_helpers/qtcore_helpers.pri)
 
-win*{
-	include(windows/windows.pri)
-}
-
-HEADERS += \
-	imageprocessing/resize/cimageinterpolationkernel.h
-
-SOURCES += \
-	utils/naturalsorting/naturalsorting_qt.cpp \
-	imageprocessing/resize/cimageinterpolationkernel.cpp
+win*:include(windows/windows.pri)
