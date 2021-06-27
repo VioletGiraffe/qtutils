@@ -1,13 +1,10 @@
-#ifndef CSETTINGSDIALOG_H
-#define CSETTINGSDIALOG_H
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QDialog>
 RESTORE_COMPILER_WARNINGS
-
-#include <vector>
 
 namespace Ui {
 class CSettingsDialog;
@@ -17,13 +14,12 @@ class CSettingsPage;
 
 class QListWidgetItem;
 
-class CSettingsDialog : public QDialog
+class CSettingsDialog final : public QDialog
 {
 	Q_OBJECT
-
 public:
 	explicit CSettingsDialog(QWidget *parent = 0);
-	~CSettingsDialog();
+	~CSettingsDialog() override;
 
 	CSettingsDialog& addSettingsPage(CSettingsPage * page, const QString& pageName = QString());
 
@@ -32,6 +28,7 @@ signals:
 
 private:
 	void pageChanged(QListWidgetItem *item);
+	void wipeSettings();
 
 private slots:
 	void accept() override;
@@ -39,5 +36,3 @@ private slots:
 private:
 	Ui::CSettingsDialog *ui;
 };
-
-#endif // CSETTINGSDIALOG_H

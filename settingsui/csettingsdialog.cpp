@@ -1,7 +1,13 @@
 #include "csettingsdialog.h"
 #include "csettingspage.h"
 #include "ui_csettingsdialog.h"
+#include "../settings/csettings.h"
 #include "assert/advanced_assert.h"
+
+DISABLE_COMPILER_WARNINGS
+#include <QMessageBox>
+#include <QShortcut>
+RESTORE_COMPILER_WARNINGS
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) :
 	QDialog(parent),
@@ -15,6 +21,8 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) :
 
 	connect(ui->pageList, &QListWidget::itemClicked, this, &CSettingsDialog::pageChanged);
 	ui->pageList->setResizeMode(QListWidget::Adjust);
+
+	new QShortcut(QKeySequence("Ctrl+Shift+W"), this, this, &CSettingsDialog::wipeSettings);
 }
 
 CSettingsDialog::~CSettingsDialog()
@@ -43,6 +51,15 @@ void CSettingsDialog::pageChanged(QListWidgetItem * item)
 {
 	const int pageIndex = item->data(Qt::UserRole).toInt();
 	ui->pages->setCurrentIndex(pageIndex);
+}
+
+void CSettingsDialog::wipeSettings()
+{
+	if (QMessageBox::question(this, tr("Wipe settings"), tr("Wipe all settings?")) == QMessageBox::Yes)
+	{
+		CSettings{}.clear();
+		exit(0); // Exiting immediately so that the current application state cannot be re-saved upon next normal exit
+	}
 }
 
 void CSettingsDialog::accept()
