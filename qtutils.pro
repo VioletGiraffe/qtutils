@@ -2,7 +2,7 @@ TEMPLATE = lib
 TARGET   = qtutils
 CONFIG += staticlib
 
-CONFIG += strict_c++ c++17
+CONFIG += strict_c++ c++2a
 
 mac* | linux* | freebsd{
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
@@ -46,7 +46,7 @@ INCLUDEPATH += \
 
 win*{
 	QMAKE_CXXFLAGS += /MP /Zi /wd4251 /JMC
-	QMAKE_CXXFLAGS += /std:c++17 /permissive- /Zc:__cplusplus
+	QMAKE_CXXFLAGS += /std:c++latest /permissive- /Zc:__cplusplus
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
 	QMAKE_CXXFLAGS_WARN_ON = /W4
 
