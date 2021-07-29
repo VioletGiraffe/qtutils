@@ -1,15 +1,11 @@
-#ifndef CIMAGERESIZER_H
-#define CIMAGERESIZER_H
+#pragma once
 
-#include "compiler/compiler_warnings_control.h"
+class QImage;
+class QSize;
 
-DISABLE_COMPILER_WARNINGS
-#include <QImage>
-RESTORE_COMPILER_WARNINGS
-
-class CImageResizer
+namespace ImageResizing
 {
-public:
+
 	enum ResizeMethod {
 		DefaultQimageFast,
 		DefaultQimageSmooth,
@@ -21,12 +17,6 @@ public:
 		IgnoreAspectRatio
 	};
 
-	CImageResizer();
+	QImage resize(const QImage& source, const QSize& targetSize, ResizeMethod method, AspectRatio aspectRatio = KeepAspectRatio);
 
-	static QImage resize(const QImage& source, const QSize& targetSize, ResizeMethod method, AspectRatio aspectRatio = KeepAspectRatio);
-
-private:
-	static QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, AspectRatio aspectRatio = KeepAspectRatio);
-};
-
-#endif // CIMAGERESIZER_H
+} // namespace ImageResizing

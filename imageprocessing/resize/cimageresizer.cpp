@@ -1,15 +1,19 @@
 #include "cimageresizer.h"
 #include "resize/cimageinterpolationkernel.h"
 #include "assert/advanced_assert.h"
+#include "math/math.hpp"
+#include "compiler/compiler_warnings_control.h"
+#include "system/ctimeelapsed.h"
+#include "utility/on_scope_exit.hpp"
 
 DISABLE_COMPILER_WARNINGS
 #include <QColor>
 #include <QDebug>
+#include <QImage>
 RESTORE_COMPILER_WARNINGS
 
 #include <math.h>
 #include <stdint.h>
-#include <time.h>
 
 QSize scaled(const QSize& source, const QSize& dest)
 {
@@ -20,8 +24,6 @@ QSize scaled(const QSize& source, const QSize& dest)
 
 	return source / actualFactor;
 }
-
-#define CLAMP_TO_255(x) if (x > 255.0f) x = 255.0f; else if (x < 0.0f) x = 0.0f;
 
 inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, const QImage& source, int x, int y)
 {
@@ -60,46 +62,28 @@ inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, cons
 				a += pixel.alpha() * coeff;
 			}
 	}
-	
-	CLAMP_TO_255(r);
-	CLAMP_TO_255(g);
-	CLAMP_TO_255(b);
-	CLAMP_TO_255(a);
+
+	r = Math::clamp(0.0f, r, 255.0f);
+	g = Math::clamp(0.0f, g, 255.0f);
+	b = Math::clamp(0.0f, b, 255.0f);
+	a = Math::clamp(0.0f, a, 255.0f);
 	return qRgba((int)(r + 0.5f), (int)(g + 0.5f), (int)(b + 0.5f), (int)(a + 0.5f));
 }
 
-static QSize operator* (const QSize& origSize, int k)
-{
-	return QSize(origSize.width()*k, origSize.height()*k);
-}
-
-
-static float ratio(const QSize& size)
+inline float ratio(const QSize& size)
 {
 	return (float)size.width() / size.height();
 }
 
-CImageResizer::CImageResizer()
+inline QSize operator*(const QSize& origSize, int k)
 {
+	return QSize(origSize.width()*k, origSize.height()*k);
 }
 
-QImage CImageResizer::resize(const QImage& source, const QSize& targetSize, CImageResizer::ResizeMethod method, AspectRatio aspectRatio)
+QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, ImageResizing::AspectRatio aspectRatio)
 {
-	switch(method)
-	{
-	case DefaultQimageFast:
-		return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::FastTransformation);
-	case DefaultQimageSmooth:
-		return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-	case Smart:
-		return bicubicInterpolation(source, targetSize, aspectRatio);
-	default:
-		return QImage();
-	}
-}
+	using namespace ImageResizing;
 
-QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& targetSize, CImageResizer::AspectRatio aspectRatio)
-{
 	if (targetSize.width() == source.width() && targetSize.height() == source.height())
 		return source;
 	else if (targetSize.width() >= source.width() || targetSize.height() >= source.height())
@@ -125,7 +109,7 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 	const CBicubicKernel bicubicKernel(upscaledSource.width() / actualTargetSize.width(), 0.5f);
 
 	const CImageInterpolationKernelBase<float>& kernel = upscaledSourceSize.width() / actualTargetSize.width() >= 30 ?
-		(CImageInterpolationKernelBase<float>&)lanczosKernel :
+		(CImageInterpolationKernelBase<float>&)bicubicKernel :
 		(CImageInterpolationKernelBase<float>&)bicubicKernel;
 
 	const auto kernelSize = kernel.size();
@@ -134,9 +118,13 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 	{
 		for (int y = 0; y < targetHeight; ++y)
 		{
-			QRgb * destLine = (QRgb*)dest.scanLine(y);
+			auto* scanLine = dest.scanLine(y);
 			for (int x = 0; x < targetWidth; ++x)
-				destLine[x] = applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize);
+			{
+				const auto rgb = applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize);
+				auto* pixelAddress = scanLine + sizeof(QRgb) * x;
+				memcpy(pixelAddress, &rgb, sizeof(rgb));
+			}
 		}
 	}
 	else
@@ -145,7 +133,31 @@ QImage CImageResizer::bicubicInterpolation(const QImage& source, const QSize& ta
 			for (int y = 0; y < targetHeight; ++y)
 				dest.setPixel(x, y, applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize));
 	}
-
-//	qInfo() << "Image resized from" << source.size() << "to" << dest.size() << "in" << ((uint64_t) clock() - start) * 1000 / CLOCKS_PER_SEC << "ms";
 	return dest;
+}
+
+QImage ImageResizing::resize(const QImage& source, const QSize& targetSize, ResizeMethod method, AspectRatio aspectRatio)
+{
+//	CTimeElapsed timer(true);
+//	EXEC_ON_SCOPE_EXIT([&]{
+//		qInfo() << "Image resized from" << source.size() << "to" << targetSize << "in" << timer.elapsed() << "ms";
+//	});
+
+	switch(method)
+	{
+	case DefaultQimageFast:
+		return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::FastTransformation);
+	case DefaultQimageSmooth:
+		return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+	case Smart:
+	{
+		auto actualTargetSize = source.size().scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio);
+		if (source.size().width() < actualTargetSize.width())
+			return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::FastTransformation);
+		else
+			return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+	}
+	default:
+		return {};
+	}
 }
