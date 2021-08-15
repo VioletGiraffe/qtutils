@@ -5,10 +5,6 @@ CTaskBarProgress::CTaskBarProgress(QWidget * widget /*= 0*/) : _parent(widget)
 {
 }
 
-CTaskBarProgress::~CTaskBarProgress()
-{
-}
-
 void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget * widget)
 {
 }

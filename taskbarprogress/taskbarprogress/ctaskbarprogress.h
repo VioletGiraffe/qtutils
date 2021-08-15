@@ -55,7 +55,6 @@ class CTaskBarProgress
 {
 public:
 	explicit CTaskBarProgress(QWidget * widget = nullptr);
-	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
 	void setProgress (int progress, int minValue = 0, int maxValue = 100);
@@ -70,7 +69,6 @@ class CTaskBarProgress
 {
 public:
 	explicit CTaskBarProgress(QWidget * widget = nullptr);
-	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton(QWidget * widget);
 	void setProgress(int progress, int minValue = 0, int maxValue = 100);
@@ -78,21 +76,6 @@ public:
 
 private:
 	QWidget      * _parent = nullptr;
-};
-
-#else
-
-class QWidget;
-
-class CTaskBarProgress
-{
-public:
-	explicit CTaskBarProgress(QWidget * widget = nullptr);
-	~CTaskBarProgress();
-
-	void linkToWidgetsTaskbarButton(QWidget * widget);
-	void setProgress(int progress, int minValue = 0, int maxValue = 100);
-	void setState(ProgressState state);
 };
 
 #endif // _WIN32 / __APPLE__
