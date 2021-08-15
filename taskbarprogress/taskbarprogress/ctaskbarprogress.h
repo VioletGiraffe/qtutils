@@ -1,5 +1,4 @@
-#ifndef CTASKBARPROGRESS_H
-#define CTASKBARPROGRESS_H
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
 
@@ -19,11 +18,11 @@ RESTORE_COMPILER_WARNINGS
 
 struct ITaskbarList3;
 
-class CTaskBarProgress : protected QAbstractNativeEventFilter
+class CTaskBarProgress final : protected QAbstractNativeEventFilter
 {
 public:
-	explicit CTaskBarProgress(QWidget * widget = 0);
-	~CTaskBarProgress();
+	explicit CTaskBarProgress(QWidget * widget = nullptr);
+	~CTaskBarProgress() override;
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
 	void setProgress (int progress, int minValue = 0, int maxValue = 100);
@@ -33,13 +32,18 @@ private:
 	ITaskbarList3 * taskbarListInterface ();
 
 	static bool eventFilter (void * msg);
-	virtual bool nativeEventFilter(const QByteArray & eventType, void * message, long * result);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	bool nativeEventFilter(const QByteArray & eventType, void * message, qintptr * result) override;
+#else
+	bool nativeEventFilter(const QByteArray & eventType, void * message, long * result) override;
+#endif
 	static bool widgetAlreadyLinked (const QWidget * widget);
 
 private:
 	static std::map<WId, quint32 /* "taskbar button created" message ID */> _taskbarButtonCreatedMessageIdMap;
-	static std::map<CTaskBarProgress*, QWidget*> _registeredWidgetsList; // List of the widgets with which linkWithWidgetstaskbarButton have already been called
-													  // is used to guard against linking different progress bar instances to the same taskbar button
+	// List of the widgets with which linkWithWidgetstaskbarButton have already been called.
+	// It's used to guard against linking different progress bar instances to the same taskbar button.
+	static std::map<CTaskBarProgress*, QWidget*> _registeredWidgetsList;
 	static std::map<WId, ITaskbarList3*> _taskbarListInterface;
 };
 
@@ -50,7 +54,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	explicit CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = nullptr);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
@@ -65,7 +69,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	explicit CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = nullptr);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton(QWidget * widget);
@@ -73,7 +77,7 @@ public:
 	void setState(ProgressState state);
 
 private:
-	QWidget      * _parent = 0;
+	QWidget      * _parent = nullptr;
 };
 
 #else
@@ -83,7 +87,7 @@ class QWidget;
 class CTaskBarProgress
 {
 public:
-	explicit CTaskBarProgress(QWidget * widget = 0);
+	explicit CTaskBarProgress(QWidget * widget = nullptr);
 	~CTaskBarProgress();
 
 	void linkToWidgetsTaskbarButton(QWidget * widget);
@@ -91,6 +95,4 @@ public:
 	void setState(ProgressState state);
 };
 
-#endif // _WIN32
-
-#endif // CTASKBARPROGRESS_H
+#endif // _WIN32 / __APPLE__

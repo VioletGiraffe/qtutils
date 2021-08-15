@@ -5,11 +5,6 @@ CTaskBarProgress::CTaskBarProgress(QWidget * /*widget*/ /*= 0*/)
 
 }
 
-CTaskBarProgress::~CTaskBarProgress()
-{
-
-}
-
 void CTaskBarProgress::linkToWidgetsTaskbarButton (QWidget * /*widget*/)
 {
 

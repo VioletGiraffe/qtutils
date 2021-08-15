@@ -122,17 +122,19 @@ bool CTaskBarProgress::widgetAlreadyLinked(const QWidget * widget)
 ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 {
 	if (_registeredWidgetsList.count(this) == 0 || _registeredWidgetsList[this] == 0 || _taskbarListInterface.count(_registeredWidgetsList[this]->winId()) == 0)
-		return 0;
+		return nullptr;
 	else
 		return _taskbarListInterface[_registeredWidgetsList[this]->winId()];
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK (5,0,0)
-bool CTaskBarProgress::nativeEventFilter(const QByteArray &/*eventType*/, void *message, long * /*result*/)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	bool CTaskBarProgress::nativeEventFilter(const QByteArray & /*eventType*/, void * message, qintptr * /*result*/)
+#else
+	bool CTaskBarProgress::nativeEventFilter(const QByteArray & /*eventType*/, void * message, long * /*result*/)
+#endif
 {
 	return eventFilter(message);
 }
-#endif
 
 std::map<WId, ITaskbarList3*> CTaskBarProgress::_taskbarListInterface;
 std::map<CTaskBarProgress*, QWidget*> CTaskBarProgress::_registeredWidgetsList;
