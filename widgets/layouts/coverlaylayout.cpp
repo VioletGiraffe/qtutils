@@ -17,7 +17,7 @@ void COverlayLayout::addItem(QLayoutItem *item)
 
 int COverlayLayout::count() const
 {
-	return _items.size();
+	return static_cast<int>(_items.size());
 }
 
 QLayoutItem* COverlayLayout::itemAt(int index) const

@@ -1,5 +1,4 @@
-#ifndef CMOUSECLICKDETECTOR_H
-#define CMOUSECLICKDETECTOR_H
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
 
@@ -10,7 +9,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <map>
 
-class CMouseClickDetector : public QObject
+class CMouseClickDetector final : public QObject
 {
 	Q_OBJECT
 public:
@@ -27,10 +26,7 @@ signals:
 protected:
 	bool eventFilter(QObject* object, QEvent* event) override;
 
-private slots:
-
 private:
-	std::map<QObject*, ulong> _lastClickTimestampForObject;
+	std::map<QObject*, qint64> _lastClickTimestampForObject;
 };
 
-#endif // CMOUSECLICKDETECTOR_H

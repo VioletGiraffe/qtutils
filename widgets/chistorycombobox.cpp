@@ -158,7 +158,7 @@ void CHistoryComboBox::currentItemActivated()
 
 		list = SetOperations::uniqueElements(list);
 		clear();
-		for (int i = list.size() - 1; i >= 0; --i)
+		for (int i = int{ list.size() } - 1; i >= 0; --i)
 			insertItem(0, list[i]);
 		setCurrentIndex(0);
 
