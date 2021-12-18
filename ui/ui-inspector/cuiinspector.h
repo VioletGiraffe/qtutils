@@ -11,11 +11,11 @@ namespace Ui {
 class CUiInspector;
 }
 
-class CUiInspector : public QMainWindow
+class CUiInspector final : public QMainWindow
 {
 public:
 	explicit CUiInspector(QWidget *parent = nullptr);
-	~CUiInspector();
+	~CUiInspector() override;
 
 private:
 	void inspect();
