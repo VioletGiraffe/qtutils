@@ -1,3 +1,5 @@
+#if __has_include("resize/cimageinterpolationkernel.h")
+
 #include "cimageresizer.h"
 #include "resize/cimageinterpolationkernel.h"
 #include "assert/advanced_assert.h"
@@ -161,3 +163,5 @@ QImage ImageResizing::resize(const QImage& source, const QSize& targetSize, Resi
 		return {};
 	}
 }
+
+#endif
