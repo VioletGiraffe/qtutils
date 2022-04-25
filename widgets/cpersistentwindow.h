@@ -6,7 +6,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QObject>
 RESTORE_COMPILER_WARNINGS
 
-class CPersistenceEnabler : public QObject
+class CPersistenceEnabler final : public QObject
 {
 public:
 	// Set widgetSettingsPath to an application-wide-unique QSettings path+name for storing this widget's state and position between application launches
