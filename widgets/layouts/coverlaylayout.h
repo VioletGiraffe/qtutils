@@ -7,10 +7,10 @@ DISABLE_COMPILER_WARNINGS
 #include <QList>
 RESTORE_COMPILER_WARNINGS
 
-class COverlayLayout : public QLayout
+class COverlayLayout final : public QLayout
 {
 public:
-	COverlayLayout(QWidget *parent);
+	using QLayout::QLayout;
 	~COverlayLayout();
 
 	void addItem(QLayoutItem *item) override;

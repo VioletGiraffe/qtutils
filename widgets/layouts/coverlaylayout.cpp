@@ -1,11 +1,8 @@
 #include "coverlaylayout.h"
 
-COverlayLayout::COverlayLayout(QWidget *parent) : QLayout (parent)
-{
-}
-
 COverlayLayout::~COverlayLayout()
 {
+	// TODO:
 	for (auto item : _items)
 		delete item;
 }
@@ -32,8 +29,6 @@ QLayoutItem* COverlayLayout::takeAt(int index)
 
 void COverlayLayout::setGeometry(const QRect & rect)
 {
-	QLayout::setGeometry(rect);
-
 	for (QLayoutItem* item : _items)
 		item->setGeometry(rect);
 }
