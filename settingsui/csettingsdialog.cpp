@@ -19,10 +19,13 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) :
 	ui->splitter->setStretchFactor(0, 0);
 	ui->splitter->setStretchFactor(1, 1);
 
-	connect(ui->pageList, &QListWidget::itemClicked, this, &CSettingsDialog::pageChanged);
+	connect(ui->pageList, &QListWidget::currentItemChanged, this, &CSettingsDialog::pageChanged);
 	ui->pageList->setResizeMode(QListWidget::Adjust);
 
 	new QShortcut(QKeySequence("Ctrl+Shift+W"), this, this, &CSettingsDialog::wipeSettings);
+
+	ui->pageList->setFocus();
+	setTabOrder(ui->pageList, nullptr);
 }
 
 CSettingsDialog::~CSettingsDialog()
@@ -40,7 +43,12 @@ CSettingsDialog& CSettingsDialog::addSettingsPage(CSettingsPage* page, const QSt
 	ui->pageList->addItem(item);
 
 	if (ui->pages->count() == 1)
+	{
 		ui->pageList->setCurrentRow(0);
+		setTabOrder(ui->pageList, page);
+	}
+	else
+		setTabOrder(ui->pages->widget(ui->pages->count() - 1), page);
 
 	ui->pageList->adjustSize();
 

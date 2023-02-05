@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>741</width>
+    <width>622</width>
     <height>437</height>
    </rect>
   </property>
@@ -26,11 +26,21 @@
       <bool>false</bool>
      </property>
      <widget class="QListWidget" name="pageList"/>
-     <widget class="QStackedWidget" name="pages"/>
+     <widget class="QStackedWidget" name="pages">
+      <property name="minimumSize">
+       <size>
+        <width>50</width>
+        <height>0</height>
+       </size>
+      </property>
+     </widget>
     </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="focusPolicy">
+      <enum>Qt::TabFocus</enum>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -41,6 +51,9 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>pageList</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
