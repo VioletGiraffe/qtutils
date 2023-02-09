@@ -10,12 +10,12 @@ namespace Ui {
 class CAboutDialog;
 }
 
-class CAboutDialog : public QDialog
+class CAboutDialog final : public QDialog
 {
 public:
-	explicit CAboutDialog(QWidget *parent = 0);
-	explicit CAboutDialog(const QString& versionString, QWidget *parent = 0, const QString& inceptionYear = QLatin1String(__DATE__).right(4), const QString& copyrightOwner = "Violet Giraffe");
-	~CAboutDialog();
+	explicit CAboutDialog(QWidget *parent);
+	explicit CAboutDialog(const QString& versionString, QWidget *parent, const QString& inceptionYear = QLatin1String(__DATE__).right(4), const QString& copyrightOwner = "Violet Giraffe");
+	~CAboutDialog() override;
 
 private:
 	Ui::CAboutDialog *ui;
