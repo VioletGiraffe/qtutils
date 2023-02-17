@@ -1,6 +1,7 @@
 HEADERS += \
     $$PWD/clineedit.h \
     $$PWD/cclickablelabel.h \
+    $$PWD/ctexteditwithlinenumbers.h \
     $$PWD/widgetutils.h \
     $$PWD/circularprogressindicator/ccircularprogressindicator.h \
     $$PWD/chistorycombobox.h \
@@ -10,6 +11,7 @@ HEADERS += \
 SOURCES += \
     $$PWD/clineedit.cpp \
     $$PWD/cclickablelabel.cpp \
+    $$PWD/ctexteditwithlinenumbers.cpp \
     $$PWD/widgetutils.cpp \
     $$PWD/circularprogressindicator/ccircularprogressindicator.cpp \
     $$PWD/chistorycombobox.cpp \
