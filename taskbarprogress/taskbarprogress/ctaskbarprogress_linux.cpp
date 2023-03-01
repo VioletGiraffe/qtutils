@@ -1,5 +1,8 @@
 #include "ctaskbarprogress.h"
+
+DISABLE_COMPILER_WARNINGS
 #include "linux/qxttooltip.h"
+RESTORE_COMPILER_WARNINGS
 
 CTaskBarProgress::CTaskBarProgress(QWidget * widget /*= 0*/) : _parent(widget)
 {
