@@ -2,11 +2,9 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QLayout>
 #include <QMainWindow>
 #include <QScreen>
-#include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
 void WidgetUtils::setLayoutVisible(QLayout* layout, bool visible)
@@ -64,19 +62,12 @@ bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const
 
 QRect WidgetUtils::currentScreenGeometryForWidget(QWidget *widget)
 {
-	const int screenIndex = QApplication::desktop()->screenNumber(widget);
-	if (const auto* primaryScreen = QApplication::primaryScreen(); screenIndex < 0)
-		return primaryScreen ? primaryScreen->availableGeometry() : QRect{};
+	const QScreen* screen = QApplication::screenAt(widget->mapToGlobal(widget->geometry().center()));
+	if (screen)
+		return screen->availableGeometry();
 
-	const auto screens = QApplication::screens();
-	if (screenIndex >= screens.size())
-	{
-		Q_ASSERT(screenIndex < screens.size());
-		const auto* primaryScreen = QApplication::primaryScreen();
-		return primaryScreen ? primaryScreen->availableGeometry() : QRect{};
-	}
-
-	return screens[screenIndex]->availableGeometry();
+	const auto* primaryScreen = QApplication::primaryScreen();
+	return primaryScreen ? primaryScreen->availableGeometry() : QRect{};
 }
 
 QRect WidgetUtils::geometryAtCenter(const QRect &reference, qreal scale)
