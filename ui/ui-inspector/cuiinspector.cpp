@@ -1,19 +1,17 @@
 #include "cuiinspector.h"
-#include "assert/advanced_assert.h"
-#include "compiler/compiler_warnings_control.h"
-#include "settings/csettings.h"
-#include "widgets/cpersistentwindow.h"
 
 DISABLE_COMPILER_WARNINGS
-#include "ui_cuiinspector.h"
-
+#include <QAction>
+#include <QApplication>
 #include <QDebug>
 #include <QLayout>
+#include <QMenu>
+#include <QMenuBar>
+#include <QStatusBar>
 #include <QTimer>
+#include <QTreeWidget>
 RESTORE_COMPILER_WARNINGS
 
-#define KEY_IGNORED_CLASSES "Tools/UiInspector/IgnoredClasses"
-#define KEY_IGNORED_WINDOW_STATE "Tools/UiInspector/Window"
 
 struct WidgetHierarchy {
 	QWidget* widget = nullptr;
@@ -22,57 +20,86 @@ struct WidgetHierarchy {
 	std::vector<WidgetHierarchy> children;
 };
 
-CUiInspector::CUiInspector(QWidget *parent) :
-	QMainWindow(parent),
-	ui(new Ui::CUiInspector)
+CUiInspector::CUiInspector(QWidget* parent) :
+	QMainWindow(parent)
 {
-	ui->setupUi(this);
-
-	installEventFilter(new CPersistenceEnabler(KEY_IGNORED_WINDOW_STATE, this));
-
-	CSettings s;
-	_ignoredClasses = s.value(KEY_IGNORED_CLASSES, QStringList{"CUiInspector", "QMenu"}).toStringList();
-
 	QTimer::singleShot(500, this, &CUiInspector::inspect);
 
-	connect(ui->action_Close, &QAction::triggered, this, &CUiInspector::close);
-	connect(ui->action_Refresh, &QAction::triggered, this, &CUiInspector::inspect);
-}
+	setCentralWidget(_tree = new QTreeWidget);
+	_tree->setSelectionMode(QAbstractItemView::NoSelection);
+	_tree->setHeaderHidden(true);
+	_tree->setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(_tree, &QWidget::customContextMenuRequested, this, &CUiInspector::showItemContextMenu);
 
-CUiInspector::~CUiInspector()
-{
-	delete ui;
+	QMenuBar* mainMenu = menuBar();
+	mainMenu->addAction("&Refresh", this, &CUiInspector::inspect);
+	_actShowHiddenItems = mainMenu->addAction("&Show hidden items", this, &CUiInspector::inspect);
+	_actShowHiddenItems->setCheckable(true);
+	_actShowHiddenItems->setChecked(true);
+
+	mainMenu->show();
+	statusBar()->show();
+
+	connect(qApp, &QApplication::focusChanged, this, [this](QWidget* old, QWidget* n) {
+		QString text;
+		{
+			QDebug infoWriter(&text);
+			infoWriter << "Focus changed from" << old << "to" << n;
+		}
+		statusBar()->showMessage(text);
+	});
 }
 
 void CUiInspector::inspect()
 {
 	std::vector<WidgetHierarchy> hierarchy;
 	for (QWidget* widget : QApplication::topLevelWidgets())
-		inspectWidgetHierarchy(widget, hierarchy);
+	{
+		if (widget != this) // Do not show self
+			inspectWidgetHierarchy(widget, hierarchy);
+	}
 
 	visualize(hierarchy);
 }
 
-inline QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, QTreeWidgetItem* parent = nullptr)
+QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, const bool showHidden, QTreeWidgetItem* parent = nullptr)
 {
+	const bool isHiddenWidget = hierarchy.widget && !hierarchy.widget->isVisible();
+	if (showHidden && isHiddenWidget) // Hidden widgets contain no visible children - do not iterate further
+		return nullptr;
+
 	auto item = new QTreeWidgetItem(parent);
 
 	QString description;
-	QDebug detailedInfoWriter(&description);
-	if (hierarchy.widget)
+
+	// Scope to ensure destruction of the QDebug object
 	{
-		detailedInfoWriter << hierarchy.widget;
-		if (!hierarchy.widget->isVisible())
-			description += "- HIDDEN";
+		QDebug detailedInfoWriter(&description);
+		if (hierarchy.widget)
+		{
+			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.widget);
+			detailedInfoWriter << hierarchy.widget;
+			if (isHiddenWidget)
+				detailedInfoWriter << "- HIDDEN";
+
+			if (hierarchy.widget->testAttribute(Qt::WA_TransparentForMouseEvents))
+				detailedInfoWriter << "(transparent for mouse events!)";
+		}
+		else if (hierarchy.layout)
+		{
+			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.layout);
+			detailedInfoWriter << hierarchy.layout;
+		}
+		else
+			assert(!"Both widget and layout are nullptr");
 	}
-	else if (hierarchy.layout)
-		detailedInfoWriter << hierarchy.layout;
-	else
-		assert_unconditional_r("Both widget and layout are nullptr");
 
 	item->setText(0, description);
+	if (hierarchy.layout)
+		item->setForeground(0, QColor(100, 255, 100));
+
 	for (const auto& child : hierarchy.children)
-		createTreeItem(child, item);
+		createTreeItem(child, showHidden, item);
 
 	return item;
 }
@@ -80,15 +107,18 @@ inline QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, QTreeWi
 void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)
 {
 	QList<QTreeWidgetItem*> items;
+	items.reserve((int)hierarchy.size());
+	const bool showHidden = _actShowHiddenItems->isChecked();
 	for (const auto& h : hierarchy)
 	{
-		auto item = createTreeItem(h);
-		items.push_back(item);
+		auto item = createTreeItem(h, showHidden);
+		if (item)
+			items.push_back(item);
 	}
 
-	ui->treeWidget->clear();
-	ui->treeWidget->addTopLevelItems(items);
-	ui->treeWidget->expandAll();
+	_tree->clear();
+	_tree->addTopLevelItems(items);
+	_tree->expandAll();
 }
 
 void CUiInspector::inspectWidgetHierarchy(QWidget* widget, std::vector<struct WidgetHierarchy>& root) const
@@ -113,8 +143,7 @@ void CUiInspector::inspectWidgetHierarchy(QWidget* widget, std::vector<struct Wi
 
 void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct WidgetHierarchy>& root) const
 {
-	root.emplace_back();
-	WidgetHierarchy& thisItem = root.back();
+	WidgetHierarchy& thisItem = root.emplace_back();
 
 	thisItem.layout = layout;
 	for (int i = 0; true; ++i)
@@ -123,11 +152,57 @@ void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct Wi
 		if (!item)
 			break;
 
-		assert_debug_only((item->layout() != nullptr) != (item->widget() != nullptr));
+		auto* l = item->layout();
+		auto* w = item->widget();
+		if (!l && !w)
+			continue;
 
-		if (item->layout())
-			inspectWidgetHierarchy(item->layout(), thisItem.children);
-		else if (item->widget())
-			inspectWidgetHierarchy(item->widget(), thisItem.children);
+		assert(!(l && w));
+
+		if (l)
+			inspectWidgetHierarchy(l, thisItem.children);
+		else if (w)
+			inspectWidgetHierarchy(w, thisItem.children);
+	}
+}
+
+inline void CUiInspector::showItemContextMenu(const QPoint& p)
+{
+	auto* item = _tree->itemAt(p);
+	if (!item)
+		return;
+
+	QMenu contextMenu(_tree);
+	auto* goToParent = contextMenu.addAction("Go to parent");
+	auto* highlight = contextMenu.addAction("Highlight item");
+	if (const auto selectedAction = contextMenu.exec(mapToGlobal(p)); selectedAction == goToParent)
+	{
+		auto* parent = item->parent();
+		if (!parent)
+			return;
+
+		_tree->setCurrentItem(parent);
+		_tree->scrollTo(_tree->currentIndex());
+	}
+	else if (selectedAction == highlight)
+	{
+		auto* ptr = (QObject*)item->data(0, Qt::UserRole).toULongLong();
+		QWidget* widget = nullptr;
+		QRect qRect;
+		if (auto* l = dynamic_cast<QLayout*>(ptr))
+		{
+			widget = l->widget();
+			qRect = widget ? widget->rect() : QRect{};
+		}
+		else if (auto* w = dynamic_cast<QWidget*>(ptr))
+		{
+			widget = w;
+			qRect = w->rect();
+		}
+
+		if (qRect.isEmpty() || !widget)
+			return;
+
+		widget->setStyleSheet("* { border: 4px solid red; }");
 	}
 }

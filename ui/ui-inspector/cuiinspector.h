@@ -3,30 +3,34 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QMainWindow>
+#include <QStringList>
 RESTORE_COMPILER_WARNINGS
 
 #include <vector>
 
-namespace Ui {
-class CUiInspector;
-}
+class QTreeWidget;
+class QAction;
+class QLayout;
+
+struct WidgetHierarchy;
 
 class CUiInspector final : public QMainWindow
 {
 public:
 	explicit CUiInspector(QWidget *parent = nullptr);
-	~CUiInspector() override;
 
 private:
 	void inspect();
-	void visualize(const std::vector<struct WidgetHierarchy>& hierarchy);
+	void visualize(const std::vector<WidgetHierarchy>& hierarchy);
 
-	void inspectWidgetHierarchy(QWidget* widget, std::vector<struct WidgetHierarchy>& root) const;
-	void inspectWidgetHierarchy(QLayout* layout, std::vector<struct WidgetHierarchy>& root) const;
+	void inspectWidgetHierarchy(QWidget* widget, std::vector<WidgetHierarchy>& root) const;
+	void inspectWidgetHierarchy(QLayout* layout, std::vector<WidgetHierarchy>& root) const;
+
+	void showItemContextMenu(const QPoint& p);
 
 private:
-	Ui::CUiInspector *ui;
-
 	QStringList _ignoredClasses;
-};
 
+	QTreeWidget* _tree;
+	QAction* _actShowHiddenItems;
+};
