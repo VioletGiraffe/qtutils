@@ -4,13 +4,13 @@
 #include "lang/type_traits_fast.hpp"
 
 #include <algorithm>
-#include <vector>
+#include <deque>
 
 template <typename T>
 class CHistoryList
 {
 public:
-	using container_type = std::vector<T>;
+	using container_type = std::deque<T>;
 	explicit CHistoryList(size_t maxSize = 2000) noexcept :
 		_currentIndex{ size_t_max },
 		_maxSize{ maxSize }
@@ -99,7 +99,7 @@ template <typename T>
 size_t CHistoryList<T>::currentIndex() const
 {
 	if (empty())
-		return std::numeric_limits<size_t>::max();
+		return size_t_max;
 	else if (_currentIndex < size())
 		return _currentIndex;
 	else
@@ -124,12 +124,15 @@ void CHistoryList<T>::addLatest(const T& item)
 		// If we were not in the end, move and insert [0; _currentIndex] just before end
 		decltype(_list) newList;
 		for (size_t i = _currentIndex + 1; i < size() - 1; ++i)
-			newList.push_back(_list[i]);
+			newList.push_back(std::move(_list[i]));
 		for (size_t i = 0; i <= _currentIndex; ++i)
-			newList.push_back(_list[i]);
+			newList.push_back(std::move(_list[i]));
 		_list = newList;
 		_list.emplace_back(item);
 	}
+
+	if (_list.size() > _maxSize)
+		_list.pop_front();
 
 	_currentIndex = _list.size() - 1;
 }
@@ -137,6 +140,11 @@ void CHistoryList<T>::addLatest(const T& item)
 template <typename T>
 void CHistoryList<T>::addLatest(const std::vector<T>& items)
 {
-	_list = SetOperations::uniqueElements<SetOperations::ItemOrder::KeepLastOccurrence>(items);
+	_list = container_type(items.begin(), items.end());
+	_list = SetOperations::uniqueElements<SetOperations::ItemOrder::KeepLastOccurrence>(_list);
+	// Trim to size - erase old (first) items
+	if (const auto size = _list.size(); size > _maxSize)
+		_list.erase(_list.begin(), _list.begin() + size - _maxSize);
+
 	_currentIndex = _list.size() - 1;
 }
