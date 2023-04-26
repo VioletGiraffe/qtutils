@@ -18,7 +18,7 @@ class CSettingsDialog final : public QDialog
 {
 	Q_OBJECT
 public:
-	explicit CSettingsDialog(QWidget *parent = 0);
+	explicit CSettingsDialog(QWidget *parent = nullptr);
 	~CSettingsDialog() override;
 
 	CSettingsDialog& addSettingsPage(CSettingsPage * page, const QString& pageName = QString());

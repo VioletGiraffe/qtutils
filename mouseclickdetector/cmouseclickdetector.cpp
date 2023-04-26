@@ -43,8 +43,8 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 			}
 			else
 			{
-				_lastClickTimestampForObject[object] = mouseEvent->timestamp();
-				QTimer::singleShot(QApplication::doubleClickInterval() + 1, [this, object, pos](){
+				_lastClickTimestampForObject[object] = (qint64)mouseEvent->timestamp();
+				QTimer::singleShot(QApplication::doubleClickInterval() + 1, this, [this, object, pos](){
 					if (_lastClickTimestampForObject[object] != 0)
 					{
 						_lastClickTimestampForObject[object] = 0;

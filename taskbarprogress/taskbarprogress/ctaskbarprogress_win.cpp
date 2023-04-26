@@ -60,31 +60,29 @@ void CTaskBarProgress::setProgress(int progress, int minValue /* = 0*/, int maxV
 void CTaskBarProgress::setState(ProgressState state)
 {
 	ITaskbarList3 * iface = taskbarListInterface();
-	TBPFLAG taskbarPRogressState;
+	TBPFLAG taskbarProgressState = TBPF_NOPROGRESS;
 	switch (state)
 	{
 	case psNormal:
-		taskbarPRogressState = TBPF_NORMAL;
+		taskbarProgressState = TBPF_NORMAL;
 		break;
 	case psPaused:
-		taskbarPRogressState = TBPF_PAUSED;
+		taskbarProgressState = TBPF_PAUSED;
 		break;
 	case psStopped:
-		taskbarPRogressState = TBPF_ERROR;
+		taskbarProgressState = TBPF_ERROR;
 		break;
 	case psIndeterminate:
-		taskbarPRogressState = TBPF_INDETERMINATE;
+		taskbarProgressState = TBPF_INDETERMINATE;
 		break;
-	case psNoProgress:
-		taskbarPRogressState = TBPF_NOPROGRESS;
-		break;
+	case psNoProgress: [[fallthrough]];
 	default:
-		taskbarPRogressState = TBPF_NOPROGRESS;
+		taskbarProgressState = TBPF_NOPROGRESS;
 		break;
 	}
 
 	if (iface)
-		iface->SetProgressState(HWND(_registeredWidgetsList[this]->winId()), taskbarPRogressState);
+		iface->SetProgressState(HWND(_registeredWidgetsList[this]->winId()), taskbarProgressState);
 }
 
 bool CTaskBarProgress::eventFilter(void *msg)
@@ -97,8 +95,8 @@ bool CTaskBarProgress::eventFilter(void *msg)
 
 	if (message->message == _taskbarButtonCreatedMessageIdMap[WId(message->hwnd)] && _taskbarListInterface.count(WId(message->hwnd)) == 0)
 	{
-		ITaskbarList3 * iface = 0;
-		HRESULT result = CoCreateInstance(CLSID_TaskbarList, NULL, CLSCTX_ALL, IID_ITaskbarList3,(void**)&iface);
+		ITaskbarList3 * iface = nullptr;
+		HRESULT result = CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_ALL, IID_ITaskbarList3, reinterpret_cast<void**>(&iface));
 		if (result != S_OK || !iface)
 			qInfo() << "ITaskbarList3 creation failed";
 		else
@@ -121,7 +119,7 @@ bool CTaskBarProgress::widgetAlreadyLinked(const QWidget * widget)
 
 ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 {
-	if (_registeredWidgetsList.count(this) == 0 || _registeredWidgetsList[this] == 0 || _taskbarListInterface.count(_registeredWidgetsList[this]->winId()) == 0)
+	if (_registeredWidgetsList.count(this) == 0 || _registeredWidgetsList[this] == nullptr || _taskbarListInterface.count(_registeredWidgetsList[this]->winId()) == 0)
 		return nullptr;
 	else
 		return _taskbarListInterface[_registeredWidgetsList[this]->winId()];

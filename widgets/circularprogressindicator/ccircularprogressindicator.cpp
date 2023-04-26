@@ -99,21 +99,21 @@ void CCircularProgressIndicator::paintEvent(QPaintEvent * /*event*/)
 	p.setRenderHint(QPainter::Antialiasing);
 
 	const int outerRadius = (width-1) / 2;
-	const int innerRadius = (int)((width-1)*0.5f*0.38f);
+	const int innerRadius = (int)((float)(width - 1) * 0.5f * 0.38f);
 
 	const int capsuleHeight = outerRadius - innerRadius;
-	const int capsuleWidth  = (int)((width > 32 ) ? capsuleHeight *.23f : capsuleHeight *.35f);
+	const int capsuleWidth  = (int)((width > 32 ) ? (float)capsuleHeight * 0.23f : (float)capsuleHeight * 0.35f);
 	const int capsuleRadius = capsuleWidth / 2;
 
 	for (int i = 0; i < 12; i++)
 	{
 		QColor color = m_color;
-		color.setAlphaF(1.0f - i / 12.0f);
+		color.setAlphaF(1.0f - (float)i / 12.0f);
 		p.setPen(Qt::NoPen);
 		p.setBrush(color);
 		p.save();
 		p.translate(rect().center());
-		p.rotate(m_angle - i*30.0f);
+		p.rotate((qreal)m_angle - (qreal)i * qreal{30.0});
 		p.drawRoundedRect(-capsuleWidth / 2, -(innerRadius+capsuleHeight), capsuleWidth, capsuleHeight, capsuleRadius, capsuleRadius);
 		p.restore();
 	}

@@ -1,5 +1,4 @@
-#ifndef CPROGRESSBARTASKBAR_H
-#define CPROGRESSBARTASKBAR_H
+#pragma once
 
 #include "taskbarprogress/ctaskbarprogress.h"
 
@@ -9,14 +8,14 @@ RESTORE_COMPILER_WARNINGS
 
 #include <memory>
 
-class CProgressBarTaskbar : public QProgressBar
+class CProgressBarTaskbar final : public QProgressBar
 {
 public:
-	explicit CProgressBarTaskbar(QWidget *parent = 0);
+	explicit CProgressBarTaskbar(QWidget *parent = nullptr);
 	void linkToWidgetstaskbarButton(QWidget * widget);
 
 	void setState(ProgressState state);
-	virtual void setVisible(bool visible);
+	void setVisible(bool visible) override;
 
 private:
 	void updateState();
@@ -24,7 +23,5 @@ private:
 
 private:
 	std::shared_ptr<CTaskBarProgress> _taskBarProgress;
-	ProgressState _state;
+	ProgressState _state = psNormal;
 };
-
-#endif // CPROGRESSBARTASKBAR_H

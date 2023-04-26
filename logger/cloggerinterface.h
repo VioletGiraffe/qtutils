@@ -12,7 +12,7 @@ public:
 	virtual ~CLoggerInterface() = default;
 
 	virtual void log(const QString& message) = 0;
-	virtual QStringList contents() const = 0;
+	[[nodiscard]] virtual QStringList contents() const = 0;
 };
 
 template <class LoggerType>

@@ -2,14 +2,14 @@
 #include "container/set_operations.hpp"
 #include "settings/csettings.h"
 
+#include "../qtcore_helpers/qstring_helpers.hpp"
+
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractItemView>
 #include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
 RESTORE_COMPILER_WARNINGS
-
-#include "assert/advanced_assert.h"
 
 CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	QComboBox(parent)
@@ -96,13 +96,13 @@ bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
 
 		QString modifierString;
 		if (keyEvent->modifiers() & Qt::ShiftModifier)
-			modifierString = "Shift+";
+			modifierString = QSL("Shift+");
 		if (keyEvent->modifiers() & Qt::ControlModifier)
-			modifierString = "Ctrl+";
+			modifierString = QSL("Ctrl+");
 		if (keyEvent->modifiers() & Qt::AltModifier)
-			modifierString = "Alt+";
+			modifierString = QSL("Alt+");
 		if (keyEvent->modifiers() & Qt::MetaModifier)
-			modifierString = "Meta+";
+			modifierString = QSL("Meta+");
 
 		QKeySequence fullSequence(modifierString + QKeySequence(keyEvent->key()).toString());
 		if (!_selectPreviousItemShortcut.isEmpty() && fullSequence == _selectPreviousItemShortcut)
@@ -117,12 +117,16 @@ bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
 
 QStringList CHistoryComboBox::items() const
 {
-	QStringList itemsList;
 	const QString currentItemText = currentText();
+	const auto nItems = count();
+
+	QStringList itemsList;
+	itemsList.reserve(nItems + 1);
+
 	if (!currentItemText.isEmpty() && currentIndex() >= 0 && currentItemText != itemText(currentIndex()))
 		itemsList.push_back(currentItemText);
 
-	for (int i = 0; i < count(); ++i)
+	for (int i = 0; i < nItems; ++i)
 		itemsList.push_back(itemText(i));
 
 	return itemsList;
@@ -160,6 +164,7 @@ void CHistoryComboBox::currentItemActivated()
 		clear();
 		for (auto it = list.rbegin(); it != list.rend(); ++it)
 			insertItem(0, *it);
+
 		setCurrentIndex(0);
 
 		if (_bClearEditorOnItemActivation)

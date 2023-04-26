@@ -10,8 +10,8 @@ RESTORE_COMPILER_WARNINGS
 class CNaturalSorterQCollator
 {
 public:
-	CNaturalSorterQCollator();
-	bool compare(const QString& l,const QString& r, SortingOptions options) const;
+	CNaturalSorterQCollator() noexcept;
+	[[nodiscard]] bool compare(const QString& l,const QString& r, SortingOptions options) const;
 
 private:
 	QCollator _collator;

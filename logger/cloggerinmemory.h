@@ -6,7 +6,7 @@ class CLoggerInMemory : public CLoggerInterface
 {
 public:
 	void log(const QString& msg) override;
-	QStringList contents() const override;
+	[[nodiscard]] QStringList contents() const override;
 
 private:
 	QStringList _entries;

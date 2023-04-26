@@ -6,5 +6,4 @@ HEADERS += \
     settingsui/csettingspage.h
 
 SOURCES += \
-    settingsui/csettingsdialog.cpp \
-    settingsui/csettingspage.cpp
+    settingsui/csettingsdialog.cpp

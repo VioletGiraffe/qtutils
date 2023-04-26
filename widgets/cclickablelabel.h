@@ -11,7 +11,7 @@ class CClickableLabel : public QLabel
 	Q_OBJECT
 
 public:
-	explicit CClickableLabel(QWidget* parent = 0);
+	using QLabel::QLabel;
 
 signals:
 	void doubleClicked(QPoint pos);

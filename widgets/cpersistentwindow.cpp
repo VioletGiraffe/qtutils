@@ -13,7 +13,9 @@ RESTORE_COMPILER_WARNINGS
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
 
-CPersistenceEnabler::CPersistenceEnabler(const QString& widgetSettingsPath, QObject* parent) : QObject(parent), _settingsPath(widgetSettingsPath)
+CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QObject* parent) :
+	QObject(parent),
+	_settingsPath{std::move(widgetSettingsPath)}
 {
 }
 

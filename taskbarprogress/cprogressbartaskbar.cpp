@@ -1,8 +1,7 @@
 #include "cprogressbartaskbar.h"
 
 CProgressBarTaskbar::CProgressBarTaskbar(QWidget *parent) :
-	QProgressBar(parent),
-	_state(psNormal)
+	QProgressBar(parent)
 {
 	connect (this, &CProgressBarTaskbar::valueChanged, this, &CProgressBarTaskbar::progressChanged);
 }

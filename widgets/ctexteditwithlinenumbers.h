@@ -11,7 +11,7 @@ public:
 	explicit CTextEditWithLineNumbers(QWidget *parent = nullptr);
 
 	void lineNumberAreaPaintEvent(QPaintEvent *event);
-	int lineNumberAreaWidth();
+	[[nodiscard]] int lineNumberAreaWidth() const;
 
 protected:
 	void resizeEvent(QResizeEvent *event) override;

@@ -16,9 +16,9 @@ public:
 	static void setFormat(QSettings::Format format);
 
 	void setValue(const QString& key, const QVariant& value);
-	QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const;
+	[[nodiscard]] QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const;
 
-	QStringList allKeys() const;
+	[[nodiscard]] QStringList allKeys() const;
 
 	void clear();
 

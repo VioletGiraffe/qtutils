@@ -11,18 +11,18 @@ class COverlayLayout final : public QLayout
 {
 public:
 	using QLayout::QLayout;
-	~COverlayLayout();
+	~COverlayLayout() override;
 
 	void addItem(QLayoutItem *item) override;
-	int count() const override;
-	QLayoutItem* itemAt(int index) const override;
+	[[nodiscard]] int count() const override;
+	[[nodiscard]] QLayoutItem* itemAt(int index) const override;
 	QLayoutItem* takeAt(int index) override;
 
 	void setGeometry(const QRect &rect) override;
 
-	QSize sizeHint(void) const override;
+	[[nodiscard]] QSize sizeHint() const override;
 
-	Qt::Orientations expandingDirections() const override;
+	[[nodiscard]] Qt::Orientations expandingDirections() const override;
 
 private:
 	QList<QLayoutItem*> _items;

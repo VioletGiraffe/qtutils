@@ -1,5 +1,4 @@
-#ifndef CNATURALSORTING_H
-#define CNATURALSORTING_H
+#pragma once
 
 #include "sortingoptions.h"
 #include "cnaturalsorterqcollator.h"
@@ -19,9 +18,9 @@ public:
 	void setSortingOptions(SortingOptions options);
 	void setSortingAlgorithm(NaturalSortingAlgorithm algorithm);
 
-	bool lessThan(const QString& l, const QString& r) const;
-	bool equal(const QString& l, const QString& r) const;
-	int compare(const QString& l, const QString& r) const;
+	[[nodiscard]] bool lessThan(const QString& l, const QString& r) const;
+	[[nodiscard]] bool equal(const QString& l, const QString& r) const;
+	[[nodiscard]] int compare(const QString& l, const QString& r) const;
 
 private:
 	SortingOptions          _options;
@@ -29,5 +28,3 @@ private:
 
 	CNaturalSorterQCollator _collatorSorter;
 };
-
-#endif // CNATURALSORTING_H

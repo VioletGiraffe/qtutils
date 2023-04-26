@@ -1,6 +1,6 @@
 #include "cnaturalsorterqcollator.h"
 
-CNaturalSorterQCollator::CNaturalSorterQCollator()
+CNaturalSorterQCollator::CNaturalSorterQCollator() noexcept
 {
 	_collator.setCaseSensitivity(Qt::CaseSensitive);
 	_collator.setNumericMode(true);

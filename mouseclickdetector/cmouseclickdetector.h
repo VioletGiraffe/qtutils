@@ -13,9 +13,9 @@ class CMouseClickDetector final : public QObject
 {
 	Q_OBJECT
 public:
-	explicit CMouseClickDetector(QObject *parent = 0);
+	explicit CMouseClickDetector(QObject *parent = nullptr);
 
-	static CMouseClickDetector * globalInstance();
+	[[nodiscard]] static CMouseClickDetector * globalInstance();
 
 	void notify(QObject* object, QEvent* event);
 

@@ -1,5 +1,4 @@
-#ifndef CLINEEDIT_H
-#define CLINEEDIT_H
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
 
@@ -10,9 +9,10 @@ RESTORE_COMPILER_WARNINGS
 class CLineEdit : public QLineEdit
 {
 public:
-	explicit CLineEdit(QWidget * parent = 0);
+	using QLineEdit::QLineEdit;
+
 	void setSelectAllOnFocus(bool select);
-	bool selectAllOnFocus() const;
+	[[nodiscard]] bool selectAllOnFocus() const;
 
 protected:
 	void focusInEvent (QFocusEvent * event) override;
@@ -20,5 +20,3 @@ protected:
 private:
 	bool _bSelectAllOnFocus = true;
 };
-
-#endif // CLINEEDIT_H

@@ -2,11 +2,10 @@
 
 #include "cimageresizer.h"
 #include "resize/cimageinterpolationkernel.h"
+
 #include "assert/advanced_assert.h"
 #include "math/math.hpp"
 #include "compiler/compiler_warnings_control.h"
-#include "system/ctimeelapsed.h"
-#include "utility/on_scope_exit.hpp"
 
 DISABLE_COMPILER_WARNINGS
 #include <QColor>
@@ -19,67 +18,76 @@ RESTORE_COMPILER_WARNINGS
 
 QSize scaled(const QSize& source, const QSize& dest)
 {
-	const float xScaleFactor = source.width() / (float)dest.width();
-	const float yScaleFactor = source.height() / (float)dest.height();
+	const float xScaleFactor = (float)source.width() / (float)dest.width();
+	const float yScaleFactor = (float)source.height() / (float)dest.height();
 
 	const float actualFactor = (xScaleFactor > 1.0f && yScaleFactor > 1.0f) ? std::max(xScaleFactor, yScaleFactor) : std::min(xScaleFactor, yScaleFactor);
 
 	return source / actualFactor;
 }
 
-inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, const QImage& source, int x, int y)
+inline QRgb applyKernel(const CImageInterpolationKernelBase<float>& kernel, const QImage& source, uint32_t x, uint32_t y)
 {
 	assert_r(x >= 0 && y >= 0); // Tested - doesn't affect performance within 1 ms resolution
 
 	float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
 
-	const auto srcHeight = source.height(), srcWidth = source.width();
-	const auto kernelSize = kernel.size();
+	const uint32_t srcHeight = (uint32_t)source.height(), srcWidth = (uint32_t)source.width();
+	const uint32_t kernelSize = kernel.size();
+
+	using FloatType = decltype(kernel.coeff(0, 0));
+
 	if (source.depth() == 32)
 	{
-		for (int k = y, k_kernel = 0; k < y + kernelSize && k < srcHeight; ++k, ++ k_kernel)
+		for (uint32_t k = y, k_kernel = 0; k < y + kernelSize && k < srcHeight; ++k, ++ k_kernel)
 		{
-			const QRgb * line = (const QRgb*)source.constScanLine(k);
-			for (int i = x, i_kernel = 0; i < x + kernelSize && i < srcWidth; ++i, ++i_kernel)
+			// TODO: strict aliasong violation!
+			const QRgb * line = reinterpret_cast<const QRgb*>(source.constScanLine((int)k));
+			for (uint32_t i = x, i_kernel = 0; i < x + kernelSize && i < srcWidth; ++i, ++i_kernel)
 			{
 				const auto coeff = kernel.coeff(i_kernel, k_kernel);
-				r += qRed(line[i]) * coeff;
-				g += qGreen(line[i]) * coeff;
-				b += qBlue(line[i]) * coeff;
-				a += qAlpha(line[i]) * coeff;
+				r += static_cast<FloatType>(qRed(line[i])) * coeff;
+				g += static_cast<FloatType>(qGreen(line[i])) * coeff;
+				b += static_cast<FloatType>(qBlue(line[i])) * coeff;
+				a += static_cast<FloatType>(qAlpha(line[i])) * coeff;
 			}
 		}
 	}
 	else
 	{
-		for (int i = x, i_kernel = 0; i < x + kernelSize && i < srcWidth; ++i, ++i_kernel)
-			for (int k = y, k_kernel = 0; k < y + kernelSize && k < srcHeight; ++k, ++ k_kernel)
+		for (uint32_t i = x, i_kernel = 0; i < x + kernelSize && i < srcWidth; ++i, ++i_kernel)
+			for (uint32_t k = y, k_kernel = 0; k < y + kernelSize && k < srcHeight; ++k, ++ k_kernel)
 			{
 				const QColor pixel(source.pixel(i, k));
 				const auto coeff = kernel.coeff(i_kernel, k_kernel);
 
-				r += pixel.red() * coeff;
-				g += pixel.green() * coeff;
-				b += pixel.blue() * coeff;
-				a += pixel.alpha() * coeff;
+				r += static_cast<FloatType>(pixel.red()) * coeff;
+				g += static_cast<FloatType>(pixel.green()) * coeff;
+				b += static_cast<FloatType>(pixel.blue()) * coeff;
+				a += static_cast<FloatType>(pixel.alpha()) * coeff;
 			}
 	}
 
-	r = Math::clamp(0.0f, r, 255.0f);
-	g = Math::clamp(0.0f, g, 255.0f);
-	b = Math::clamp(0.0f, b, 255.0f);
-	a = Math::clamp(0.0f, a, 255.0f);
-	return qRgba((int)(r + 0.5f), (int)(g + 0.5f), (int)(b + 0.5f), (int)(a + 0.5f));
+	r = Math::clamp(FloatType{0.0f}, r, FloatType{255.0f});
+	g = Math::clamp(FloatType{0.0f}, g, FloatType{255.0f});
+	b = Math::clamp(FloatType{0.0f}, b, FloatType{255.0f});
+	a = Math::clamp(FloatType{0.0f}, a, FloatType{255.0f});
+
+	return qRgba(Math::round<int>(r),
+				 Math::round<int>(g),
+				 Math::round<int>(b),
+				 Math::round<int>(a)
+			);
 }
 
 inline float ratio(const QSize& size)
 {
-	return (float)size.width() / size.height();
+	return (float)size.width() / (float)size.height();
 }
 
 inline QSize operator*(const QSize& origSize, int k)
 {
-	return QSize(origSize.width()*k, origSize.height()*k);
+	return QSize(origSize.width() * k, origSize.height() * k);
 }
 
 QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, ImageResizing::AspectRatio aspectRatio)
@@ -92,7 +100,7 @@ QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, Image
 		return source.scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
 	QSize actualTargetSize = targetSize;
-	if (ratio(targetSize) != ratio(source.size()))
+	if (::fabs(ratio(targetSize) - ratio(source.size())) < 0.01f)
 		actualTargetSize = source.size().scaled(targetSize, aspectRatio == KeepAspectRatio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio);
 
 	if (actualTargetSize.isEmpty())
@@ -101,27 +109,27 @@ QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, Image
 	const float scaleFactor = source.width() > actualTargetSize.width() ? source.width() / (float)actualTargetSize.width() : actualTargetSize.width() / (float)source.width();
 
 	const int intScaleFactor = (int)ceilf(scaleFactor);
-	const QSize upscaledSourceSize = scaleFactor != 1 ? scaled(source.size(), actualTargetSize * intScaleFactor) : source.size();
+	const QSize upscaledSourceSize = ::fabs(scaleFactor - 1.0f) < 0.001f ? scaled(source.size(), actualTargetSize * intScaleFactor) : source.size();
 
 	QImage dest(actualTargetSize, source.format());
 	QImage upscaledSource(upscaledSourceSize == source.size() ? source : source.scaled(upscaledSourceSize, Qt::IgnoreAspectRatio, source.depth() == 32 ? Qt::SmoothTransformation : Qt::FastTransformation));
 
 	// TODO: refactor this. There's no need to create all the kernels, we're only going to need one.
-	const CLanczosKernel lanczosKernel(upscaledSource.width() / actualTargetSize.width(), 3);
-	const CBicubicKernel bicubicKernel(upscaledSource.width() / actualTargetSize.width(), 0.5f);
+	const CLanczosKernel lanczosKernel((uint32_t)upscaledSource.width() / (uint32_t)actualTargetSize.width(), 3);
+	const CBicubicKernel bicubicKernel((uint32_t)upscaledSource.width() / (uint32_t)actualTargetSize.width(), 0.5f);
 
 	const CImageInterpolationKernelBase<float>& kernel = upscaledSourceSize.width() / actualTargetSize.width() >= 30 ?
 		(CImageInterpolationKernelBase<float>&)bicubicKernel :
 		(CImageInterpolationKernelBase<float>&)bicubicKernel;
 
-	const auto kernelSize = kernel.size();
-	const auto targetWidth = actualTargetSize.width(), targetHeight = actualTargetSize.height();
+	const uint32_t kernelSize = kernel.size();
+	const uint32_t targetWidth = (uint32_t)actualTargetSize.width(), targetHeight = (uint32_t)actualTargetSize.height();
 	if (upscaledSource.depth() == 32)
 	{
-		for (int y = 0; y < targetHeight; ++y)
+		for (uint32_t y = 0; y < targetHeight; ++y)
 		{
 			auto* scanLine = dest.scanLine(y);
-			for (int x = 0; x < targetWidth; ++x)
+			for (uint32_t x = 0; x < targetWidth; ++x)
 			{
 				const auto rgb = applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize);
 				auto* pixelAddress = scanLine + sizeof(QRgb) * x;
@@ -131,9 +139,13 @@ QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, Image
 	}
 	else
 	{
-		for (int x = 0; x < targetWidth; ++x)
-			for (int y = 0; y < targetHeight; ++y)
+		for (uint32_t x = 0; x < targetWidth; ++x)
+		{
+			for (uint32_t y = 0; y < targetHeight; ++y)
+			{
 				dest.setPixel(x, y, applyKernel(kernel, upscaledSource, x*kernelSize, y*kernelSize));
+			}
+		}
 	}
 	return dest;
 }

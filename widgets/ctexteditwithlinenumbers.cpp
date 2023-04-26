@@ -1,7 +1,9 @@
 #include "ctexteditwithlinenumbers.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QPainter>
 #include <QTextBlock>
+RESTORE_COMPILER_WARNINGS
 
 // Space between the edge of the number and the right edge of the number area column
 static constexpr int RightNumberMargin = 4;
@@ -9,11 +11,12 @@ static constexpr int RightNumberMargin = 4;
 class CLineNumberArea final : public QWidget
 {
 public:
-	CLineNumberArea(CTextEditWithLineNumbers *editor) :
-		QWidget(editor), _codeEditor(editor)
+	CLineNumberArea(CTextEditWithLineNumbers *editor) noexcept :
+		QWidget(editor),
+		_codeEditor(editor)
 	{}
 
-	QSize sizeHint() const override
+	[[nodiscard]] QSize sizeHint() const override
 	{
 		return QSize(_codeEditor->lineNumberAreaWidth(), 0);
 	}
@@ -39,7 +42,7 @@ CTextEditWithLineNumbers::CTextEditWithLineNumbers(QWidget *parent) :
 	updateLineNumberAreaWidth(0);
 }
 
-int CTextEditWithLineNumbers::lineNumberAreaWidth()
+int CTextEditWithLineNumbers::lineNumberAreaWidth() const
 {
 	int digits = 1;
 	int max = qMax(1, blockCount());

@@ -1,5 +1,4 @@
-#ifndef CSETTINGSPAGE_H
-#define CSETTINGSPAGE_H
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
 
@@ -10,10 +9,7 @@ RESTORE_COMPILER_WARNINGS
 class CSettingsPage : public QWidget
 {
 public:
-	explicit CSettingsPage(QWidget *parent = 0);
-	virtual ~CSettingsPage();
+	using QWidget::QWidget;
 
 	virtual void acceptSettings() = 0;
 };
-
-#endif // CSETTINGSPAGE_H

@@ -32,8 +32,8 @@ CUiInspector::CUiInspector(QWidget* parent) :
 	connect(_tree, &QWidget::customContextMenuRequested, this, &CUiInspector::showItemContextMenu);
 
 	QMenuBar* mainMenu = menuBar();
-	mainMenu->addAction("&Refresh", this, &CUiInspector::inspect);
-	_actShowHiddenItems = mainMenu->addAction("&Show hidden items", this, &CUiInspector::inspect);
+	mainMenu->addAction(tr("&Refresh"), this, &CUiInspector::inspect);
+	_actShowHiddenItems = mainMenu->addAction(tr("&Show hidden items"), this, &CUiInspector::inspect);
 	_actShowHiddenItems->setCheckable(true);
 	_actShowHiddenItems->setChecked(true);
 
@@ -173,8 +173,8 @@ inline void CUiInspector::showItemContextMenu(const QPoint& p)
 		return;
 
 	QMenu contextMenu(_tree);
-	auto* goToParent = contextMenu.addAction("Go to parent");
-	auto* highlight = contextMenu.addAction("Highlight item");
+	auto* goToParent = contextMenu.addAction(tr("Go to parent"));
+	auto* highlight = contextMenu.addAction(tr("Highlight item"));
 	if (const auto selectedAction = contextMenu.exec(mapToGlobal(p)); selectedAction == goToParent)
 	{
 		auto* parent = item->parent();
@@ -203,6 +203,6 @@ inline void CUiInspector::showItemContextMenu(const QPoint& p)
 		if (qRect.isEmpty() || !widget)
 			return;
 
-		widget->setStyleSheet("* { border: 4px solid red; }");
+		widget->setStyleSheet(QStringLiteral("* { border: 4px solid red; }"));
 	}
 }

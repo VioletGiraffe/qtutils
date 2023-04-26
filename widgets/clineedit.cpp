@@ -4,10 +4,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
 
-CLineEdit::CLineEdit(QWidget *parent) : QLineEdit(parent)
-{
-}
-
 void CLineEdit::setSelectAllOnFocus(bool select)
 {
 	_bSelectAllOnFocus = select;

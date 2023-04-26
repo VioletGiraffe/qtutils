@@ -17,29 +17,29 @@ public:
 	{}
 
 	// Access and status
-	inline bool empty() const { return _list.empty(); }
-	inline size_t size() const { return _list.size(); }
+	[[nodiscard]] inline bool empty() const { return _list.empty(); }
+	[[nodiscard]] inline size_t size() const { return _list.size(); }
 	inline void clear() { _list.clear(); }
 
-	inline typename container_type::const_iterator begin() const { return _list.begin(); }
-	inline typename container_type::const_iterator end() const { return _list.end(); }
-	inline typename container_type::const_reverse_iterator rbegin() const { return _list.rbegin(); }
-	inline typename container_type::const_reverse_iterator rend() const { return _list.rend(); }
+	[[nodiscard]] inline typename container_type::const_iterator begin() const { return _list.begin(); }
+	[[nodiscard]] inline typename container_type::const_iterator end() const { return _list.end(); }
+	[[nodiscard]] inline typename container_type::const_reverse_iterator rbegin() const { return _list.rbegin(); }
+	[[nodiscard]] inline typename container_type::const_reverse_iterator rend() const { return _list.rend(); }
 
-	inline const T& front() const { return _list.front(); }
-	inline const T& back() const { return _list.back(); }
+	[[nodiscard]] inline const T& front() const { return _list.front(); }
+	[[nodiscard]] inline const T& back() const { return _list.back(); }
 
-	inline const T& operator[](size_t index) const { return _list[index]; }
+	[[nodiscard]] inline const T& operator[](size_t index) const { return _list[index]; }
 
-	inline bool historyLocationSet() const { return _currentIndex <= _list.size(); }
+	[[nodiscard]] inline bool historyLocationSet() const { return _currentIndex <= _list.size(); }
 
-	inline const container_type& list() const { return _list; }
+	[[nodiscard]] inline const container_type& list() const { return _list; }
 
-	size_t currentIndex() const;
-	const T& currentItem() const;
+	[[nodiscard]] size_t currentIndex() const;
+	[[nodiscard]] const T& currentItem() const;
 
-	bool isAtEnd() const;
-	bool isAtBeginning() const;
+	[[nodiscard]] bool isAtEnd() const;
+	[[nodiscard]] bool isAtBeginning() const;
 
 	// Actions
 	void addLatest(const T& item);
