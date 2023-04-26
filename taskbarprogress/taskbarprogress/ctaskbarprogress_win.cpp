@@ -7,7 +7,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QDebug>
 RESTORE_COMPILER_WARNINGS
 
-#include <Shobjidl.h>
+#include <ShObjIdl.h>
 
 CTaskBarProgress::CTaskBarProgress(QWidget *widget)
 {

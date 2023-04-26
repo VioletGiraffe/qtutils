@@ -106,7 +106,7 @@ QImage bicubicInterpolation(const QImage& source, const QSize& targetSize, Image
 	if (actualTargetSize.isEmpty())
 		return QImage();
 
-	const float scaleFactor = source.width() > actualTargetSize.width() ? source.width() / (float)actualTargetSize.width() : actualTargetSize.width() / (float)source.width();
+	const float scaleFactor = source.width() > actualTargetSize.width() ? (float)source.width() / (float)actualTargetSize.width() : (float)actualTargetSize.width() / (float)source.width();
 
 	const int intScaleFactor = (int)ceilf(scaleFactor);
 	const QSize upscaledSourceSize = ::fabs(scaleFactor - 1.0f) < 0.001f ? scaled(source.size(), actualTargetSize * intScaleFactor) : source.size();
