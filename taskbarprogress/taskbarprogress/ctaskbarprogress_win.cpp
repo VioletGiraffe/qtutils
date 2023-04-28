@@ -90,10 +90,10 @@ bool CTaskBarProgress::eventFilter(void *msg)
 	MSG * message = static_cast<MSG*>(msg);
 	assert_and_return_r(message, false);
 
-	if (_taskbarButtonCreatedMessageIdMap.count(WId(message->hwnd)) == 0)
+	if (!_taskbarButtonCreatedMessageIdMap.contains(WId(message->hwnd)))
 		return false;
 
-	if (message->message == _taskbarButtonCreatedMessageIdMap[WId(message->hwnd)] && _taskbarListInterface.count(WId(message->hwnd)) == 0)
+	if (message->message == _taskbarButtonCreatedMessageIdMap[WId(message->hwnd)] && !_taskbarListInterface.contains(WId(message->hwnd)))
 	{
 		ITaskbarList3 * iface = nullptr;
 		HRESULT result = CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_ALL, IID_ITaskbarList3, reinterpret_cast<void**>(&iface));
@@ -111,15 +111,17 @@ bool CTaskBarProgress::eventFilter(void *msg)
 bool CTaskBarProgress::widgetAlreadyLinked(const QWidget * widget)
 {
 	for (const auto& item: _registeredWidgetsList)
+	{
 		if (item.second == widget)
 			return true;
+	}
 
 	return false;
 }
 
 ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 {
-	if (_registeredWidgetsList.count(this) == 0 || _registeredWidgetsList[this] == nullptr || _taskbarListInterface.count(_registeredWidgetsList[this]->winId()) == 0)
+	if (!_registeredWidgetsList.contains(this) || _registeredWidgetsList[this] == nullptr || !_taskbarListInterface.contains(_registeredWidgetsList[this]->winId()))
 		return nullptr;
 	else
 		return _taskbarListInterface[_registeredWidgetsList[this]->winId()];

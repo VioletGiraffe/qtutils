@@ -33,7 +33,7 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 		{
 			const QPoint pos = mouseEvent->pos();
 
-			if (_lastClickTimestampForObject.count(object) < 1)
+			if (!_lastClickTimestampForObject.contains(object))
 				_lastClickTimestampForObject[object] = 0;
 
 			if (mouseEvent->timestamp() - _lastClickTimestampForObject[object] <= (unsigned int)QApplication::doubleClickInterval())

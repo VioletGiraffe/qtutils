@@ -3,7 +3,7 @@
 COverlayLayout::~COverlayLayout()
 {
 	// TODO:
-	for (auto item : _items)
+	for (auto* item : _items)
 		delete item;
 }
 

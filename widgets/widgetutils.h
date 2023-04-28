@@ -16,7 +16,7 @@ namespace WidgetUtils
 	void setLayoutVisible(QLayout* layout, bool visible);
 	QMainWindow* findParentMainWindow(QWidget* child);
 	QMainWindow* findTopLevelWindow();
-	bool widgetBelongsToHierarchy(QWidget * const widget, QObject * const hierarchy);
+	bool widgetBelongsToHierarchy(QWidget * widget, QObject * hierarchy);
 
 	QRect currentScreenGeometryForWidget(QWidget* widget);
 	QRect geometryAtCenter(const QRect& reference, qreal scale);
@@ -29,4 +29,4 @@ namespace WidgetUtils
 
 	void centerWidgetInParent(QWidget* widget, const QSize& newWidgetSize = QSize(-1, -1));
 	void centerWidgetInParent(QWidget* widget, qreal fractionOfParentSize);
-}
+} // namespace WidgetUtils

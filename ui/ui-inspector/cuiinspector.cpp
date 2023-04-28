@@ -68,7 +68,7 @@ QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, const bool sho
 	if (showHidden && isHiddenWidget) // Hidden widgets contain no visible children - do not iterate further
 		return nullptr;
 
-	auto item = new QTreeWidgetItem(parent);
+	auto* item = new QTreeWidgetItem(parent);
 
 	QString description;
 
@@ -111,7 +111,7 @@ void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)
 	const bool showHidden = _actShowHiddenItems->isChecked();
 	for (const auto& h : hierarchy)
 	{
-		auto item = createTreeItem(h, showHidden);
+		auto* item = createTreeItem(h, showHidden);
 		if (item)
 			items.push_back(item);
 	}
@@ -135,7 +135,7 @@ void CUiInspector::inspectWidgetHierarchy(QWidget* widget, std::vector<struct Wi
 	{
 		for (QObject* child : widget->children())
 		{
-			if (auto childWidget = dynamic_cast<QWidget*>(child))
+			if (auto* childWidget = dynamic_cast<QWidget*>(child))
 				inspectWidgetHierarchy(childWidget, thisItem.children);
 		}
 	}
@@ -148,7 +148,7 @@ void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct Wi
 	thisItem.layout = layout;
 	for (int i = 0; true; ++i)
 	{
-		const auto item = layout->itemAt(i);
+		QLayoutItem* item = layout->itemAt(i);
 		if (!item)
 			break;
 
@@ -175,7 +175,7 @@ inline void CUiInspector::showItemContextMenu(const QPoint& p)
 	QMenu contextMenu(_tree);
 	auto* goToParent = contextMenu.addAction(tr("Go to parent"));
 	auto* highlight = contextMenu.addAction(tr("Highlight item"));
-	if (const auto selectedAction = contextMenu.exec(mapToGlobal(p)); selectedAction == goToParent)
+	if (const auto* selectedAction = contextMenu.exec(mapToGlobal(p)); selectedAction == goToParent)
 	{
 		auto* parent = item->parent();
 		if (!parent)

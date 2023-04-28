@@ -26,13 +26,13 @@ void CProgressBarTaskbar::setVisible(bool visible)
 
 void CProgressBarTaskbar::updateState()
 {
-	if (_taskBarProgress.get())
+	if (_taskBarProgress)
 		_taskBarProgress->setState(isVisible() ? (_state) : psNoProgress);
 }
 
 void CProgressBarTaskbar::progressChanged(int progress)
 {
-	if (_taskBarProgress.get())
+	if (_taskBarProgress)
 		_taskBarProgress->setProgress(progress, minimum(), maximum());
 }
 

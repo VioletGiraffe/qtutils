@@ -25,9 +25,9 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 	{
 		_windowStateRestored = true;
 
-		auto widget = static_cast<QWidget*>(watched);
+		auto* widget = static_cast<QWidget*>(watched);
 		assert_and_return_r(widget, QObject::eventFilter(watched, e));
-		auto window = dynamic_cast<QMainWindow*>(watched);
+		auto* window = dynamic_cast<QMainWindow*>(watched);
 
 		CSettings s;
 
@@ -40,8 +40,8 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 	}
 	else if (e->type() == QEvent::Close)
 	{
-		auto widget = static_cast<QWidget*>(watched);
-		auto window = dynamic_cast<QMainWindow*>(watched);
+		auto* widget = static_cast<QWidget*>(watched);
+		auto* window = dynamic_cast<QMainWindow*>(watched);
 		CSettings s;
 
 		s.setValue(GEOMETRY_KEY, widget->saveGeometry());

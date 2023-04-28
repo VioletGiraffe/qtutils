@@ -54,8 +54,10 @@ bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const
 			return true;
 
 		for (const auto& child : children)
+		{
 			if (widgetBelongsToHierarchy(widget, child))
 				return true;
+		}
 
 		return false;
 }
