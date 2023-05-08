@@ -4,7 +4,7 @@ DISABLE_COMPILER_WARNINGS
 #include "ui_csimpleprogressdialog.h"
 RESTORE_COMPILER_WARNINGS
 
-CSimpleProgressDialog::CSimpleProgressDialog(QWidget *parent) :
+CSimpleProgressDialog::CSimpleProgressDialog(QWidget *parent) noexcept :
 	QDialog(parent),
 	ui(new Ui::CSimpleProgressDialog)
 {
@@ -13,7 +13,7 @@ CSimpleProgressDialog::CSimpleProgressDialog(QWidget *parent) :
 	connect(ui->_cancelButton, &QPushButton::clicked, this, &CSimpleProgressDialog::reject);
 }
 
-CSimpleProgressDialog::~CSimpleProgressDialog()
+CSimpleProgressDialog::~CSimpleProgressDialog() noexcept
 {
 	delete ui;
 }

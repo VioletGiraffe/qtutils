@@ -9,7 +9,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QShortcut>
 RESTORE_COMPILER_WARNINGS
 
-CSettingsDialog::CSettingsDialog(QWidget *parent) :
+CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
 	QDialog(parent),
 	ui(new Ui::CSettingsDialog)
 {

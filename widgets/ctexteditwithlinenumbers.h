@@ -8,7 +8,7 @@ RESTORE_COMPILER_WARNINGS
 class CTextEditWithLineNumbers : public QPlainTextEdit
 {
 public:
-	explicit CTextEditWithLineNumbers(QWidget *parent = nullptr);
+	explicit CTextEditWithLineNumbers(QWidget *parent = nullptr) noexcept;
 
 	void lineNumberAreaPaintEvent(QPaintEvent *event);
 	[[nodiscard]] int lineNumberAreaWidth() const;

@@ -12,8 +12,8 @@ class CSimpleProgressDialog;
 class CSimpleProgressDialog : public QDialog
 {
 public:
-	explicit CSimpleProgressDialog(QWidget *parent = nullptr);
-	~CSimpleProgressDialog() override;
+	explicit CSimpleProgressDialog(QWidget *parent = nullptr) noexcept;
+	~CSimpleProgressDialog() noexcept override;
 
 	void setLabelText(const QString& text);
 

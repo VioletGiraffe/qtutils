@@ -8,9 +8,12 @@ QString CSettings::_applicationName;
 QString CSettings::_organizationName;
 QSettings::Format CSettings::_settingsFormat = QSettings::NativeFormat;
 
-CSettings::CSettings() : _impl(_settingsFormat, QSettings::UserScope,
-							   _organizationName.isEmpty() ? qApp->organizationName() : _organizationName,
-							   _applicationName.isEmpty() ? qApp->applicationName() : _applicationName)
+CSettings::CSettings() noexcept :
+	_impl{
+		_settingsFormat, QSettings::UserScope,
+		_organizationName.isEmpty() ? qApp->organizationName() : _organizationName,
+		_applicationName.isEmpty() ? qApp->applicationName() : _applicationName
+	}
 {
 }
 

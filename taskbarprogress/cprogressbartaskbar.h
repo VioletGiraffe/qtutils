@@ -11,7 +11,7 @@ RESTORE_COMPILER_WARNINGS
 class CProgressBarTaskbar final : public QProgressBar
 {
 public:
-	explicit CProgressBarTaskbar(QWidget *parent = nullptr);
+	explicit CProgressBarTaskbar(QWidget *parent = nullptr) noexcept;
 	void linkToWidgetstaskbarButton(QWidget * widget);
 
 	void setState(ProgressState state);

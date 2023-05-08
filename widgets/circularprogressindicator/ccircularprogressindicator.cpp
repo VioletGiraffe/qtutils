@@ -6,7 +6,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QPainter>
 RESTORE_COMPILER_WARNINGS
 
-CCircularProgressIndicator::CCircularProgressIndicator(QWidget* parent)
+CCircularProgressIndicator::CCircularProgressIndicator(QWidget* parent) noexcept
 	: QWidget(parent),
 	  m_angle(0),
 	  m_timerId(-1),

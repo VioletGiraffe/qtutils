@@ -20,7 +20,7 @@ struct WidgetHierarchy {
 	std::vector<WidgetHierarchy> children;
 };
 
-CUiInspector::CUiInspector(QWidget* parent) :
+CUiInspector::CUiInspector(QWidget* parent) noexcept :
 	QMainWindow(parent)
 {
 	QTimer::singleShot(500, this, &CUiInspector::inspect);

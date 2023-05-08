@@ -17,7 +17,7 @@ struct WidgetHierarchy;
 class CUiInspector final : public QMainWindow
 {
 public:
-	explicit CUiInspector(QWidget *parent = nullptr);
+	explicit CUiInspector(QWidget *parent = nullptr) noexcept;
 
 private:
 	void inspect();

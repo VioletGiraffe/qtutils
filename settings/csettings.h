@@ -9,7 +9,7 @@ RESTORE_COMPILER_WARNINGS
 class CSettings
 {
 public:
-	CSettings();
+	CSettings() noexcept;
 
 	static void setApplicationName(const QString& name);
 	static void setOrganizationName(const QString& name);

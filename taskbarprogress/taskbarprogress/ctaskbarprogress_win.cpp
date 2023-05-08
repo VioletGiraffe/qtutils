@@ -9,13 +9,13 @@ RESTORE_COMPILER_WARNINGS
 
 #include <ShObjIdl.h>
 
-CTaskBarProgress::CTaskBarProgress(QWidget *widget)
+CTaskBarProgress::CTaskBarProgress(QWidget *widget) noexcept
 {
 	if (widget)
 		linkToWidgetsTaskbarButton(widget);
 }
 
-CTaskBarProgress::~CTaskBarProgress()
+CTaskBarProgress::~CTaskBarProgress() noexcept
 {
 	ITaskbarList3 * iface = taskbarListInterface();
 	if (iface)

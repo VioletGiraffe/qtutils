@@ -21,7 +21,7 @@ class CCircularProgressIndicator : public QWidget
 	Q_PROPERTY(bool displayedWhenStopped READ isDisplayedWhenStopped WRITE setDisplayedWhenStopped)
 	Q_PROPERTY(QColor color READ color WRITE setColor)
 public:
-	CCircularProgressIndicator(QWidget* parent = 0);
+	CCircularProgressIndicator(QWidget* parent = 0) noexcept;
 
 	/*! Returns the delay between animation steps.
 		\return The number of milliseconds between animation steps. By default, the animation delay is set to 40 milliseconds.
@@ -46,7 +46,7 @@ public:
 	  */
 	const QColor & color() const { return m_color; }
 
-	virtual QSize sizeHint() const;
+	virtual QSize sizeHint() const override;
 	int heightForWidth(int w) const;
 public slots:
 	/*! Starts the spin animation.
@@ -77,8 +77,8 @@ public slots:
 	 */
 	void setColor(const QColor & color);
 protected:
-	virtual void timerEvent(QTimerEvent * event);
-	virtual void paintEvent(QPaintEvent * event);
+	virtual void timerEvent(QTimerEvent * event) override;
+	virtual void paintEvent(QPaintEvent * event) override;
 private:
 	int m_angle;
 	int m_timerId;

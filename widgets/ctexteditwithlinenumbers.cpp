@@ -31,7 +31,7 @@ private:
 	CTextEditWithLineNumbers *_codeEditor;
 };
 
-CTextEditWithLineNumbers::CTextEditWithLineNumbers(QWidget *parent) :
+CTextEditWithLineNumbers::CTextEditWithLineNumbers(QWidget *parent) noexcept :
 	QPlainTextEdit(parent)
 {
 	_lineNumberArea = new CLineNumberArea(this);

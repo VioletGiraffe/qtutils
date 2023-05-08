@@ -1,6 +1,6 @@
 #include "cprogressbartaskbar.h"
 
-CProgressBarTaskbar::CProgressBarTaskbar(QWidget *parent) :
+CProgressBarTaskbar::CProgressBarTaskbar(QWidget *parent) noexcept :
 	QProgressBar(parent)
 {
 	connect (this, &CProgressBarTaskbar::valueChanged, this, &CProgressBarTaskbar::progressChanged);

@@ -13,7 +13,7 @@ class CMouseClickDetector final : public QObject
 {
 	Q_OBJECT
 public:
-	explicit CMouseClickDetector(QObject *parent = nullptr);
+	explicit CMouseClickDetector(QObject *parent = nullptr) noexcept;
 
 	[[nodiscard]] static CMouseClickDetector * globalInstance();
 

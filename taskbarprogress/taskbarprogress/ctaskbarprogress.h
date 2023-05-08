@@ -21,8 +21,8 @@ struct ITaskbarList3;
 class CTaskBarProgress final : protected QAbstractNativeEventFilter
 {
 public:
-	explicit CTaskBarProgress(QWidget * widget = nullptr);
-	~CTaskBarProgress() override;
+	explicit CTaskBarProgress(QWidget * widget = nullptr) noexcept;
+	~CTaskBarProgress()  noexcept override;
 
 	void linkToWidgetsTaskbarButton (QWidget * widget);
 	void setProgress (int progress, int minValue = 0, int maxValue = 100);
