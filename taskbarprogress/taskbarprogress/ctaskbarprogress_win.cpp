@@ -17,6 +17,8 @@ CTaskBarProgress::CTaskBarProgress(QWidget *widget) noexcept
 
 CTaskBarProgress::~CTaskBarProgress() noexcept
 {
+	qApp->removeNativeEventFilter(this);
+
 	ITaskbarList3 * iface = taskbarListInterface();
 	if (iface)
 		iface->Release();
@@ -27,13 +29,6 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 	if (!widget)
 	{
 		qInfo() << __FUNCTION__ << ": widget is null";
-		return;
-	}
-
-	QAbstractEventDispatcher * dispatcher = QAbstractEventDispatcher::instance();
-	if (!dispatcher)
-	{
-		qInfo() << __FUNCTION__ << ": QAbstractEventDispatcher is null";
 		return;
 	}
 

@@ -7,11 +7,8 @@ enum ProgressState { psNormal, psPaused, psStopped, psIndeterminate, psNoProgres
 #if defined _WIN32
 
 DISABLE_COMPILER_WARNINGS
-#include <QWidget>
-#include <qt_windows.h>
-#include <QAbstractEventDispatcher>
-
 #include <QAbstractNativeEventFilter>
+#include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
 #include <map>
