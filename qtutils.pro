@@ -15,20 +15,18 @@ contains(QT_ARCH, x86_64) {
 	ARCHITECTURE = x86
 }
 
-android {
-	Release:OUTPUT_DIR=android/release
-	Debug:OUTPUT_DIR=android/debug
-
-} else:ios {
-	Release:OUTPUT_DIR=ios/release
-	Debug:OUTPUT_DIR=ios/debug
-
-} else {
-	Release:OUTPUT_DIR=release/$${ARCHITECTURE}
-	Debug:OUTPUT_DIR=debug/$${ARCHITECTURE}
+Release{
+	OUTPUT_DIR=release/$${ARCHITECTURE}
+	OUTPUT_DIR_NOARCH=release
 }
 
-DESTDIR  = ../bin/$${OUTPUT_DIR}
+Debug{
+	OUTPUT_DIR=debug/$${ARCHITECTURE}
+	OUTPUT_DIR_NOARCH=debug
+}
+
+DESTDIR = ../bin/$${OUTPUT_DIR}
+DESTDIR_NOARCH = ../bin/$${OUTPUT_DIR_NOARCH}
 OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
 MOC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 UI_DIR      = ../build/$${OUTPUT_DIR}/$${TARGET}
@@ -71,7 +69,7 @@ linux*|mac*|freebsd{
 	Release:DEFINES += NDEBUG=1
 	Debug:DEFINES += _DEBUG
 
-	PRE_TARGETDEPS += $${DESTDIR}/libcpputils.a
+	PRE_TARGETDEPS += $${DESTDIR_NOARCH}/libcpputils.a
 }
 
 include(imageprocessing/imageprocessing.pri)
