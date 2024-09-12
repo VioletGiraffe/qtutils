@@ -11,7 +11,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
-#include <map>
+#include <unordered_map>
 
 struct ITaskbarList3;
 
@@ -37,11 +37,11 @@ private:
 	static bool widgetAlreadyLinked (const QWidget * widget);
 
 private:
-	static std::map<WId, quint32 /* "taskbar button created" message ID */> _taskbarButtonCreatedMessageIdMap;
+	static std::unordered_map<WId, quint32 /* "taskbar button created" message ID */> _taskbarButtonCreatedMessageIdMap;
 	// List of the widgets with which linkWithWidgetstaskbarButton have already been called.
 	// It's used to guard against linking different progress bar instances to the same taskbar button.
-	static std::map<CTaskBarProgress*, QWidget*> _registeredWidgetsList;
-	static std::map<WId, ITaskbarList3*> _taskbarListInterface;
+	static std::unordered_map<CTaskBarProgress*, QWidget*> _registeredWidgetsList;
+	static std::unordered_map<WId, ITaskbarList3*> _taskbarListInterface;
 };
 
 #elif defined __APPLE__

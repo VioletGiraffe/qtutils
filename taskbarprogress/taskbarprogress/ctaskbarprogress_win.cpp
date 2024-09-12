@@ -131,6 +131,6 @@ ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 	return eventFilter(message);
 }
 
-std::map<WId, ITaskbarList3*> CTaskBarProgress::_taskbarListInterface;
-std::map<CTaskBarProgress*, QWidget*> CTaskBarProgress::_registeredWidgetsList;
-std::map<WId, quint32 /* "taskbar button created" message ID */> CTaskBarProgress::_taskbarButtonCreatedMessageIdMap;
+std::unordered_map<WId, ITaskbarList3*> CTaskBarProgress::_taskbarListInterface;
+std::unordered_map<CTaskBarProgress*, QWidget*> CTaskBarProgress::_registeredWidgetsList;
+std::unordered_map<WId, quint32 /* "taskbar button created" message ID */> CTaskBarProgress::_taskbarButtonCreatedMessageIdMap;

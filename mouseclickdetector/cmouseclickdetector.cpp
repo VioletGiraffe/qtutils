@@ -7,11 +7,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QTimer>
 RESTORE_COMPILER_WARNINGS
 
-CMouseClickDetector::CMouseClickDetector(QObject *parent) noexcept :
-	QObject(parent)
-{
-}
-
 CMouseClickDetector *CMouseClickDetector::globalInstance()
 {
 	static CMouseClickDetector inst;

@@ -7,13 +7,13 @@ DISABLE_COMPILER_WARNINGS
 #include <QPoint>
 RESTORE_COMPILER_WARNINGS
 
-#include <map>
+#include <unordered_map>
 
 class CMouseClickDetector final : public QObject
 {
 	Q_OBJECT
 public:
-	explicit CMouseClickDetector(QObject *parent = nullptr) noexcept;
+	using QObject::QObject;
 
 	[[nodiscard]] static CMouseClickDetector * globalInstance();
 
@@ -27,6 +27,6 @@ protected:
 	bool eventFilter(QObject* object, QEvent* event) override;
 
 private:
-	std::map<QObject*, qint64> _lastClickTimestampForObject;
+	std::unordered_map<QObject*, qint64> _lastClickTimestampForObject;
 };
 
