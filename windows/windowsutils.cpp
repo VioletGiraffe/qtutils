@@ -14,7 +14,7 @@ inline wchar_t* append(wchar_t* dst, const wchar_t (&src)[N])
 	return dst + N - 1; // Null was already part of the input literal
 }
 
-size_t detail::toUncWcharArray(const QString& somePath, wchar_t* array, size_t arraySize)
+size_t detail::toUncWcharArray(const QString& somePath, wchar_t* array, [[maybe_unused]] size_t arraySize)
 {
 	wchar_t* currentStrStart = array;
 	if (somePath.contains(':')) // Quick and dirty test for absolute path
