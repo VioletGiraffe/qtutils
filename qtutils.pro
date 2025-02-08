@@ -1,32 +1,18 @@
 TEMPLATE = lib
-TARGET   = qtutils
+TARGET = qtutils
 CONFIG += staticlib
 
 CONFIG += strict_c++ c++latest
 
-mac* | linux* | freebsd{
+mac* | linux* | freebsd {
 	CONFIG(release, debug|release):CONFIG *= Release optimize_full
 	CONFIG(debug, debug|release):CONFIG *= Debug
 }
 
-contains(QT_ARCH, x86_64) {
-	ARCHITECTURE = x64
-} else {
-	ARCHITECTURE = x86
-}
-
-Release{
-	OUTPUT_DIR=release/$${ARCHITECTURE}
-	OUTPUT_DIR_NOARCH=release
-}
-
-Debug{
-	OUTPUT_DIR=debug/$${ARCHITECTURE}
-	OUTPUT_DIR_NOARCH=debug
-}
+Release:OUTPUT_DIR=release/$${ARCHITECTURE}
+Debug:OUTPUT_DIR=debug/$${ARCHITECTURE}
 
 DESTDIR = ../bin/$${OUTPUT_DIR}
-DESTDIR_NOARCH = ../bin/$${OUTPUT_DIR_NOARCH}
 OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
 MOC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 UI_DIR      = ../build/$${OUTPUT_DIR}/$${TARGET}
@@ -57,10 +43,6 @@ win*{
 	}
 }
 
-linux*{
-
-}
-
 linux*|mac*|freebsd{
 	QMAKE_CXXFLAGS += -pedantic-errors
 	QMAKE_CFLAGS += -pedantic-errors
@@ -69,7 +51,7 @@ linux*|mac*|freebsd{
 	Release:DEFINES += NDEBUG=1
 	Debug:DEFINES += _DEBUG
 
-	PRE_TARGETDEPS += $${DESTDIR_NOARCH}/libcpputils.a
+	PRE_TARGETDEPS += $${DESTDIR}/libcpputils.a
 }
 
 include(imageprocessing/imageprocessing.pri)
@@ -87,5 +69,4 @@ include(dialogs/dialogs.pri)
 include(ui/ui.pri)
 include(std_helpers/std_helpers.pri)
 include(qtcore_helpers/qtcore_helpers.pri)
-
 win*:include(windows/windows.pri)
