@@ -2,10 +2,10 @@
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
-#include <QPlainTextEdit>
+#include <QTextEdit>
 RESTORE_COMPILER_WARNINGS
 
-class CTextEditWithLineNumbers : public QPlainTextEdit
+class CTextEditWithLineNumbers : public QTextEdit
 {
 public:
 	explicit CTextEditWithLineNumbers(QWidget *parent = nullptr) noexcept;
@@ -17,8 +17,10 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 
 private:
+	int getFirstVisibleBlockId();
+
 	void updateLineNumberAreaWidth(int newBlockCount);
-	void updateLineNumberArea(const QRect &rect, int dy);
+	void updateLineNumberArea();
 
 private:
 	QWidget *_lineNumberArea = nullptr;
