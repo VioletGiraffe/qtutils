@@ -7,7 +7,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QKeySequence>
 RESTORE_COMPILER_WARNINGS
 
-class CHistoryComboBox : public QComboBox
+class CHistoryComboBox final : public QComboBox
 {
 	Q_OBJECT
 
@@ -41,8 +41,10 @@ protected:
 private:
 	// Moves the currently selected item to the top
 	void currentItemActivated();
+	void onItemSelected();
 
 	[[nodiscard]] QStringList itemsToSave() const;
+	void saveState();
 
 private:
 	// QShortcut doesn't work properly with this class for some reason, so here's a hack for creating a keyboard shortcut to selectPreviousItem

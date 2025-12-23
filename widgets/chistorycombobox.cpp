@@ -18,12 +18,13 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	setEditable(true);
 
 	installEventFilter(this);
+
+	connect(this, &QComboBox::activated, this, &CHistoryComboBox::onItemSelected);
 }
 
 CHistoryComboBox::~CHistoryComboBox()
 {
-	if (!_settingName.isEmpty())
-		CSettings().setValue(_settingName, itemsToSave());
+	saveState();
 }
 
 void CHistoryComboBox::enableAutoSave(const QString& settingName)
@@ -142,23 +143,23 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	else
 		QComboBox::keyPressEvent(e);
 
-	if (!_settingName.isEmpty())
-		CSettings().setValue(_settingName, itemsToSave());
+	saveState();
 }
 
 // Moves the currently selected item to the top
 void CHistoryComboBox::currentItemActivated()
 {
 	const QString newItem = currentText();
+	onItemSelected();
 	emit itemActivated(newItem);
+}
 
+void CHistoryComboBox::onItemSelected()
+{
 	if (_bHistoryMode)
 	{
-		// No longer necessary as of Qt 5.4?..
-		//		removeItem(currentIndex());
-
 		auto list = items();
-		list.push_front(newItem);
+		list.push_front(currentText());
 
 		list = SetOperations::uniqueElements(list);
 		clear();
@@ -170,6 +171,8 @@ void CHistoryComboBox::currentItemActivated()
 		if (_bClearEditorOnItemActivation)
 			lineEdit()->clear();
 	}
+
+	saveState();
 }
 
 QStringList CHistoryComboBox::itemsToSave() const
@@ -179,4 +182,10 @@ QStringList CHistoryComboBox::itemsToSave() const
 		result.push_front(currentText());
 
 	return result;
+}
+
+void CHistoryComboBox::saveState()
+{
+	if (!_settingName.isEmpty())
+		CSettings().setValue(_settingName, itemsToSave());
 }
