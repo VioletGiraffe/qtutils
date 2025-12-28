@@ -26,6 +26,9 @@ public:
 signals:
 	void settingsChanged();
 
+protected:
+	void showEvent(QShowEvent* event) override;
+
 private:
 	void pageChanged(QListWidgetItem *item);
 	void wipeSettings();
@@ -35,4 +38,5 @@ private slots:
 
 private:
 	Ui::CSettingsDialog *ui;
+	bool _firstShow = true;
 };
