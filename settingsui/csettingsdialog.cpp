@@ -107,7 +107,7 @@ void CSettingsDialog::wipeSettings()
 	if (QMessageBox::question(this, tr("Wipe settings"), tr("Wipe all settings?")) == QMessageBox::Yes)
 	{
 		CSettings{}.clear();
-		exit(0); // Exiting immediately so that the current application state cannot be re-saved upon next normal exit
+		_Exit(0); // Exiting immediately so that the current application state cannot be re-saved upon next normal exit
 	}
 }
 
