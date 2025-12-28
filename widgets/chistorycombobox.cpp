@@ -162,9 +162,11 @@ void CHistoryComboBox::onItemSelected()
 		list.push_front(currentText());
 
 		list = SetOperations::uniqueElements(list);
+
+		setUpdatesEnabled(false);
 		clear();
-		for (auto it = list.rbegin(); it != list.rend(); ++it)
-			insertItem(0, *it);
+		addItems(list);
+		setUpdatesEnabled(true);
 
 		setCurrentIndex(0);
 
