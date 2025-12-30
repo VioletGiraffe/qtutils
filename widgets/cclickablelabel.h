@@ -6,12 +6,12 @@ DISABLE_COMPILER_WARNINGS
 #include <QLabel>
 RESTORE_COMPILER_WARNINGS
 
-class CClickableLabel : public QLabel
+class CClickableLabel final : public QLabel
 {
 	Q_OBJECT
 
 public:
-	using QLabel::QLabel;
+	explicit CClickableLabel(QWidget* parent = 0);
 
 signals:
 	void doubleClicked(QPoint pos);
