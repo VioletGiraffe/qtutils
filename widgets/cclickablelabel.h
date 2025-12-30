@@ -9,9 +9,8 @@ RESTORE_COMPILER_WARNINGS
 class CClickableLabel final : public QLabel
 {
 	Q_OBJECT
-
 public:
-	explicit CClickableLabel(QWidget* parent = 0);
+	explicit CClickableLabel(QWidget* parent = nullptr);
 
 signals:
 	void doubleClicked(QPoint pos);
