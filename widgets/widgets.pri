@@ -1,4 +1,5 @@
 HEADERS += \
+    $$PWD/clabelmidelision.h \
     $$PWD/clineedit.h \
     $$PWD/cclickablelabel.h \
     $$PWD/ctexteditwithlinenumbers.h \
@@ -10,6 +11,7 @@ HEADERS += \
     $$PWD/cpersistentwindow.h
 
 SOURCES += \
+    $$PWD/clabelmidelision.cpp \
     $$PWD/clineedit.cpp \
     $$PWD/cclickablelabel.cpp \
     $$PWD/ctexteditwithlinenumbers.cpp \

@@ -26,7 +26,7 @@ public:
 	[[nodiscard]] QLayoutItem *takeAt(int index) override;
 
 private:
-	[[nodiscard]] int doLayout(const QRect &rect, bool testOnly) const;
+	int doLayout(const QRect &rect, bool testOnly) const;
 
 private:
 	QList<QLayoutItem *> m_itemList;
