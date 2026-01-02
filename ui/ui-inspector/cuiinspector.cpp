@@ -1,22 +1,22 @@
 #include "cuiinspector.h"
 
-#include <QAction>
-#include <QApplication>
-#include <QComboBox>
-#include <QDebug>
-#include <QHeaderView>
-#include <QLabel>
-#include <QLayout>
-#include <QLineEdit>
-#include <QMenu>
-#include <QMenuBar>
-#include <QPushButton>
-#include <QSplitter>
-#include <QStatusBar>
-#include <QStyleHints>
-#include <QTextBrowser>
-#include <QTimer>
-#include <QTreeWidget>
+#include <QtGui/QAction>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QComboBox>
+#include <QtCore/QDebug>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QLayout>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QMenu>
+#include <QtWidgets/QMenuBar>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QSplitter>
+#include <QtWidgets/QStatusBar>
+#include <QtGui/QStyleHints>
+#include <QtWidgets/QTextBrowser>
+#include <QtCore/QTimer>
+#include <QtWidgets/QTreeWidget>
 
 
 struct WidgetHierarchy {

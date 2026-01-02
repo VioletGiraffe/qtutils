@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QStringList>
+#include <QtWidgets/QMainWindow>
+#include <QtCore/QStringList>
 
 #include <vector>
 
