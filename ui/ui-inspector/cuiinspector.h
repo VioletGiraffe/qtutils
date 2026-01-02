@@ -1,16 +1,12 @@
 #pragma once
-#include "compiler/compiler_warnings_control.h"
 
-DISABLE_COMPILER_WARNINGS
 #include <QMainWindow>
 #include <QStringList>
-RESTORE_COMPILER_WARNINGS
 
 #include <vector>
 
-class QTreeWidget;
-class QAction;
 class QLayout;
+class QTreeWidgetItem;
 
 struct WidgetHierarchy;
 
@@ -18,8 +14,11 @@ class CUiInspector final : public QMainWindow
 {
 public:
 	explicit CUiInspector(QWidget *parent = nullptr) noexcept;
+	void setRootToInspect(QWidget* root);
 
 private:
+	void setupUi();
+
 	void inspect();
 	void visualize(const std::vector<WidgetHierarchy>& hierarchy);
 
@@ -27,10 +26,16 @@ private:
 	void inspectWidgetHierarchy(QLayout* layout, std::vector<WidgetHierarchy>& root) const;
 
 	void showItemContextMenu(const QPoint& p);
+	void highlightItem(QObject* item);
+	void onItemSelected(QTreeWidgetItem* current, QTreeWidgetItem* previous);
 
 private:
 	QStringList _ignoredClasses;
+	QWidget* _rootToInspect = nullptr;
 
-	QTreeWidget* _tree;
-	QAction* _actShowHiddenItems;
+	QWidget* _currentlyHighlighted = nullptr;
+	QString _styleSheetToRestore;
+
+	struct Ui;
+	Ui* _ui = nullptr;
 };
