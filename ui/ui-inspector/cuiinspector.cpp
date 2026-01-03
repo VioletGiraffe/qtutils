@@ -114,6 +114,10 @@ static QString getLayoutDetails(const QLayout* layout)
 		QDebug infoWriter(&details);
 		infoWriter << "Geometry:" << layout->geometry() << '\n';
 		infoWriter << "Enabled:" << layout->isEnabled() << '\n';
+		infoWriter << "Min. size:" << layout->minimumSize() << '\n';
+		infoWriter << "Max. size:" << layout->maximumSize() << '\n';
+		infoWriter << "Size hint:" << layout->sizeHint() << '\n';
+		infoWriter << "Size constraint:" << layout->sizeConstraint() << '\n';
 		infoWriter << "Contents margins:" << layout->contentsMargins() << '\n';
 		infoWriter << "Spacing:" << layout->spacing() << '\n';
 		infoWriter << "item count:" << layout->count() << '\n';
@@ -136,6 +140,8 @@ CUiInspector::CUiInspector(QWidget* parent) noexcept :
 		}
 		statusBar()->showMessage(text);
 	});
+
+	setWindowTitle("UI Inspector - " + qApp->applicationName());
 
 	resize(800, 600);
 	show();
