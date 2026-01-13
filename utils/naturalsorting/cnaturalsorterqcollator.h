@@ -14,7 +14,7 @@ public:
 		_collator.setNumericMode(true);
 	}
 
-	inline [[nodiscard]] bool lessThan(const QString& l, const QString& r) const noexcept {
+	[[nodiscard]] inline bool lessThan(const QString& l, const QString& r) const noexcept {
 		// Fix for the new breaking changes in QCollator in Qt 5.14 - null strings are no longer a valid input
 		return _collator.compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r)) < 0;
 	}
