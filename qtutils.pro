@@ -56,8 +56,6 @@ linux*|mac*|freebsd{
 
 	Release:DEFINES += NDEBUG=1
 	Debug:DEFINES += _DEBUG
-
-	PRE_TARGETDEPS += $${DESTDIR}/libcpputils.a
 }
 
 include(imageprocessing/imageprocessing.pri)
