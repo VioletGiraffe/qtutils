@@ -30,7 +30,6 @@ QT = core gui widgets
 DEFINES += QT_MESSAGELOGCONTEXT
 
 INCLUDEPATH += \
-	../image-processing \
 	../cpputils \
 	../cpp-template-utils \
 
@@ -58,7 +57,6 @@ linux*|mac*|freebsd{
 	Debug:DEFINES += _DEBUG
 }
 
-include(imageprocessing/imageprocessing.pri)
 include(logger/logger.pri)
 include(aboutdialog/aboutdialog.pri)
 include(settings/settings.pri)
