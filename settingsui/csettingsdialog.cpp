@@ -37,6 +37,9 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
 	ui->splitter->setStretchFactor(0, 0);
 	ui->splitter->setStretchFactor(1, 1);
 
+	ui->pageList->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	ui->pageList->setStyleSheet("QListWidget::item { padding-left: 6px; padding-right: 6px; }");
+
 	connect(ui->pageList, &QListWidget::currentItemChanged, this, &CSettingsDialog::pageChanged);
 	ui->pageList->setResizeMode(QListWidget::Adjust);
 
