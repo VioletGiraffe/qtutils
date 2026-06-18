@@ -14,7 +14,7 @@ class CSettingsPage;
 
 class QListWidgetItem;
 
-class CSettingsDialog final : public QDialog
+class CSettingsDialog : public QDialog
 {
 	Q_OBJECT
 public:
