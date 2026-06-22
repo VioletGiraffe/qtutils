@@ -28,21 +28,31 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 		{
 			const QPoint pos = mouseEvent->pos();
 
-			if (!_lastClickTimestampForObject.contains(object))
-				_lastClickTimestampForObject[object] = 0;
-
-			if (mouseEvent->timestamp() - _lastClickTimestampForObject[object] <= (unsigned int)QApplication::doubleClickInterval())
+			auto it = _lastClickTimestampForObject.find(object);
+			if (it == _lastClickTimestampForObject.end())
 			{
-				_lastClickTimestampForObject[object] = 0;
+				it = _lastClickTimestampForObject.emplace(object, 0).first;
+				// Clean up the entry once the object goes away, otherwise the map grows without bound over the app's lifetime.
+				connect(object, &QObject::destroyed, this, [this](QObject* destroyedObject){
+					_lastClickTimestampForObject.erase(destroyedObject);
+				});
+			}
+
+			if (mouseEvent->timestamp() - it->second <= (unsigned int)QApplication::doubleClickInterval())
+			{
+				it->second = 0;
 				emit doubleLeftClickDetected(object, pos);
 			}
 			else
 			{
-				_lastClickTimestampForObject[object] = (qint64)mouseEvent->timestamp();
+				it->second = (qint64)mouseEvent->timestamp();
 				QTimer::singleShot(QApplication::doubleClickInterval() + 1, this, [this, object, pos](){
-					if (_lastClickTimestampForObject[object] != 0)
+					// Look up by find(), not operator[]: the object may have been destroyed (and its entry erased) by now,
+					// and operator[] would silently re-insert a stray entry for the now-dangling pointer.
+					const auto timerIt = _lastClickTimestampForObject.find(object);
+					if (timerIt != _lastClickTimestampForObject.end() && timerIt->second != 0)
 					{
-						_lastClickTimestampForObject[object] = 0;
+						timerIt->second = 0;
 						emit singleLeftClickDetected(object, pos);
 					}
 				});
