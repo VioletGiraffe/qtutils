@@ -23,6 +23,13 @@ void CFlowLayout::addItem(QLayoutItem *item)
 	m_itemList.append(item);
 }
 
+void CFlowLayout::setSpacing(int spacing)
+{
+	m_hSpace = spacing;
+	m_vSpace = spacing;
+	QLayout::setSpacing(spacing);
+}
+
 int CFlowLayout::horizontalSpacing() const
 {
 	if (m_hSpace >= 0)
