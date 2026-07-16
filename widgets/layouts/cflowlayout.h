@@ -13,6 +13,8 @@ public:
 	~CFlowLayout() override;
 
 	void addItem(QLayoutItem *item) override;
+	[[nodiscard]] int spacing() const override;
+	void setSpacing(int spacing) override;
 	[[nodiscard]] int horizontalSpacing() const;
 	[[nodiscard]] int verticalSpacing() const;
 	[[nodiscard]] Qt::Orientations expandingDirections() const override;

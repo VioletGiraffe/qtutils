@@ -5,6 +5,20 @@ DISABLE_COMPILER_WARNINGS
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
+namespace {
+	[[nodiscard]] int inheritedOrStyleSpacing(const QLayout &layout, QStyle::PixelMetric metric)
+	{
+		const QObject *parent = layout.parent();
+		if (!parent)
+			return -1;
+		if (parent->isWidgetType()) {
+			const auto *parentWidget = static_cast<const QWidget *>(parent);
+			return parentWidget->style()->pixelMetric(metric, nullptr, parentWidget);
+		}
+		return static_cast<const QLayout *>(parent)->spacing();
+	}
+}
+
 CFlowLayout::CFlowLayout(QWidget *parent, int margin, int hSpacing, int vSpacing)
 	: QLayout(parent), m_hSpace(hSpacing), m_vSpace(vSpacing)
 {
@@ -20,29 +34,39 @@ CFlowLayout::~CFlowLayout()
 
 void CFlowLayout::addItem(QLayoutItem *item)
 {
+	if (QLayout *childLayout = item->layout())
+		addChildLayout(childLayout);
 	m_itemList.append(item);
+}
+
+int CFlowLayout::spacing() const
+{
+	if (m_hSpace >= 0 && m_hSpace == m_vSpace)
+		return m_hSpace;
+	if (m_hSpace < 0 && m_vSpace < 0)
+		return QLayout::spacing();
+	return -1;
+}
+
+void CFlowLayout::setSpacing(int spacing)
+{
+	m_hSpace = spacing;
+	m_vSpace = spacing;
+	QLayout::setSpacing(spacing);
 }
 
 int CFlowLayout::horizontalSpacing() const
 {
 	if (m_hSpace >= 0)
 		return m_hSpace;
-
-	if (QWidget* pw = parentWidget(); pw)
-		return pw->style()->pixelMetric(QStyle::PM_LayoutHorizontalSpacing);
-	else
-		return 0;
+	return inheritedOrStyleSpacing(*this, QStyle::PM_LayoutHorizontalSpacing);
 }
 
 int CFlowLayout::verticalSpacing() const
 {
 	if (m_vSpace >= 0)
 		return m_vSpace;
-
-	if (QWidget* pw = parentWidget(); pw)
-		return pw->style()->pixelMetric(QStyle::PM_LayoutVerticalSpacing);
-	else
-		return 0;
+	return inheritedOrStyleSpacing(*this, QStyle::PM_LayoutVerticalSpacing);
 }
 
 int CFlowLayout::count() const
@@ -109,17 +133,19 @@ int CFlowLayout::doLayout(const QRect &rect, bool testOnly) const
 	int x = effectiveRect.x();
 	int y = effectiveRect.y();
 	int lineHeight = 0;
+	QWidget *layoutWidget = parentWidget();
 
 	for (QLayoutItem* item: m_itemList) {
 		QWidget *wid = item->widget();
 		int spaceX = horizontalSpacing();
-		if (spaceX == -1)
-			spaceX = wid->style()->layoutSpacing(
-				QSizePolicy::PushButton, QSizePolicy::PushButton, Qt::Horizontal);
 		int spaceY = verticalSpacing();
-		if (spaceY == -1)
-			spaceY = wid->style()->layoutSpacing(
-				QSizePolicy::PushButton, QSizePolicy::PushButton, Qt::Vertical);
+		if (spaceX == -1 || spaceY == -1) {
+			QStyle *style = wid ? wid->style() : layoutWidget ? layoutWidget->style() : nullptr;
+			if (spaceX == -1)
+				spaceX = style ? style->layoutSpacing(QSizePolicy::PushButton, QSizePolicy::PushButton, Qt::Horizontal) : 0;
+			if (spaceY == -1)
+				spaceY = style ? style->layoutSpacing(QSizePolicy::PushButton, QSizePolicy::PushButton, Qt::Vertical) : 0;
+		}
 
 		int nextX = x + item->sizeHint().width() + spaceX;
 		if (nextX - spaceX > effectiveRect.right() && lineHeight > 0) {
