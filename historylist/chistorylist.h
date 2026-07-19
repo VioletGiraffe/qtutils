@@ -19,6 +19,7 @@ public:
 	// Access and status
 	[[nodiscard]] inline bool empty() const { return _list.empty(); }
 	[[nodiscard]] inline size_t size() const { return _list.size(); }
+	[[nodiscard]] inline size_t maxSize() const { return _maxSize; }
 	inline void clear() { _list.clear(); }
 
 	[[nodiscard]] inline typename container_type::const_iterator begin() const { return _list.begin(); }
