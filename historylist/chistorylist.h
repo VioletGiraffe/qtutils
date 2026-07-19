@@ -119,9 +119,10 @@ void CHistoryList<T>::addLatest(const T& item)
 		std::rotate(currentPosition, currentPosition + 1, _list.end());
 
 	assert_r(!empty());
-	if (size() > 1 && _currentIndex <= size() - 2) // If we already were at the end of the list, just move the index to the newest element
+	// Rebuild only when there are entries between the cursor and the just-added newest item to pull to the front.
+	// At _currentIndex >= size()-2 there are none, so the rebuild would reproduce the list verbatim; skip the copy.
+	if (size() > 1 && _currentIndex < size() - 2)
 	{
-		// If we were not in the end, move and insert [0; _currentIndex] just before end
 		decltype(_list) newList;
 		for (size_t i = _currentIndex + 1; i < size() - 1; ++i)
 			newList.push_back(std::move(_list[i]));
