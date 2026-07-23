@@ -22,6 +22,12 @@ CTaskBarProgress::~CTaskBarProgress() noexcept
 	ITaskbarList3 * iface = taskbarListInterface();
 	if (iface)
 		iface->Release();
+
+	// The static maps must not keep entries for this instance or its window: Windows reuses HWND values,
+	// so a leftover released interface pointer would be found - and called - for a future window with the same id.
+	_taskbarListInterface.erase(_linkedWindowId);
+	_taskbarButtonCreatedMessageIdMap.erase(_linkedWindowId);
+	_registeredWidgetsList.erase(this);
 }
 
 void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
@@ -39,7 +45,8 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 	}
 
 	_registeredWidgetsList[this] = widget;
-	_taskbarButtonCreatedMessageIdMap[widget->winId()] = RegisterWindowMessageW(L"TaskbarButtonCreated");
+	_linkedWindowId = widget->winId();
+	_taskbarButtonCreatedMessageIdMap[_linkedWindowId] = RegisterWindowMessageW(L"TaskbarButtonCreated");
 
 	// Care: creating winId leads to creating a window which leads to creating a Window which leads to window procedure starting up, so you should only register event filter afterwards
 	qApp->installNativeEventFilter(this);
@@ -49,7 +56,7 @@ void CTaskBarProgress::setProgress(int progress, int minValue /* = 0*/, int maxV
 {
 	ITaskbarList3 * iface = taskbarListInterface();
 	if (iface)
-		iface->SetProgressValue(HWND(_registeredWidgetsList[this]->winId()), progress, maxValue - minValue);
+		iface->SetProgressValue(HWND(_linkedWindowId), progress, maxValue - minValue);
 }
 
 void CTaskBarProgress::setState(ProgressState state)
@@ -77,7 +84,7 @@ void CTaskBarProgress::setState(ProgressState state)
 	}
 
 	if (iface)
-		iface->SetProgressState(HWND(_registeredWidgetsList[this]->winId()), taskbarProgressState);
+		iface->SetProgressState(HWND(_linkedWindowId), taskbarProgressState);
 }
 
 bool CTaskBarProgress::eventFilter(void *msg)
@@ -116,10 +123,10 @@ bool CTaskBarProgress::widgetAlreadyLinked(const QWidget * widget)
 
 ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 {
-	if (!_registeredWidgetsList.contains(this) || _registeredWidgetsList[this] == nullptr || !_taskbarListInterface.contains(_registeredWidgetsList[this]->winId()))
-		return nullptr;
-	else
-		return _taskbarListInterface[_registeredWidgetsList[this]->winId()];
+	// Looked up by the stored window id only - the linked widget must not be dereferenced here, this
+	// runs on the destructor path where its QWidget part may already be destroyed.
+	const auto found = _taskbarListInterface.find(_linkedWindowId);
+	return found != _taskbarListInterface.end() ? found->second : nullptr;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

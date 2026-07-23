@@ -37,6 +37,10 @@ private:
 	static bool widgetAlreadyLinked (const QWidget * widget);
 
 private:
+	// Captured once at link time. All later use goes through this id, never through the widget: the
+	// destructor runs while the linked widget may already be past its QWidget destructor.
+	WId _linkedWindowId = 0;
+
 	static std::unordered_map<WId, quint32 /* "taskbar button created" message ID */> _taskbarButtonCreatedMessageIdMap;
 	// List of the widgets with which linkWithWidgetstaskbarButton have already been called.
 	// It's used to guard against linking different progress bar instances to the same taskbar button.
