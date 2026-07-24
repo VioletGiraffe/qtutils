@@ -19,4 +19,12 @@ namespace MessageBox {
 	const QStringList& options, int defaultIndex = 0, bool cancellable = true,
 	QMessageBox::Icon icon = QMessageBox::Question);
 
+// An OK-only message box that shows `text` above `details` in a scrollable, height-capped body, where a plain
+// QMessageBox instead grows to fit its whole message. Use it wherever the message carries a part whose length is
+// driven by input rather than fixed - one line per offending file, per failure - so the box can't outgrow the screen.
+// `details` is plain text the caller has already assembled, separator included; it is selectable, so paths can be
+// copied out of it.
+void notice(QWidget* parent, const QString& title, const QString& text, const QString& details,
+	QMessageBox::Icon icon = QMessageBox::Warning);
+
 }
