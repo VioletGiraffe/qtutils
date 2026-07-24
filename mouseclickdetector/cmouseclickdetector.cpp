@@ -28,10 +28,9 @@ bool CMouseClickDetector::eventFilter(QObject * object, QEvent * event)
 		{
 			const QPoint pos = mouseEvent->pos();
 
-			auto it = _lastClickTimestampForObject.find(object);
-			if (it == _lastClickTimestampForObject.end())
+			auto [it, inserted] = _lastClickTimestampForObject.try_emplace(object, 0);
+			if (inserted)
 			{
-				it = _lastClickTimestampForObject.emplace(object, 0).first;
 				// Clean up the entry once the object goes away, otherwise the map grows without bound over the app's lifetime.
 				connect(object, &QObject::destroyed, this, [this](QObject* destroyedObject){
 					_lastClickTimestampForObject.erase(destroyedObject);
