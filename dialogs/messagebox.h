@@ -23,7 +23,8 @@ namespace MessageBox {
 // QMessageBox instead grows to fit its whole message. Use it wherever the message carries a part whose length is
 // driven by input rather than fixed - one line per offending file, per failure - so the box can't outgrow the screen.
 // `details` is plain text the caller has already assembled, separator included; it is selectable, so paths can be
-// copied out of it.
+// copied out of it. Empty `details` (the process that failed had nothing to say) degrades to a plain message box,
+// so a caller that may or may not have output needn't branch.
 void notice(QWidget* parent, const QString& title, const QString& text, const QString& details,
 	QMessageBox::Icon icon = QMessageBox::Warning);
 

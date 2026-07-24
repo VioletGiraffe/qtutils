@@ -75,6 +75,8 @@ void notice(QWidget* parent, const QString& title, const QString& text, const QS
 	dialog.setWindowTitle(title);
 	dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
+	QVBoxLayout* layout = new QVBoxLayout(&dialog);
+
 	QHBoxLayout* headerRow = new QHBoxLayout;
 	if (icon != QMessageBox::NoIcon)
 	{
@@ -88,31 +90,33 @@ void notice(QWidget* parent, const QString& title, const QString& text, const QS
 	QLabel* textLabel = new QLabel(text, &dialog);
 	textLabel->setWordWrap(true);
 	headerRow->addWidget(textLabel, 1);
+	layout->addLayout(headerRow);
 
-	QPlainTextEdit* detailsView = new QPlainTextEdit(details, &dialog);
-	detailsView->setReadOnly(true);
-	// Wrap a long entry instead of scrolling sideways for it: vertical scrolling alone then reaches every entry,
-	// and a wrapped path stays readable.
-	detailsView->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+	if (!details.isEmpty())
+	{
+		QPlainTextEdit* detailsView = new QPlainTextEdit(details, &dialog);
+		detailsView->setReadOnly(true);
+		// Wrap a long entry instead of scrolling sideways for it: vertical scrolling alone then reaches every entry,
+		// and a wrapped path stays readable.
+		detailsView->setLineWrapMode(QPlainTextEdit::WidgetWidth);
 
-	const QFontMetrics metrics = detailsView->fontMetrics();
-	detailsView->setMinimumWidth(metrics.averageCharWidth() * 80);   // a typical path fits without wrapping
+		const QFontMetrics metrics = detailsView->fontMetrics();
+		detailsView->setMinimumWidth(metrics.averageCharWidth() * 80);   // a typical path fits without wrapping
 
-	// The height is what bounds the box: past the cap the list scrolls rather than growing the dialog off-screen,
-	// while a short list still gets a small box. Counting explicit newlines under-counts a list whose entries wrap,
-	// which only brings the scrollbar in earlier - the bounded behaviour wanted anyway.
-	constexpr int MIN_DETAIL_ROWS = 3;
-	constexpr int MAX_DETAIL_ROWS = 12;
-	const int rows = std::clamp(static_cast<int>(details.count('\n')) + 1, MIN_DETAIL_ROWS, MAX_DETAIL_ROWS);
-	detailsView->setFixedHeight(rows * metrics.lineSpacing()
-		+ 2 * (detailsView->frameWidth() + static_cast<int>(detailsView->document()->documentMargin())));
+		// The height is what bounds the box: past the cap the details scroll rather than growing the dialog
+		// off-screen, while a short list still gets a small box. Counting explicit newlines under-counts entries
+		// that wrap, which only brings the scrollbar in earlier - the bounded behaviour wanted anyway.
+		constexpr int MIN_DETAIL_ROWS = 3;
+		constexpr int MAX_DETAIL_ROWS = 12;
+		const int rows = std::clamp(static_cast<int>(details.count('\n')) + 1, MIN_DETAIL_ROWS, MAX_DETAIL_ROWS);
+		detailsView->setFixedHeight(rows * metrics.lineSpacing()
+			+ 2 * (detailsView->frameWidth() + static_cast<int>(detailsView->document()->documentMargin())));
+
+		layout->addWidget(detailsView);
+	}
 
 	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok, &dialog);
 	QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-
-	QVBoxLayout* layout = new QVBoxLayout(&dialog);
-	layout->addLayout(headerRow);
-	layout->addWidget(detailsView);
 	layout->addWidget(buttons);
 
 	dialog.exec();
