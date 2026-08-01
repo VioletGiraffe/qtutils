@@ -9,6 +9,10 @@ RESTORE_COMPILER_WARNINGS
 
 #include <ShObjIdl.h>
 
+#include <utility>
+
+using Microsoft::WRL::ComPtr;
+
 CTaskBarProgress::CTaskBarProgress(QWidget *widget) noexcept
 {
 	if (widget)
@@ -19,12 +23,8 @@ CTaskBarProgress::~CTaskBarProgress() noexcept
 {
 	qApp->removeNativeEventFilter(this);
 
-	ITaskbarList3 * iface = taskbarListInterface();
-	if (iface)
-		iface->Release();
-
 	// The static maps must not keep entries for this instance or its window: Windows reuses HWND values,
-	// so a leftover released interface pointer would be found - and called - for a future window with the same id.
+	// so a leftover entry would be found - and called - for a future window with the same id.
 	_taskbarListInterface.erase(_linkedWindowId);
 	_taskbarButtonCreatedMessageIdMap.erase(_linkedWindowId);
 	_registeredWidgetsList.erase(this);
@@ -97,13 +97,13 @@ bool CTaskBarProgress::eventFilter(void *msg)
 
 	if (message->message == _taskbarButtonCreatedMessageIdMap[WId(message->hwnd)] && !_taskbarListInterface.contains(WId(message->hwnd)))
 	{
-		ITaskbarList3 * iface = nullptr;
-		HRESULT result = CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_ALL, IID_ITaskbarList3, reinterpret_cast<void**>(&iface));
+		ComPtr<ITaskbarList3> iface;
+		HRESULT result = CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_ALL, IID_ITaskbarList3, reinterpret_cast<void**>(iface.GetAddressOf()));
 		if (result != S_OK || !iface)
 			qInfo() << "ITaskbarList3 creation failed";
 		else
 		{
-			_taskbarListInterface[WId(message->hwnd)] = iface;
+			_taskbarListInterface[WId(message->hwnd)] = std::move(iface);
 		}
 	}
 
@@ -126,7 +126,7 @@ ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 	// Looked up by the stored window id only - the linked widget must not be dereferenced here, this
 	// runs on the destructor path where its QWidget part may already be destroyed.
 	const auto found = _taskbarListInterface.find(_linkedWindowId);
-	return found != _taskbarListInterface.end() ? found->second : nullptr;
+	return found != _taskbarListInterface.end() ? found->second.Get() : nullptr;
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -138,6 +138,6 @@ ITaskbarList3 * CTaskBarProgress::taskbarListInterface()
 	return eventFilter(message);
 }
 
-std::unordered_map<WId, ITaskbarList3*> CTaskBarProgress::_taskbarListInterface;
+std::unordered_map<WId, ComPtr<ITaskbarList3>> CTaskBarProgress::_taskbarListInterface;
 std::unordered_map<CTaskBarProgress*, QWidget*> CTaskBarProgress::_registeredWidgetsList;
 std::unordered_map<WId, quint32 /* "taskbar button created" message ID */> CTaskBarProgress::_taskbarButtonCreatedMessageIdMap;
