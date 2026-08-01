@@ -35,7 +35,8 @@ INCLUDEPATH += \
 	../cpp-template-utils \
 
 win*{
-	QMAKE_CXXFLAGS += /MP /Zi /wd4251 /JMC
+	QMAKE_CXXFLAGS += /MP /Zi /wd4251
+	Debug:QMAKE_CXXFLAGS += /JMC
 	QMAKE_CXXFLAGS += /std:c++latest /permissive- /Zc:__cplusplus
 	DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
 	QMAKE_CXXFLAGS_WARN_ON = /W4
