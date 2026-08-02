@@ -38,14 +38,19 @@ void CTaskBarProgress::linkToWidgetsTaskbarButton(QWidget *widget)
 		return;
 	}
 
-	if (widgetAlreadyLinked(widget))
+	// The taskbar button belongs to the top-level window, so that is what gets linked and tracked - two widgets
+	// in the same window must collide in the check below. It also keeps winId() from turning a child widget
+	// (and, by default, its siblings) into native windows.
+	QWidget* const window = widget->window();
+
+	if (widgetAlreadyLinked(window))
 	{
-		qInfo() << __FUNCTION__ << ": CProgressBarTaskbar instance" << Qt::hex << this << " is trying to link to QWidget " << Qt::hex << widget << ", whose taskbar button has already been linked to";
+		qInfo() << __FUNCTION__ << ": CTaskBarProgress instance" << Qt::hex << this << " is trying to link to QWidget " << Qt::hex << window << ", whose taskbar button has already been linked to";
 		return;
 	}
 
-	_registeredWidgetsList[this] = widget;
-	_linkedWindowId = widget->winId();
+	_registeredWidgetsList[this] = window;
+	_linkedWindowId = window->winId();
 	_taskbarButtonCreatedMessageIdMap[_linkedWindowId] = RegisterWindowMessageW(L"TaskbarButtonCreated");
 
 	// Care: creating winId leads to creating a window which leads to creating a Window which leads to window procedure starting up, so you should only register event filter afterwards
