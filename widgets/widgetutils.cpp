@@ -1,5 +1,7 @@
 #include "widgetutils.h"
 
+#include "assert/advanced_assert.h"
+
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QLayout>
@@ -42,6 +44,12 @@ QMainWindow* WidgetUtils::findTopLevelWindow()
 	}
 
 	return nullptr;
+}
+
+void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)
+{
+	assert_and_return_r(widget, nullptr);
+	return reinterpret_cast<void*>(widget->window()->winId());
 }
 
 bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const hierarchy)

@@ -16,6 +16,9 @@ namespace WidgetUtils
 	void setLayoutVisible(QLayout* layout, bool visible);
 	QMainWindow* findParentMainWindow(QWidget* child);
 	QMainWindow* findTopLevelWindow();
+	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
+	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
+	void* nativeOwnerWinId(const QWidget* widget);
 	bool widgetBelongsToHierarchy(QWidget * widget, QObject * hierarchy);
 
 	QRect currentScreenGeometryForWidget(QWidget* widget);
