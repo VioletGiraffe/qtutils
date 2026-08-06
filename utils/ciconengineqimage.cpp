@@ -46,21 +46,24 @@ QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode mode, QIc
 	if (_source.isNull() || targetSize.isEmpty())
 		return {};
 
-	QPixmap pixmap = _rawPixmapsByPixelSize.value(targetSize);
+	const CacheKey key{ targetSize, mode };
+
+	QPixmap pixmap = _cache.value(key);
 	if (pixmap.isNull())
 	{
 		pixmap = QPixmap::fromImage(renderFitted(targetSize));
-		_rawPixmapsByPixelSize.insert(targetSize, pixmap);
-	}
 
-	if (mode != QIcon::Normal)
-	{
-		QStyleOption option;
-		option.palette = QGuiApplication::palette();
+		if (mode != QIcon::Normal)
+		{
+			QStyleOption option;
+			option.palette = QGuiApplication::palette();
 
-		const QPixmap styled = QApplication::style()->generatedIconPixmap(mode, pixmap, &option);
-		if (!styled.isNull())
-			pixmap = styled;
+			const QPixmap styled = QApplication::style()->generatedIconPixmap(mode, pixmap, &option);
+			if (!styled.isNull())
+				pixmap = styled;
+		}
+
+		_cache.insert(key, pixmap);
 	}
 
 	pixmap.setDevicePixelRatio(scale);

@@ -22,7 +22,7 @@ public:
 	// Scales `source` to exactly `targetSize`, which already carries the source's aspect ratio.
 	using ScaleFunction = std::function<QImage (const QImage& source, const QSize& targetSize)>;
 
-	explicit CIconEngineQImage(QImage source, ScaleFunction scale) noexcept;
+	explicit CIconEngineQImage(QImage source, ScaleFunction scale = {}) noexcept;
 
 	[[nodiscard]] QIconEngine* clone() const override;
 	[[nodiscard]] bool isNull() override;
@@ -38,7 +38,18 @@ private:
 	[[nodiscard]] QImage renderFitted(const QSize& targetSize) const;
 
 private:
+	struct CacheKey
+	{
+		QSize targetSize;
+		QIcon::Mode mode;
+
+		bool operator==(const CacheKey& other) const noexcept = default;
+		friend size_t qHash(const CacheKey& key, size_t seed = 0) noexcept {
+			return qHashMulti(seed, key.targetSize, static_cast<int>(key.mode));
+		}
+	};
+
 	QImage _source;
 	ScaleFunction _scale;
-	QHash<QSize, QPixmap> _rawPixmapsByPixelSize;
+	QHash<CacheKey, QPixmap> _cache;
 };
