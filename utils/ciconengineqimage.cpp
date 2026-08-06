@@ -39,12 +39,18 @@ bool CIconEngineQImage::isNull()
 
 QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State /*state*/, qreal scale)
 {
+	if (_source.isNull() || scale <= 0)
+		return {};
+
 	// QIcon::pixmap() re-derives the returned pixmap's dpr from its pixel count, and it comes back as `scale` only
 	// if that count is exactly size * scale. Too few pixels lower the dpr instead of being upscaled, which shrinks
 	// the icon rather than blurring it.
-	const QSize targetSize = size * scale;
-	if (_source.isNull() || targetSize.isEmpty())
-		return {};
+	QSize targetSize = size * scale;
+
+	// A consumer that names no size still needs an icon; 64x64 is what Qt hands a Wayland compositor that
+	// advertised no preferred sizes.
+	if (targetSize.isEmpty())
+		targetSize = QSize{ 64, 64 };
 
 	const CacheKey key{ targetSize, mode };
 
@@ -73,15 +79,6 @@ QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode mode, QIc
 QPixmap CIconEngineQImage::pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state)
 {
 	return scaledPixmap(size, mode, state, 1.0);
-}
-
-QList<QSize> CIconEngineQImage::availableSizes(QIcon::Mode /*mode*/, QIcon::State /*state*/)
-{
-#ifdef Q_OS_MACOS
-	return { QSize{ 16, 16 } }; // The title bar's document proxy icon button; the request arrives scaled by the screen's DPR.
-#else
-	return {};
-#endif
 }
 
 void CIconEngineQImage::paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state)

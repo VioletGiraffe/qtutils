@@ -6,7 +6,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QHash>
 #include <QIconEngine>
 #include <QImage>
-#include <QList>
 #include <QPixmap>
 RESTORE_COMPILER_WARNINGS
 
@@ -28,14 +27,11 @@ public:
 	[[nodiscard]] QIconEngine* clone() const override;
 	[[nodiscard]] bool isNull() override;
 
-	// actualSize() is not overridden: the base reports the requested size, which is exactly what gets rendered.
+	// Neither actualSize() nor availableSizes() is overridden: the base actualSize() reports the requested size,
+	// which is exactly what gets rendered, and an empty size list is what lets each consumer ask for the sizes it
+	// needs - the XCB plugin falls back to 16/32/64/128, a Wayland compositor to the ones it advertised.
 	[[nodiscard]] QPixmap scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State state, qreal scale) override;
 	[[nodiscard]] QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state) override;
-
-	// Empty everywhere but macOS: an empty list lets the consumer pick the sizes (the XCB plugin falls back to
-	// 16/32/64/128, a Wayland compositor uses the ones it advertised), but the Cocoa helper drops the size AppKit
-	// asked for and iterates this list instead, so an empty one leaves the window with no icon at all.
-	[[nodiscard]] QList<QSize> availableSizes(QIcon::Mode mode, QIcon::State state) override;
 
 	void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override;
 
