@@ -75,6 +75,15 @@ QPixmap CIconEngineQImage::pixmap(const QSize& size, QIcon::Mode mode, QIcon::St
 	return scaledPixmap(size, mode, state, 1.0);
 }
 
+QList<QSize> CIconEngineQImage::availableSizes(QIcon::Mode /*mode*/, QIcon::State /*state*/)
+{
+#ifdef Q_OS_MACOS
+	return { QSize{ 16, 16 } }; // The title bar's document proxy icon button; the request arrives scaled by the screen's DPR.
+#else
+	return {};
+#endif
+}
+
 void CIconEngineQImage::paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state)
 {
 	const QPaintDevice* device = painter->device();
