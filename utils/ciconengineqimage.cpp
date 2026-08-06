@@ -3,9 +3,12 @@
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QApplication>
 #include <QGuiApplication>
 #include <QPainter>
 #include <QPixmap>
+#include <QStyle>
+#include <QStyleOption>
 RESTORE_COMPILER_WARNINGS
 
 #include <utility>
@@ -34,7 +37,7 @@ bool CIconEngineQImage::isNull()
 	return _source.isNull();
 }
 
-QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode /*mode*/, QIcon::State /*state*/, qreal scale)
+QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State /*state*/, qreal scale)
 {
 	// QIcon::pixmap() re-derives the returned pixmap's dpr from its pixel count, and it comes back as `scale` only
 	// if that count is exactly size * scale. Too few pixels lower the dpr instead of being upscaled, which shrinks
@@ -44,6 +47,16 @@ QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode /*mode*/,
 		return {};
 
 	QPixmap pixmap = QPixmap::fromImage(renderFitted(targetSize));
+	if (mode != QIcon::Normal)
+	{
+		QStyleOption option;
+		option.palette = QGuiApplication::palette();
+
+		const QPixmap styled = QApplication::style()->generatedIconPixmap(mode, pixmap, &option);
+		if (!styled.isNull())
+			pixmap = styled;
+	}
+
 	pixmap.setDevicePixelRatio(scale);
 	return pixmap;
 }

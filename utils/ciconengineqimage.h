@@ -13,7 +13,7 @@ RESTORE_COMPILER_WARNINGS
 // letting QIcon pick the nearest one and resample it again: one scale, straight from the original, to the size that
 // is actually going to be blitted. The aspect ratio is preserved, the rest of the requested rect stays transparent.
 // Source and scaler-result DPR metadata is ignored: both are treated as raw pixels. Nothing is cached - every request
-// re-scales.
+// re-scales. The application style generates mode variants; On and Off share the same source.
 class CIconEngineQImage final : public QIconEngine
 {
 public:
