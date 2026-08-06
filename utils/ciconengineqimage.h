@@ -3,8 +3,10 @@
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QHash>
 #include <QIconEngine>
 #include <QImage>
+#include <QPixmap>
 RESTORE_COMPILER_WARNINGS
 
 #include <functional>
@@ -12,8 +14,8 @@ RESTORE_COMPILER_WARNINGS
 // Renders `source` at the exact pixel size each consumer asks for, instead of holding a few pre-scaled pixmaps and
 // letting QIcon pick the nearest one and resample it again: one scale, straight from the original, to the size that
 // is actually going to be blitted. The aspect ratio is preserved, the rest of the requested rect stays transparent.
-// Source and scaler-result DPR metadata is ignored: both are treated as raw pixels. Nothing is cached - every request
-// re-scales. The application style generates mode variants; On and Off share the same source.
+// Source and scaler-result DPR metadata is ignored: both are treated as raw pixels. Raw renders are cached by final
+// physical size. The application style generates mode variants; On and Off share the same source.
 class CIconEngineQImage final : public QIconEngine
 {
 public:
@@ -38,4 +40,5 @@ private:
 private:
 	QImage _source;
 	ScaleFunction _scale;
+	QHash<QSize, QPixmap> _rawPixmapsByPixelSize;
 };

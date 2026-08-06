@@ -46,7 +46,13 @@ QPixmap CIconEngineQImage::scaledPixmap(const QSize& size, QIcon::Mode mode, QIc
 	if (_source.isNull() || targetSize.isEmpty())
 		return {};
 
-	QPixmap pixmap = QPixmap::fromImage(renderFitted(targetSize));
+	QPixmap pixmap = _rawPixmapsByPixelSize.value(targetSize);
+	if (pixmap.isNull())
+	{
+		pixmap = QPixmap::fromImage(renderFitted(targetSize));
+		_rawPixmapsByPixelSize.insert(targetSize, pixmap);
+	}
+
 	if (mode != QIcon::Normal)
 	{
 		QStyleOption option;
