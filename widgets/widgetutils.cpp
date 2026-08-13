@@ -70,14 +70,9 @@ bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const
 		return false;
 }
 
-QRect WidgetUtils::currentScreenGeometryForWidget(QWidget *widget)
+QRect WidgetUtils::currentScreenGeometryForWidget(const QWidget *widget)
 {
-	const QScreen* screen = QApplication::screenAt(widget->mapToGlobal(widget->geometry().center()));
-	if (screen)
-		return screen->availableGeometry();
-
-	const auto* primaryScreen = QApplication::primaryScreen();
-	return primaryScreen ? primaryScreen->availableGeometry() : QRect{};
+	return widget->screen()->availableGeometry(); // falls back to the primary screen on its own
 }
 
 QRect WidgetUtils::geometryAtCenter(const QRect &reference, qreal scale)
@@ -118,5 +113,33 @@ void WidgetUtils::centerWidgetOnScreen(QWidget *widget, qreal fractionOfScreenSi
 void WidgetUtils::centerWidgetInParent(QWidget *widget, qreal fractionOfParentSize)
 {
 	centerWidgetInParent(widget, widget->parentWidget() ? (widget->parentWidget()->size() * fractionOfParentSize) : widget->size());
+}
+
+void WidgetUtils::keepWidgetWithinScreen(QWidget *widget)
+{
+	assert_r(widget->isWindow());
+
+	const QRect available = currentScreenGeometryForWidget(widget);
+	const QRect frame = widget->frameGeometry(); // move() positions the frame, so the frame is what has to fit
+
+	// qMin then qMax, not qBound: a widget larger than the screen inverts the bounds
+	widget->move(qMax(available.left(), qMin(frame.left(), available.right() - frame.width() + 1)),
+		qMax(available.top(), qMin(frame.top(), available.bottom() - frame.height() + 1)));
+}
+
+void WidgetUtils::placeUnder(QWidget *widget, const QWidget *anchor)
+{
+	QPoint topLeft = anchor->mapToGlobal(QPoint{0, anchor->height()});
+	if (topLeft.y() + widget->height() > currentScreenGeometryForWidget(anchor).bottom())
+		topLeft.setY(anchor->mapToGlobal(QPoint{0, 0}).y() - widget->height()); // above instead, clear of the anchor
+
+	widget->move(topLeft);
+	keepWidgetWithinScreen(widget);
+}
+
+void WidgetUtils::placeCenteredOn(QWidget *widget, const QWidget *window)
+{
+	centerWidgetInRect(widget, window->geometry()); // a top-level window's geometry is already global
+	keepWidgetWithinScreen(widget);
 }
 
