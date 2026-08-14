@@ -1,4 +1,4 @@
-#include "clabelmidelision.h"
+#include "clabelelided.h"
 
 #include <QEvent>
 #include <QFontMetrics>
@@ -6,7 +6,18 @@
 #include <QPainter>
 #include <QToolTip>
 
-bool CLabelMidElision::event(QEvent* e)
+void CLabelElided::setElideMode(Qt::TextElideMode mode)
+{
+	_elideMode = mode;
+	update();
+}
+
+Qt::TextElideMode CLabelElided::elideMode() const
+{
+	return _elideMode;
+}
+
+bool CLabelElided::event(QEvent* e)
 {
 	// Show automatic tooltip if no custom tooltip is set
 	if (e->type() == QEvent::ToolTip && toolTip().isEmpty())
@@ -29,7 +40,7 @@ bool CLabelMidElision::event(QEvent* e)
 	return QLabel::event(e);
 }
 
-void CLabelMidElision::paintEvent(QPaintEvent*)
+void CLabelElided::paintEvent(QPaintEvent*)
 {
 	QPainter painter(this);
 	painter.setFont(font());
@@ -37,7 +48,7 @@ void CLabelMidElision::paintEvent(QPaintEvent*)
 	const QRect cr = contentsRect();
 
 	QFontMetrics fm(font());
-	const QString elidedText = fm.elidedText(text(), Qt::ElideMiddle, cr.width());
+	const QString elidedText = fm.elidedText(text(), _elideMode, cr.width());
 
 	painter.setPen(palette().color(foregroundRole()));
 	painter.drawText(cr, alignment(), elidedText);
