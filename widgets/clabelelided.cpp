@@ -8,13 +8,28 @@
 
 void CLabelElided::setElideMode(Qt::TextElideMode mode)
 {
+	if (mode == _elideMode)
+		return;
+
 	_elideMode = mode;
+	updateGeometry(); // minimumSizeHint() depends on the mode
 	update();
 }
 
 Qt::TextElideMode CLabelElided::elideMode() const
 {
 	return _elideMode;
+}
+
+QSize CLabelElided::minimumSizeHint() const
+{
+	if (_elideMode == Qt::ElideNone)
+		return QLabel::minimumSizeHint();
+
+	constexpr QChar ellipsis{0x2026}; // What QFontMetrics::elidedText substitutes
+	const QFontMetrics fm(font());
+	const int widthUnavailableForText = width() - contentsRect().width();
+	return { fm.horizontalAdvance(ellipsis) + widthUnavailableForText, QLabel::minimumSizeHint().height() };
 }
 
 bool CLabelElided::event(QEvent* e)
