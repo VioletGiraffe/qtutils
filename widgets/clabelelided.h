@@ -33,6 +33,7 @@ private:
 	// The area the text is painted in: contentsRect() less margin() and indent(), following QLabel's own arithmetic.
 	[[nodiscard]] QRect textRect() const;
 	[[nodiscard]] Qt::Alignment visualAlignment() const;
+	[[nodiscard]] int textFlags() const; // visualAlignment() plus the mnemonic handling the style asks for
 
 	Qt::TextElideMode _elideMode = Qt::ElideMiddle;
 	bool _textIsTruncated = false; // Determined while painting, read by the tooltip handler

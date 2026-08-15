@@ -98,7 +98,6 @@ void CLabelElided::paintEvent(QPaintEvent*)
 	QPainter painter(this);
 	drawFrame(&painter);
 	painter.setFont(font());
-	painter.setPen(palette().color(foregroundRole()));
 
 	const QRect textArea = textRect();
 	if (wordWrap())
@@ -111,9 +110,11 @@ void CLabelElided::paintSingleLine(QPainter& painter, const QRect& textArea)
 {
 	const QString fullText = text();
 	const QFontMetrics fm(font());
+	const int flags = textFlags();
 
 	_textIsTruncated = fm.horizontalAdvance(fullText) > textArea.width();
-	painter.drawText(textArea, visualAlignment(), fm.elidedText(fullText, _elideMode, textArea.width()));
+	const QString elidedText = fm.elidedText(fullText, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic);
+	style()->drawItemText(&painter, textArea, flags, palette(), isEnabled(), elidedText, foregroundRole());
 }
 
 void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
@@ -156,15 +157,16 @@ void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
 	}
 
 	int y = textArea.top();
-	const Qt::Alignment align = visualAlignment();
+	const int flags = textFlags();
 	const int blockHeight = (headLineCount + tailLineCount + (elide ? 1 : 0)) * lineHeight;
-	if (align & Qt::AlignVCenter)
+	if (flags & Qt::AlignVCenter)
 		y += (textArea.height() - blockHeight) / 2;
-	else if (align & Qt::AlignBottom)
+	else if (flags & Qt::AlignBottom)
 		y += textArea.height() - blockHeight;
 
 	const auto drawLine = [&](const QString& lineText) {
-		painter.drawText(QRect{ textArea.left(), y, textArea.width(), lineHeight }, align, lineText);
+		const QRect lineRect{ textArea.left(), y, textArea.width(), lineHeight };
+		style()->drawItemText(&painter, lineRect, flags, palette(), isEnabled(), lineText, foregroundRole());
 		y += lineHeight;
 	};
 
@@ -177,7 +179,7 @@ void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
 		const int seamEnd = tailLineCount > 0 ? lines[lineCount - tailLineCount].start : (int)fullText.size();
 		QString seam = fullText.mid(seamStart, seamEnd - seamStart);
 		seam.replace(QChar::LineFeed, QChar::Space); // The seam is one line, but the text it spans may not be
-		drawLine(fm.elidedText(seam, _elideMode, textArea.width()));
+		drawLine(fm.elidedText(seam, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic));
 	}
 
 	for (int i = lineCount - tailLineCount; i < lineCount; ++i)
@@ -213,4 +215,17 @@ QRect CLabelElided::textRect() const
 Qt::Alignment CLabelElided::visualAlignment() const
 {
 	return QStyle::visualAlignment(layoutDirection(), alignment());
+}
+
+int CLabelElided::textFlags() const
+{
+	int flags = (int)visualAlignment();
+	if (buddy()) // QLabel only reads '&' as a mnemonic marker when there's a buddy for it to activate
+	{
+		flags |= Qt::TextShowMnemonic;
+		if (!style()->styleHint(QStyle::SH_UnderlineShortcut, nullptr, this))
+			flags |= Qt::TextHideMnemonic;
+	}
+
+	return flags;
 }
