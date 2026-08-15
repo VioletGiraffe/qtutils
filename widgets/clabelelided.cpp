@@ -4,7 +4,6 @@
 #include <QFontMetrics>
 #include <QHelpEvent>
 #include <QPainter>
-#include <QStringList>
 #include <QStyle>
 #include <QTextLayout>
 #include <QTextOption>
@@ -21,16 +20,32 @@ struct TextLine
 	int length = 0;
 };
 
-// A QTextLayout covers a single paragraph, so the newlines are split here rather than left to the wrapping.
+// Always yields at least one line, so an empty paragraph keeps its height
+std::vector<TextLine> splitIntoParagraphs(const QString& text)
+{
+	std::vector<TextLine> paragraphs;
+	for (int start = 0;;)
+	{
+		const int end = (int)text.indexOf(QChar::LineFeed, start);
+		if (end < 0)
+		{
+			paragraphs.push_back({ start, (int)text.size() - start });
+			return paragraphs;
+		}
+
+		paragraphs.push_back({ start, end - start });
+		start = end + 1;
+	}
+}
+
+// A QTextLayout covers a single paragraph, so the newlines are split off before the wrapping rather than by it.
 std::vector<TextLine> wrapIntoLines(const QString& text, const QFont& font, int width)
 {
 	std::vector<TextLine> lines;
 
-	const QStringList paragraphs = text.split(QChar::LineFeed);
-	int paragraphStart = 0;
-	for (const QString& paragraph : paragraphs)
+	for (const TextLine& paragraph : splitIntoParagraphs(text))
 	{
-		QTextLayout layout(paragraph, font);
+		QTextLayout layout(text.mid(paragraph.start, paragraph.length), font);
 		QTextOption textOption = layout.textOption();
 		textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere); // What QLabel does
 		layout.setTextOption(textOption);
@@ -39,11 +54,9 @@ std::vector<TextLine> wrapIntoLines(const QString& text, const QFont& font, int 
 		for (QTextLine line = layout.createLine(); line.isValid(); line = layout.createLine())
 		{
 			line.setLineWidth(width); // Decides where this line breaks, so it must precede reading its extents
-			lines.push_back({ paragraphStart + line.textStart(), line.textLength() });
+			lines.push_back({ paragraph.start + line.textStart(), line.textLength() });
 		}
 		layout.endLayout();
-
-		paragraphStart += (int)paragraph.size() + 1; // The +1 is the separator that split() consumed
 	}
 
 	return lines;
@@ -99,37 +112,24 @@ void CLabelElided::paintEvent(QPaintEvent*)
 	drawFrame(&painter);
 	painter.setFont(font());
 
-	const QRect textArea = textRect();
-	if (wordWrap())
-		paintWrapped(painter, textArea);
-	else
-		paintSingleLine(painter, textArea);
+	paintText(painter, textRect());
 }
 
-void CLabelElided::paintSingleLine(QPainter& painter, const QRect& textArea)
-{
-	const QString fullText = text();
-	const QFontMetrics fm(font());
-	const int flags = textFlags();
-
-	_textIsTruncated = fm.horizontalAdvance(fullText) > textArea.width();
-	const QString elidedText = fm.elidedText(fullText, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic);
-	style()->drawItemText(&painter, textArea, flags, palette(), isEnabled(), elidedText, foregroundRole());
-}
-
-void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
+void CLabelElided::paintText(QPainter& painter, const QRect& textArea)
 {
 	const QString fullText = text();
 	const QFontMetrics fm(font());
 	const int lineHeight = fm.lineSpacing();
-	const int visibleLineCount = lineHeight > 0 ? textArea.height() / lineHeight : 0; // Whole lines only
-	if (visibleLineCount <= 0 || textArea.width() <= 0)
+	if (textArea.width() <= 0 || lineHeight <= 0)
 	{
 		_textIsTruncated = !fullText.isEmpty();
 		return;
 	}
 
-	const std::vector<TextLine> lines = wrapIntoLines(fullText, font(), textArea.width());
+	// Whole lines only, except that a rect too short for even one line still gets that line rather than nothing
+	const int visibleLineCount = std::max(1, textArea.height() / lineHeight);
+
+	const std::vector<TextLine> lines = wordWrap() ? wrapIntoLines(fullText, font(), textArea.width()) : splitIntoParagraphs(fullText);
 	const int lineCount = (int)lines.size();
 
 	_textIsTruncated = lineCount > visibleLineCount;
@@ -165,8 +165,12 @@ void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
 		y += textArea.height() - blockHeight;
 
 	const auto drawLine = [&](const QString& lineText) {
+		if (!_textIsTruncated)
+			_textIsTruncated = fm.horizontalAdvance(lineText) > textArea.width(); // Also covers ElideNone, which elides nothing
+
 		const QRect lineRect{ textArea.left(), y, textArea.width(), lineHeight };
-		style()->drawItemText(&painter, lineRect, flags, palette(), isEnabled(), lineText, foregroundRole());
+		const QString elidedText = fm.elidedText(lineText, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic);
+		style()->drawItemText(&painter, lineRect, flags, palette(), isEnabled(), elidedText, foregroundRole());
 		y += lineHeight;
 	};
 
@@ -179,7 +183,7 @@ void CLabelElided::paintWrapped(QPainter& painter, const QRect& textArea)
 		const int seamEnd = tailLineCount > 0 ? lines[lineCount - tailLineCount].start : (int)fullText.size();
 		QString seam = fullText.mid(seamStart, seamEnd - seamStart);
 		seam.replace(QChar::LineFeed, QChar::Space); // The seam is one line, but the text it spans may not be
-		drawLine(fm.elidedText(seam, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic));
+		drawLine(seam);
 	}
 
 	for (int i = lineCount - tailLineCount; i < lineCount; ++i)
