@@ -90,6 +90,16 @@ QSize CLabelElided::minimumSizeHint() const
 	return { fm.horizontalAdvance(ellipsis) + widthUnavailableForText, QLabel::minimumSizeHint().height() };
 }
 
+bool CLabelElided::hasHeightForWidth() const
+{
+	return false; // Wrapped text elides into the height it's given instead of demanding more of it
+}
+
+int CLabelElided::heightForWidth(int) const
+{
+	return -1; // Must agree with hasHeightForWidth()
+}
+
 bool CLabelElided::event(QEvent* e)
 {
 	// Show automatic tooltip if no custom tooltip is set

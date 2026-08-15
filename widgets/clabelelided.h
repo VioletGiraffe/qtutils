@@ -4,14 +4,14 @@
 
 class QPainter;
 
-// Reports a minimum width of just the ellipsis: elided text fits into any width, so the text length must not drive the
-// layout's minimum. sizeHint() is still QLabel's un-elided text width, so a caller that also needs the preferred width
-// bounded must constrain it itself - QSizePolicy::Ignored, or an explicit maximum.
+// The layout is free to make this label any size: the minimum width is one ellipsis, the minimum height one line, and
+// hasHeightForWidth() is false, so a wrapped label doesn't demand the height its text would need - it elides into
+// whatever it is given. Both size hints are still QLabel's un-elided ones, so a caller that needs the preferred size
+// bounded as well must constrain it itself - QSizePolicy::Ignored, or an explicit maximum.
 // The text is split into lines at newlines, and at wrap points too when wordWrap() is set. Every line is elided to the
 // available width, and the lines that don't fit in the height collapse into a single ellipsis line placed according to
 // elideMode() - the head and the tail of the dropped text survive around it. Under ElideNone the overflow is clipped
-// instead, as QLabel does. A wrapped label still asks for the full text height via QLabel::heightForWidth(), so its
-// vertical elision only engages once something bounds the height.
+// instead, as QLabel does.
 // Rich text and pixmaps are ignored. Fix these gaps when a live potential consumer wants them.
 class CLabelElided final : public QLabel
 {
@@ -22,6 +22,8 @@ public:
 	[[nodiscard]] Qt::TextElideMode elideMode() const;
 
 	[[nodiscard]] QSize minimumSizeHint() const override;
+	[[nodiscard]] bool hasHeightForWidth() const override;
+	[[nodiscard]] int heightForWidth(int width) const override;
 
 protected:
 	bool event(QEvent* e) override;
