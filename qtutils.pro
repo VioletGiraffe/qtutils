@@ -26,7 +26,6 @@ UI_DIR      = ../build/$${OUTPUT_DIR}/$${TARGET}
 RCC_DIR     = ../build/$${OUTPUT_DIR}/$${TARGET}
 
 QT = core gui widgets
-QT += core-private   # include paths only (no link dependency): theme/cthemeiconhandler.* uses QAbstractFileEngineHandler
 
 # Required for qInfo() to log function name, file and line in release build
 DEFINES += QT_MESSAGELOGCONTEXT
