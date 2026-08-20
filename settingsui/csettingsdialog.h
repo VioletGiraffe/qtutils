@@ -49,6 +49,7 @@ private:
 	void pageChanged(QListWidgetItem *item);
 	void wipeSettings();
 	void accept() override;
+	void reject() override;
 
 	Ui::CSettingsDialog *ui;
 	bool _firstShow = true;

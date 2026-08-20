@@ -53,6 +53,7 @@ CSettingsDialog::~CSettingsDialog()
 
 CSettingsDialog& CSettingsDialog::addSettingsPage(CSettingsPage* page, const QString &pageName)
 {
+	// The page comes in parented to the dialog; addWidget() would re-parent it anyway, but warns while doing so
 	page->setParent(ui->pages);
 	ui->pages->addWidget(page);
 
@@ -126,4 +127,16 @@ void CSettingsDialog::accept()
 	CSettingsNotifier::instance().notifySettingsChanged();
 
 	QDialog::accept();
+}
+
+void CSettingsDialog::reject()
+{
+	for (int i = 0; i < ui->pages->count(); ++i)
+	{
+		CSettingsPage * page = dynamic_cast<CSettingsPage*>(ui->pages->widget(i));
+		assert_r(page);
+		page->rejectSettings();
+	}
+
+	QDialog::reject();
 }
