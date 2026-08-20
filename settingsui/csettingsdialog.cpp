@@ -123,7 +123,7 @@ void CSettingsDialog::accept()
 		page->acceptSettings();
 	}
 
-	emit settingsChanged();
+	CSettingsNotifier::instance().notifySettingsChanged();
 
 	QDialog::accept();
 }

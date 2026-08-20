@@ -6,27 +6,4 @@ DISABLE_COMPILER_WARNINGS
 #include <QSettings>
 RESTORE_COMPILER_WARNINGS
 
-class CSettings
-{
-public:
-	CSettings() noexcept;
-
-	static void setApplicationName(const QString& name);
-	static void setOrganizationName(const QString& name);
-	static void setFormat(QSettings::Format format);
-
-	void setValue(const QString& key, const QVariant& value);
-	[[nodiscard]] QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const;
-
-	[[nodiscard]] QStringList allKeys() const;
-
-	void clear();
-
-private:
-	QSettings _impl;
-
-	static QString _applicationName;
-	static QString _organizationName;
-	static QSettings::Format _settingsFormat;
-};
-
+using CSettings = QSettings;
