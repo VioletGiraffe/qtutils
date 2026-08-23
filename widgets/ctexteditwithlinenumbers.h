@@ -15,13 +15,17 @@ public:
 
 protected:
 	void resizeEvent(QResizeEvent *event) override;
+	void changeEvent(QEvent *event) override;
 
 private:
-	int getFirstVisibleBlockId();
+	// The number of the first block reaching below the top of the viewport
+	[[nodiscard]] int firstVisibleBlockNumber() const;
 
-	void updateLineNumberAreaWidth(int newBlockCount);
+	void updateLineNumberAreaWidth();
+	void updateLineNumberAreaGeometry();
 	void updateLineNumberArea();
 
 private:
 	QWidget *_lineNumberArea = nullptr;
+	int _lineNumberAreaWidth = 0; // the viewport's left margin, and so the number area's width
 };

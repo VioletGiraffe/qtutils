@@ -2,12 +2,14 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractTextDocumentLayout>
+#include <QEvent>
 #include <QPainter>
 #include <QScrollBar>
 #include <QTextBlock>
 RESTORE_COMPILER_WARNINGS
 
-// Space between the edge of the number and the right edge of the number area column
+// Padding on either side of the number within the number area
+static constexpr int LeftNumberMargin = 3;
 static constexpr int RightNumberMargin = 4;
 
 class CLineNumberArea final : public QWidget
@@ -35,12 +37,12 @@ CTextEditWithLineNumbers::CTextEditWithLineNumbers(QWidget* parent) noexcept :
 {
 	_lineNumberArea = new CLineNumberArea(this);
 
-	connect(document(), &QTextDocument::blockCountChanged, this, &CTextEditWithLineNumbers::updateLineNumberAreaWidth);
+	// No connection binds to the document: setDocument() may replace it.
+	// textChanged is QTextEdit's own signal, and it covers every block count change.
 	connect(verticalScrollBar(), &QScrollBar::valueChanged, this, &CTextEditWithLineNumbers::updateLineNumberArea);
 	connect(this, &CTextEditWithLineNumbers::textChanged, this, &CTextEditWithLineNumbers::updateLineNumberArea);
-	connect(this, &CTextEditWithLineNumbers::cursorPositionChanged, this, &CTextEditWithLineNumbers::updateLineNumberArea);
 
-	updateLineNumberAreaWidth(0);
+	updateLineNumberAreaWidth();
 }
 
 int CTextEditWithLineNumbers::lineNumberAreaWidth() const
@@ -53,64 +55,74 @@ int CTextEditWithLineNumbers::lineNumberAreaWidth() const
 		++digits;
 	}
 
-	const int space = 3 + RightNumberMargin + fontMetrics().horizontalAdvance(QLatin1Char('M')) * digits;
-	return space;
+	return LeftNumberMargin + RightNumberMargin + fontMetrics().horizontalAdvance(QLatin1Char('M')) * digits;
 }
 
-void CTextEditWithLineNumbers::updateLineNumberAreaWidth(int /* newBlockCount */)
+void CTextEditWithLineNumbers::updateLineNumberAreaWidth()
 {
-	setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+	const int width = lineNumberAreaWidth();
+	// setViewportMargins relayouts the scroll area, and this runs on every text change
+	if (width == _lineNumberAreaWidth)
+		return;
+
+	_lineNumberAreaWidth = width;
+	setViewportMargins(width, 0, 0, 0);
+	updateLineNumberAreaGeometry(); // setViewportMargins makes the margin but does not fill it
+}
+
+void CTextEditWithLineNumbers::updateLineNumberAreaGeometry()
+{
+	const QRect cr = contentsRect();
+	_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), _lineNumberAreaWidth, cr.height()));
 }
 
 void CTextEditWithLineNumbers::updateLineNumberArea()
 {
-	const QRect rect = contentsRect();
-	_lineNumberArea->update(0, rect.y(), _lineNumberArea->width(), rect.height());
-	updateLineNumberAreaWidth(0);
+	_lineNumberArea->update();
+	updateLineNumberAreaWidth();
 }
 
 void CTextEditWithLineNumbers::resizeEvent(QResizeEvent* e)
 {
 	QTextEdit::resizeEvent(e);
 
-	const QRect cr = contentsRect();
-	_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
+	updateLineNumberAreaGeometry();
 }
 
-int CTextEditWithLineNumbers::getFirstVisibleBlockId()
+void CTextEditWithLineNumbers::changeEvent(QEvent* e)
 {
-	// Detect the first block for which bounding rect - once translated
-	// in absolute coordinated - is contained by the editor's text area
+	QTextEdit::changeEvent(e);
 
-	// Costly way of doing but since "blockBoundingGeometry(...)" doesn't
-	// exists for "QTextEdit"...
+	// QTextEdit gives the document the new font on either event, so the blocks have moved by the time this runs.
+	// The number area's width follows the font too, and nothing else recomputes it.
+	if (e->type() == QEvent::FontChange || e->type() == QEvent::ApplicationFontChange)
+		updateLineNumberArea();
+}
 
-	QTextCursor curs = QTextCursor(document());
-	curs.movePosition(QTextCursor::Start);
+// Blocks of a laid-out document are in non-decreasing vertical order, so bisection finds this one without
+// walking them.
+// blockBoundingRect() lays the document out as far as the block it is asked about, so any block's position
+// can be had. QPlainTextEdit lays out only what is shown and answers with firstVisibleBlock() instead.
+int CTextEditWithLineNumbers::firstVisibleBlockNumber() const
+{
+	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
+	const qreal scrollY = verticalScrollBar()->value();
 
-	const QRect r1 = viewport()->geometry();
-
-	for (int i = 0, n = document()->blockCount(); i < n; ++i)
+	int low = 0, high = document()->blockCount() - 1;
+	while (low < high)
 	{
-		QTextBlock block = curs.block();
-
-		QRect r2 = document()->documentLayout()->blockBoundingRect(block).translated(
-			r1.x(), r1.y() - verticalScrollBar()->sliderPosition()
-		).toRect();
-
-		if (r1.contains(r2, true))
-			return i;
-
-		curs.movePosition(QTextCursor::NextBlock);
+		const int middle = low + (high - low) / 2;
+		if (layout->blockBoundingRect(document()->findBlockByNumber(middle)).bottom() > scrollY)
+			high = middle;
+		else
+			low = middle + 1;
 	}
 
-	return 0;
+	return low;
 }
 
 void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
 {
-	//verticalScrollBar()->setSliderPosition(verticalScrollBar()->sliderPosition());
-
 	QPainter painter{ _lineNumberArea };
 	auto baseColor = palette().color(QPalette::Base);
 	const bool darkTheme = baseColor.lightness() < 128;
@@ -119,43 +131,25 @@ void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
 	painter.fillRect(event->rect(), baseColor);
 	painter.setPen(!darkTheme ? baseColor.darker(250) : baseColor.lighter(200));
 
-	int blockNumber = getFirstVisibleBlockId();
+	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
+	// The viewport shows the document shifted up by the scroll position.
+	// The number area shares the viewport's top and height, so the same shift places a block in both.
+	const qreal offsetY = -qreal(verticalScrollBar()->value());
+	const int numberHeight = fontMetrics().height();
+	const int numberWidth = _lineNumberArea->width() - RightNumberMargin;
 
-	QTextBlock block = document()->findBlockByNumber(blockNumber);
-	QTextBlock prev_block = (blockNumber > 0) ? document()->findBlockByNumber(blockNumber - 1) : block;
-	const int translate_y = (blockNumber > 0) ? (-verticalScrollBar()->sliderPosition()) : 0;
-
-	int top = viewport()->geometry().top();
-
-	// Adjust text position according to the previous "non entirely visible" block
-	// if applicable. Also takes in consideration the document's margin offset.
-	int additional_margin = 0;
-	if (blockNumber == 0)
-		// Simply adjust to document's margin
-		additional_margin = (int)document()->documentMargin() - 1 - verticalScrollBar()->sliderPosition();
-	else
-		// Getting the height of the visible part of the previous "non entirely visible" block
-		additional_margin = (int)document()->documentLayout()->blockBoundingRect(prev_block).translated(0, translate_y).intersected(viewport()->geometry()).height();
-
-	// Shift the starting point
-	top += additional_margin;
-
-	const int fontHeight = fontMetrics().height();
-
-	int bottom = top + (int)document()->documentLayout()->blockBoundingRect(block).height();
-
-	// Draw the numbers (displaying the current line number in green)
-	while (block.isValid() && top <= event->rect().bottom())
+	for (QTextBlock block = document()->findBlockByNumber(firstVisibleBlockNumber()); block.isValid(); block = block.next())
 	{
-		if (block.isVisible() && bottom >= event->rect().top())
-		{
-			const QString number = QString::number(blockNumber + 1);
-			painter.drawText(-5, top, _lineNumberArea->width(), fontHeight, Qt::AlignRight, number);
-		}
+		// Before the rect is read: blockBoundingRect() answers a null one for a hidden block
+		if (!block.isVisible())
+			continue;
 
-		block = block.next();
-		top = bottom;
-		bottom = top + (int)document()->documentLayout()->blockBoundingRect(block).height();
-		++blockNumber;
+		const QRectF blockRect = layout->blockBoundingRect(block).translated(0.0, offsetY);
+		if (blockRect.top() > event->rect().bottom())
+			break;
+
+		// Against the top of the block, so a wrapped block numbers its first line only
+		if (blockRect.bottom() >= event->rect().top())
+			painter.drawText(0, qRound(blockRect.top()), numberWidth, numberHeight, Qt::AlignRight, QString::number(block.blockNumber() + 1));
 	}
 }
