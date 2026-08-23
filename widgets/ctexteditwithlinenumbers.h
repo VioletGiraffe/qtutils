@@ -5,6 +5,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QTextEdit>
 RESTORE_COMPILER_WARNINGS
 
+class QTextBlock;
+
 class CTextEditWithLineNumbers : public QTextEdit
 {
 public:
@@ -18,8 +20,10 @@ protected:
 	void changeEvent(QEvent *event) override;
 
 private:
-	// The number of the first block reaching below the top of the viewport
-	[[nodiscard]] int firstVisibleBlockNumber() const;
+	// The first block reaching below the top of the viewport
+	[[nodiscard]] QTextBlock firstVisibleBlock() const;
+	// The document y the viewport starts at
+	[[nodiscard]] qreal documentYAtViewportTop() const;
 
 	void updateLineNumberAreaWidth();
 	void updateLineNumberAreaGeometry();

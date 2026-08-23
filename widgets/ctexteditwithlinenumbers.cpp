@@ -1,5 +1,7 @@
 #include "ctexteditwithlinenumbers.h"
 
+#include "assert/advanced_assert.h"
+
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractTextDocumentLayout>
 #include <QEvent>
@@ -99,26 +101,20 @@ void CTextEditWithLineNumbers::changeEvent(QEvent* e)
 		updateLineNumberArea();
 }
 
-// Blocks of a laid-out document are in non-decreasing vertical order, so bisection finds this one without
-// walking them.
-// blockBoundingRect() lays the document out as far as the block it is asked about, so any block's position
-// can be had. QPlainTextEdit lays out only what is shown and answers with firstVisibleBlock() instead.
-int CTextEditWithLineNumbers::firstVisibleBlockNumber() const
+// QTextEdit scrolls by pixels, so the scrollbar value is the document y the viewport starts at
+qreal CTextEditWithLineNumbers::documentYAtViewportTop() const
 {
-	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
-	const qreal scrollY = verticalScrollBar()->value();
+	return verticalScrollBar()->value();
+}
 
-	int low = 0, high = document()->blockCount() - 1;
-	while (low < high)
-	{
-		const int middle = low + (high - low) / 2;
-		if (layout->blockBoundingRect(document()->findBlockByNumber(middle)).bottom() > scrollY)
-			high = middle;
-		else
-			low = middle + 1;
-	}
-
-	return low;
+// hitTest() lays the document out only as far as the y it is asked about, which painting the viewport
+// requires regardless. blockBoundingRect() lays out as far as the block it is handed, so a search by block
+// index lays out however deep its probes reach.
+QTextBlock CTextEditWithLineNumbers::firstVisibleBlock() const
+{
+	const int position = document()->documentLayout()->hitTest(QPointF{ 0.0, documentYAtViewportTop() }, Qt::FuzzyHit);
+	assert_r(position >= 0); // Qt::FuzzyHit always resolves to a position
+	return document()->findBlock(position);
 }
 
 void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
@@ -132,13 +128,12 @@ void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
 	painter.setPen(!darkTheme ? baseColor.darker(250) : baseColor.lighter(200));
 
 	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
-	// The viewport shows the document shifted up by the scroll position.
-	// The number area shares the viewport's top and height, so the same shift places a block in both.
-	const qreal offsetY = -qreal(verticalScrollBar()->value());
+	// The number area shares the viewport's top and height, so the same shift places a block in both
+	const qreal offsetY = -documentYAtViewportTop();
 	const int numberHeight = fontMetrics().height();
 	const int numberWidth = _lineNumberArea->width() - RightNumberMargin;
 
-	for (QTextBlock block = document()->findBlockByNumber(firstVisibleBlockNumber()); block.isValid(); block = block.next())
+	for (QTextBlock block = firstVisibleBlock(); block.isValid(); block = block.next())
 	{
 		// Before the rect is read: blockBoundingRect() answers a null one for a hidden block
 		if (!block.isVisible())
