@@ -1,5 +1,6 @@
 #include "cuiinspector.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QtGui/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QComboBox>
@@ -17,7 +18,7 @@
 #include <QtWidgets/QTextBrowser>
 #include <QtCore/QTimer>
 #include <QtWidgets/QTreeWidget>
-
+RESTORE_COMPILER_WARNINGS
 
 struct WidgetHierarchy {
 	QWidget* widget = nullptr;

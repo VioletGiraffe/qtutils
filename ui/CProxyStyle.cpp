@@ -1,6 +1,8 @@
 #include "CProxyStyle.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+RESTORE_COMPILER_WARNINGS
 
 void CProxyStyle::drawComplexControl(ComplexControl control, const QStyleOptionComplex * option, QPainter * painter, const QWidget * widget) const
 {

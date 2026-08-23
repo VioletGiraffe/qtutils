@@ -1,5 +1,10 @@
 #pragma once
+
+#include "compiler/compiler_warnings_control.h"
+
+DISABLE_COMPILER_WARNINGS
 #include <QStyle>
+RESTORE_COMPILER_WARNINGS
 
 class CProxyStyle : public QStyle
 {

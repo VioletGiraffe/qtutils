@@ -1,5 +1,6 @@
 #include "clabelelided.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QEvent>
 #include <QFontMetrics>
 #include <QHelpEvent>
@@ -8,6 +9,7 @@
 #include <QTextLayout>
 #include <QTextOption>
 #include <QToolTip>
+RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
 #include <vector>
