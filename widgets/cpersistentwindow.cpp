@@ -13,10 +13,11 @@ RESTORE_COMPILER_WARNINGS
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
 
-CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QObject* parent, bool delayed) :
+CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QObject* parent, Delayed delayed, SetDefaultSize setDefaultSize) :
 	QObject(parent),
 	_settingsPath{std::move(widgetSettingsPath)},
-	_delayed{ delayed }
+	_delayed{ delayed },
+	_setDefaultSize{ setDefaultSize }
 {
 	if (!_delayed)
 	{
@@ -55,10 +56,16 @@ void CPersistenceEnabler::restoreState(QWidget* widget)
 	auto* window = dynamic_cast<QMainWindow*>(widget);
 	CSettings s;
 
-	if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) || !window || !window->restoreState(s.value(STATE_KEY).toByteArray()))
+	if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()))
 	{
+		if (!_setDefaultSize)
+			return;
+
 		const auto* const currentScreen = QApplication::screenAt(widget->geometry().center());
 		const auto availableGeometry = currentScreen ? currentScreen->availableGeometry() : QApplication::primaryScreen()->availableGeometry();
 		widget->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, availableGeometry.size() / 2, availableGeometry));
 	}
+
+	if (window)
+		window->restoreState(s.value(STATE_KEY).toByteArray());
 }
