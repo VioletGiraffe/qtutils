@@ -86,6 +86,10 @@ private:
 	// Common methods
 	[[nodiscard]] qsizetype totalLines() const;
 	[[nodiscard]] int visibleLines() const;
+	// Viewport x of content column 0. The line label column keeps its place while the content scrolls under it.
+	[[nodiscard]] int contentOriginX() const;
+	// Viewport width left for content once the line label column has taken its share. Zero where the column fills the viewport.
+	[[nodiscard]] int visibleContentWidth() const;
 	void updateLayoutAndScrollBars();
 	void ensureVisible(qsizetype offset);
 	// Renders the selected bytes as the given column shows them. Text mode has only its own text, so it ignores the format.
@@ -99,6 +103,8 @@ private:
 	void updateCursorShape(const QPoint& pos);
 	void moveCursorTo(qsizetype offset);
 	void updateFontMetrics();
+	// Offsets in hex mode, line numbers in text mode. Painted last: the band covers the content scrolled under it.
+	void drawLineLabelColumn(QPainter& painter, qsizetype firstLine, qsizetype lastLine);
 	void contentChanged();
 	[[nodiscard]] qsizetype searchStartOffset(bool backward, qsizetype haystackSize) const;
 	// The text a regex search runs over. In hex mode the bytes are converted once and kept until the content changes.
@@ -109,8 +115,8 @@ private:
 	// Hex mode methods
 	void calculateHexLayout();
 
+	// Content coordinates: the hex column opens at 0, the line label column is not part of them
 	struct LineLayout {
-		int hexStart = 0;
 		int asciiStart = 0;
 		int totalWidth = 0;
 	};
@@ -153,6 +159,9 @@ private:
 	QString _text;
 	// Visual line starts, with a trailing sentinel equal to _text.size(): line i spans [_lineOffsets[i], _lineOffsets[i + 1]).
 	std::vector<qsizetype> _lineOffsets;
+	// 1-based number of the logical line each visual line belongs to; one entry per visual line, no sentinel
+	std::vector<uint32_t> _logicalLineNumbers;
+	qsizetype _logicalLineCount = 0; // Counted by setText: the label column's width follows it, and the wrap width follows that
 	qsizetype _maxLineColumns = 0;
 	qsizetype _wrappedForMaxColumns = -1; // Line width the index was built for; -1 while the index is stale
 	bool _wordWrap = true;
@@ -161,6 +170,7 @@ private:
 	int _lineHeight = 0;
 	int _charWidth = 0;
 	int _tabWidth = 4;
+	int _lineLabelColumnWidth = 0; // The band alone, both modes, in viewport coordinates: the content starts a margin further right
 	// Columns per BMP code point, memoized. Empty until the first non-ASCII character, cleared on font change.
 	mutable std::vector<uint8_t> _charColumns;
 	QString _paintScratch; // Reused by both painters: QPainter::drawText has no QStringView overload. Emptied with resize(0), which keeps the buffer.
@@ -177,7 +187,6 @@ private:
 	bool _geometrySettled = false; // The line index needs the real viewport width, which only exists after the first resize
 
 	// Hex layout positions
-	int _hexStart = 0;
 	int _asciiStart = 0;
 	int _nDigits = 0; // Cached number of digits for offset display
 };

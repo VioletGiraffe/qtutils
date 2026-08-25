@@ -22,15 +22,19 @@ static constexpr int autoScrollIntervalMs = 50;
 
 namespace Layout {
 	static constexpr int MIN_OFFSET_DIGITS = 4;
-	static constexpr int OFFSET_SUFFIX_CHARS = 2; // ": "
+	static constexpr int OFFSET_SUFFIX_CHARS = 1; // ":"
 	static constexpr int HEX_CHARS_PER_BYTE = 3; // "XX "
 	static constexpr int HEX_BYTES_PER_GROUP = 8;
 	static constexpr int HEX_MIDDLE_EXTRA_SPACE = 1; // Extra space after each group
 	static constexpr int HEX_GROUP_CHARS = HEX_BYTES_PER_GROUP * HEX_CHARS_PER_BYTE + HEX_MIDDLE_EXTRA_SPACE;
 	static constexpr int HEX_ASCII_SEPARATOR_CHARS = 2; // The separator is technically " | ",
 	// but we get the space on the left by default due to it being included with every byte via HEX_CHARS_PER_BYTE
-	static constexpr int LEFT_MARGIN_PIXELS = 2;
+	static constexpr int LABEL_LEFT_PADDING_PIXELS = 2;  // Between the column's left edge and a line label
+	static constexpr int LABEL_RIGHT_PADDING_PIXELS = 2; // Between a line label and the column's right edge
+	static constexpr int CONTENT_LEFT_MARGIN_PIXELS = 4; // Between the line label column and the content
 	static constexpr int TEXT_HORIZONTAL_MARGIN_CHARS = 2;
+	// Below this, QPalette::AlternateBase is too close to Base to read as a band
+	static constexpr int MIN_BAND_LIGHTNESS_DELTA = 10;
 
 	// Line width used when word wrap is off: never reached, and constant, so resizing cannot invalidate the index.
 	static constexpr qsizetype NO_WRAP_COLUMNS = std::numeric_limits<qsizetype>::max();
@@ -105,6 +109,41 @@ ByteColors byteColors(const QPalette& palette)
 	};
 }
 
+struct LabelColors
+{
+	QColor band;
+	QColor text;
+};
+
+// The theme's alternate surface where the style sets one apart from Base, otherwise a shade derived from Base
+LabelColors labelColors(const QPalette& palette)
+{
+	const QColor base = palette.color(QPalette::Base);
+	const QColor alternate = palette.color(QPalette::AlternateBase);
+	const bool darkBackground = base.lightness() < 128;
+
+	const QColor band = qAbs(alternate.lightness() - base.lightness()) >= Layout::MIN_BAND_LIGHTNESS_DELTA
+		? alternate
+		: (darkBackground ? base.lighter(250) : base.darker(113));
+
+	return { .band = band, .text = darkBackground ? band.lighter(200) : band.darker(250) };
+}
+
+// Never fewer than one, so an empty count still reserves a digit
+int decimalDigits(qsizetype value)
+{
+	int digits = 1;
+	for (; value >= 10; value /= 10)
+		++digits;
+
+	return digits;
+}
+
+int lineLabelColumnWidth(int digits, int charWidth)
+{
+	return Layout::LABEL_LEFT_PADDING_PIXELS + digits * charWidth + Layout::LABEL_RIGHT_PADDING_PIXELS;
+}
+
 } // namespace
 
 inline constexpr bool isPrintableAscii(char16_t code)
@@ -168,6 +207,7 @@ void CLightningFastViewerWidget::setData(const QByteArray& bytes)
 	_mode = Mode::Hex;
 	_data = bytes;
 	_text.clear();
+	_logicalLineCount = 0;
 
 	contentChanged();
 }
@@ -177,6 +217,9 @@ void CLightningFastViewerWidget::setText(const QString& text)
 	_mode = Mode::Text;
 	_text = text;
 	_data.clear();
+
+	// The largest number the labels will show. Counted here rather than while indexing: the index is built to a wrap width the label column takes its share of.
+	_logicalLineCount = std::count(_text.cbegin(), _text.cend(), QChar(u'\n')) + (_text.isEmpty() || _text.endsWith(u'\n') ? 0 : 1);
 
 	contentChanged();
 }
@@ -214,6 +257,7 @@ void CLightningFastViewerWidget::contentChanged()
 	_hexSearchText.clear();
 	_foldedData.clear();
 	_lineOffsets.clear();
+	_logicalLineNumbers.clear();
 	_maxLineColumns = 0;
 	_wrappedForMaxColumns = -1;
 
@@ -246,6 +290,36 @@ void CLightningFastViewerWidget::paintEvent(QPaintEvent*)
 			drawTextLine(painter, line, y);
 		}
 		y += _lineHeight;
+	}
+
+	drawLineLabelColumn(painter, firstLine, lastLine);
+}
+
+void CLightningFastViewerWidget::drawLineLabelColumn(QPainter& painter, qsizetype firstLine, qsizetype lastLine)
+{
+	const LabelColors colors = labelColors(palette());
+	painter.fillRect(0, 0, _lineLabelColumnWidth, viewport()->height(), colors.band);
+	painter.setPen(colors.text);
+
+	const int labelRight = _lineLabelColumnWidth - Layout::LABEL_RIGHT_PADDING_PIXELS;
+
+	int y = 0;
+	for (qsizetype line = firstLine; line < lastLine; ++line, y += _lineHeight)
+	{
+		const int baseline = y + _fontMetrics.ascent();
+
+		if (_mode == Mode::Hex)
+		{
+			painter.drawText(Layout::LABEL_LEFT_PADDING_PIXELS, baseline, QStringLiteral("%1:").arg(line * _bytesPerLine, _nDigits, 10, QChar('0')));
+			continue;
+		}
+
+		if (line > 0 && _logicalLineNumbers[line] == _logicalLineNumbers[line - 1])
+			continue; // A wrapped continuation carries no number of its own
+
+		const uint32_t number = _logicalLineNumbers[line];
+		// Right-aligned, and the font is fixed pitch, so the digit count places the left edge
+		painter.drawText(labelRight - decimalDigits(number) * _charWidth, baseline, QString::number(number));
 	}
 }
 
@@ -595,13 +669,10 @@ int CLightningFastViewerWidget::visibleLines() const
 void CLightningFastViewerWidget::calculateHexLayout()
 {
 	// Sized for the last byte's offset rather than the last line's: _bytesPerLine is derived from this count
-	int digits = 1;
-	for (qsizetype largestOffset = _data.size() - 1; largestOffset >= 10; largestOffset /= 10)
-		++digits;
+	_nDigits = qMax(Layout::MIN_OFFSET_DIGITS, decimalDigits(_data.size() - 1));
+	_lineLabelColumnWidth = lineLabelColumnWidth(_nDigits + Layout::OFFSET_SUFFIX_CHARS, _charWidth);
 
-	_nDigits = qMax(Layout::MIN_OFFSET_DIGITS, digits);
-
-	const int viewportWidth = viewport()->width();
+	const int availableWidth = visibleContentWidth();
 	// The minimum stands even when it overflows the viewport: the horizontal scroll bar covers the excess
 	int optimalBytesPerLine = 4;
 	LineLayout optimalLayout = calculateHexLineLayout(optimalBytesPerLine);
@@ -609,7 +680,7 @@ void CLightningFastViewerWidget::calculateHexLayout()
 	for (int candidate = 4; candidate <= 128; candidate += 4)
 	{
 		const auto layout = calculateHexLineLayout(candidate);
-		if (layout.totalWidth >= viewportWidth)
+		if (layout.totalWidth >= availableWidth)
 			break;
 
 		optimalBytesPerLine = candidate;
@@ -617,7 +688,6 @@ void CLightningFastViewerWidget::calculateHexLayout()
 	}
 
 	_bytesPerLine = optimalBytesPerLine;
-	_hexStart = optimalLayout.hexStart;
 	_asciiStart = optimalLayout.asciiStart;
 }
 
@@ -626,8 +696,7 @@ CLightningFastViewerWidget::LineLayout CLightningFastViewerWidget::calculateHexL
 	const int hexWidth = (bytesPerLine * Layout::HEX_CHARS_PER_BYTE + Layout::HEX_MIDDLE_EXTRA_SPACE * ((bytesPerLine - 1) / Layout::HEX_BYTES_PER_GROUP)) * _charWidth;
 
 	LineLayout layout;
-	layout.hexStart = Layout::LEFT_MARGIN_PIXELS + (_nDigits + Layout::OFFSET_SUFFIX_CHARS) * _charWidth;
-	layout.asciiStart = layout.hexStart + hexWidth + Layout::HEX_ASCII_SEPARATOR_CHARS * _charWidth;
+	layout.asciiStart = hexWidth + Layout::HEX_ASCII_SEPARATOR_CHARS * _charWidth;
 	layout.totalWidth = layout.asciiStart + bytesPerLine * _charWidth;
 
 	return layout;
@@ -638,7 +707,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 	if (offset >= _data.size())
 		return;
 
-	const int hScroll = horizontalScrollBar()->value();
+	const int originX = contentOriginX();
 	const int baseline = y + _fontMetrics.ascent();
 	const QPalette& pal = palette();
 	const ByteColors colors = byteColors(pal);
@@ -648,8 +717,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 	const char* const dataPtr = _data.constData(); // QByteArray::operator[] is the detaching overload here
 
 	painter.setPen(pal.color(QPalette::Disabled, QPalette::Text));
-	painter.drawText(Layout::LEFT_MARGIN_PIXELS - hScroll, baseline, QStringLiteral("%1:").arg(offset, _nDigits, 10, QChar('0')));
-	painter.drawText(_asciiStart - _charWidth * Layout::HEX_ASCII_SEPARATOR_CHARS - hScroll, baseline, QStringLiteral("|"));
+	painter.drawText(originX + _asciiStart - _charWidth * Layout::HEX_ASCII_SEPARATOR_CHARS, baseline, QStringLiteral("|"));
 
 	// Both columns paint in runs of one colour, so a stretch of same-class bytes costs one drawText rather than one per byte.
 	int runX = 0;
@@ -663,10 +731,10 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 			return;
 
 		if (runSelected)
-			painter.fillRect(runX - hScroll, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, pal.highlight());
+			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, pal.highlight());
 
 		painter.setPen(runColor);
-		painter.drawText(runX - hScroll, baseline, _paintScratch);
+		painter.drawText(originX + runX, baseline, _paintScratch);
 		_paintScratch.resize(0);
 	};
 
@@ -696,7 +764,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 
 	// The gap between groups goes into the run as a second space, so one run can span it
 	paintColumn(
-		[this](qsizetype i) { return _hexStart + static_cast<int>(i * Layout::HEX_CHARS_PER_BYTE + i / Layout::HEX_BYTES_PER_GROUP) * _charWidth; },
+		[this](qsizetype i) { return static_cast<int>(i * Layout::HEX_CHARS_PER_BYTE + i / Layout::HEX_BYTES_PER_GROUP) * _charWidth; },
 		[this](qsizetype i, uint8_t byte) {
 			if (!_paintScratch.isEmpty())
 			{
@@ -722,7 +790,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, qsizetype lineI
 	const QChar* const chars = _text.constData(); // QString::operator[] is the detaching overload here
 
 	const int baseline = y + _fontMetrics.ascent();
-	const int originX = Layout::LEFT_MARGIN_PIXELS - horizontalScrollBar()->value();
+	const int originX = contentOriginX();
 
 	const QColor normalColor = palette().color(QPalette::Text);
 	const QColor selectedColor = palette().highlightedText().color();
@@ -811,6 +879,16 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, qsizetype lineI
 		highlight(column, column + 1);
 }
 
+int CLightningFastViewerWidget::contentOriginX() const
+{
+	return _lineLabelColumnWidth + Layout::CONTENT_LEFT_MARGIN_PIXELS - horizontalScrollBar()->value();
+}
+
+int CLightningFastViewerWidget::visibleContentWidth() const
+{
+	return qMax(0, viewport()->width() - _lineLabelColumnWidth - Layout::CONTENT_LEFT_MARGIN_PIXELS);
+}
+
 void CLightningFastViewerWidget::updateLayoutAndScrollBars()
 {
 	if (_mode == Mode::Hex)
@@ -824,17 +902,18 @@ void CLightningFastViewerWidget::updateLayoutAndScrollBars()
 		? _asciiStart + _charWidth * _bytesPerLine
 		: (_maxLineColumns + Layout::TEXT_HORIZONTAL_MARGIN_CHARS) * _charWidth;
 
-	horizontalScrollBar()->setRange(0, static_cast<int>(qMax<qsizetype>(0, contentWidth - viewport()->width())));
-	horizontalScrollBar()->setPageStep(viewport()->width());
+	const int visibleWidth = visibleContentWidth();
+	horizontalScrollBar()->setRange(0, static_cast<int>(qMax<qsizetype>(0, contentWidth - visibleWidth)));
+	horizontalScrollBar()->setPageStep(visibleWidth);
 	horizontalScrollBar()->setSingleStep(_charWidth);
 }
 
 CLightningFastViewerWidget::Region CLightningFastViewerWidget::regionAtPos(const QPoint& pos) const
 {
-	int x = pos.x() + horizontalScrollBar()->value();
-
-	if (x < _hexStart)
+	if (pos.x() < _lineLabelColumnWidth)
 		return Region::Offset;
+
+	const int x = pos.x() - contentOriginX();
 	if (x < _asciiStart - _charWidth * Layout::HEX_ASCII_SEPARATOR_CHARS)
 		return Region::Hex;
 	if (x >= _asciiStart)
@@ -851,7 +930,7 @@ qsizetype CLightningFastViewerWidget::hexPosToOffset(const QPoint& pos, Region r
 	if (line < 0 || line >= totalLines())
 		return -1;
 
-	const int x = pos.x() + horizontalScrollBar()->value();
+	const int x = pos.x() - contentOriginX();
 
 	qsizetype lineOffset = line * _bytesPerLine;
 	qsizetype byteInLine = 0;
@@ -860,7 +939,7 @@ qsizetype CLightningFastViewerWidget::hexPosToOffset(const QPoint& pos, Region r
 	{
 		// Inverse of the column formula in drawHexLine
 		// The gap following a group counts inside that group's span: a click on it clamps to the group's last byte
-		const int cell = (x - _hexStart) / _charWidth;
+		const int cell = x / _charWidth;
 		const int group = cell / Layout::HEX_GROUP_CHARS;
 		const int byteInGroup = qMin((cell - group * Layout::HEX_GROUP_CHARS) / Layout::HEX_CHARS_PER_BYTE, Layout::HEX_BYTES_PER_GROUP - 1);
 		byteInLine = qBound(0, group * Layout::HEX_BYTES_PER_GROUP + byteInGroup, _bytesPerLine - 1);
@@ -884,7 +963,7 @@ qsizetype CLightningFastViewerWidget::textPosToOffset(const QPoint& pos) const
 	if (line < 0 || line >= totalLines())
 		return -1;
 
-	return offsetAtColumn(line, qMax<qsizetype>(0, (pos.x() + horizontalScrollBar()->value() - Layout::LEFT_MARGIN_PIXELS) / _charWidth));
+	return offsetAtColumn(line, qMax<qsizetype>(0, (pos.x() - contentOriginX()) / _charWidth));
 }
 
 qsizetype CLightningFastViewerWidget::offsetAtColumn(qsizetype line, qsizetype targetColumn) const
@@ -959,12 +1038,13 @@ void CLightningFastViewerWidget::ensureVisible(qsizetype offset)
 	if (_mode == Mode::Hex)
 		return; // The hex layout is fitted to the viewport width, so there is nothing to scroll to horizontally
 
-	const int x = Layout::LEFT_MARGIN_PIXELS + static_cast<int>(columnOfOffset(line, offset)) * _charWidth;
+	const int x = static_cast<int>(columnOfOffset(line, offset)) * _charWidth;
 	const int firstVisibleX = horizontalScrollBar()->value();
+	const int visibleWidth = visibleContentWidth();
 	if (x < firstVisibleX)
 		horizontalScrollBar()->setValue(x);
-	else if (x + _charWidth > firstVisibleX + viewport()->width())
-		horizontalScrollBar()->setValue(x + _charWidth - viewport()->width());
+	else if (x + _charWidth > firstVisibleX + visibleWidth)
+		horizontalScrollBar()->setValue(x + _charWidth - visibleWidth);
 }
 
 void CLightningFastViewerWidget::copySelection(Region format)
@@ -1078,11 +1158,16 @@ int CLightningFastViewerWidget::columnsForNonAsciiChar(QChar ch) const
 
 void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 {
-	if (_mode != Mode::Text || !_geometrySettled)
+	if (_mode != Mode::Text)
+		return;
+
+	_lineLabelColumnWidth = lineLabelColumnWidth(decimalDigits(_logicalLineCount), _charWidth);
+
+	if (!_geometrySettled)
 		return;
 
 	const qsizetype maxColumns = _wordWrap
-		? qMax<qsizetype>(1, (viewport()->width() - _charWidth * Layout::TEXT_HORIZONTAL_MARGIN_CHARS) / _charWidth)
+		? qMax<qsizetype>(1, (visibleContentWidth() - _charWidth * Layout::TEXT_HORIZONTAL_MARGIN_CHARS) / _charWidth)
 		: Layout::NO_WRAP_COLUMNS;
 
 	if (maxColumns == _wrappedForMaxColumns)
@@ -1090,6 +1175,7 @@ void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 
 	_wrappedForMaxColumns = maxColumns;
 	_lineOffsets.clear();
+	_logicalLineNumbers.clear();
 	_maxLineColumns = 0;
 
 	const qsizetype textLength = _text.length();
@@ -1102,10 +1188,16 @@ void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 	qsizetype columnsBeforeBreak = 0; // Excludes the break character itself, which is whitespace hanging past the margin
 
 	_lineOffsets.push_back(0);
+	_logicalLineNumbers.push_back(1);
 
-	const auto endLine = [&](qsizetype endedLineColumns, qsizetype nextLineStart) {
+	uint32_t logicalLine = 1;
+	// Both pushes describe the line that starts at nextLineStart; a soft break carries the number of the line it continues
+	const auto endLine = [&](qsizetype endedLineColumns, qsizetype nextLineStart, bool hardBreak) {
 		_maxLineColumns = qMax(_maxLineColumns, endedLineColumns);
 		_lineOffsets.push_back(nextLineStart);
+		if (hardBreak)
+			++logicalLine;
+		_logicalLineNumbers.push_back(logicalLine);
 		lineStart = nextLineStart;
 		column = 0;
 		breakPos = -1;
@@ -1121,7 +1213,7 @@ void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 
 		if (ch == u'\n')
 		{
-			endLine(column, i + 1);
+			endLine(column, i + 1, true);
 			continue;
 		}
 
@@ -1137,11 +1229,11 @@ void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 			if (breakPos > lineStart)
 			{
 				i = breakPos; // Must precede endLine, which clears breakPos
-				endLine(columnsBeforeBreak, i + 1); // The character broken after stays on the line it ends
+				endLine(columnsBeforeBreak, i + 1, false); // The character broken after stays on the line it ends
 			}
 			else
 			{
-				endLine(column - columns, i);
+				endLine(column - columns, i, false);
 				--i;
 			}
 		}
@@ -1150,6 +1242,9 @@ void CLightningFastViewerWidget::rebuildLineIndexIfNeeded()
 	_maxLineColumns = qMax(_maxLineColumns, column);
 	if (_lineOffsets.back() != textLength)
 		_lineOffsets.push_back(textLength);
+
+	// One number per visual line. endLine pushed one more when the text ends on a line break, the sentinel taking that line's place.
+	_logicalLineNumbers.resize(_lineOffsets.size() - 1);
 }
 
 void CLightningFastViewerWidget::updateFontMetrics()
@@ -1443,8 +1538,7 @@ void CLightningFastViewerWidget::updateCursorShape(const QPoint& pos)
 	}
 	else
 	{
-		qsizetype offset = textPosToOffset(pos);
-		overText = (offset >= 0);
+		overText = pos.x() >= _lineLabelColumnWidth && textPosToOffset(pos) >= 0;
 	}
 
 	viewport()->setCursor(overText ? Qt::IBeamCursor : Qt::ArrowCursor);
