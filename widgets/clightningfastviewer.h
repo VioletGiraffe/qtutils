@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QAbstractScrollArea>
+#include <QBrush>
 #include <QByteArray>
 #include <QFontMetrics>
 #include <QRegularExpression>
@@ -9,6 +10,8 @@
 #include <array>
 #include <cstdint>
 #include <vector>
+
+class QPalette;
 
 class CLightningFastViewerWidget final : public QAbstractScrollArea
 {
@@ -115,13 +118,32 @@ private:
 	// Hex mode methods
 	void calculateHexLayout();
 
+	// Resolved once per paint, not per line
+	struct HexColors
+	{
+		// Byte classes carry their own colours: QPalette has no categorical colour set to borrow, and the hues have to hold up on either background.
+		QColor null;
+		QColor whitespace;
+		QColor printable;
+		QColor control;
+		QColor nonAscii;
+		QColor filler;
+
+		QColor selectedText;
+		QColor separator; // The bar between the hex and ASCII columns
+		QBrush highlight;
+
+		[[nodiscard]] const QColor& forByte(uint8_t byte) const;
+	};
+	[[nodiscard]] static HexColors hexColors(const QPalette& palette);
+
 	// Content coordinates: the hex column opens at 0, the line label column is not part of them
 	struct LineLayout {
 		int asciiStart = 0;
 		int totalWidth = 0;
 	};
 	[[nodiscard]] LineLayout calculateHexLineLayout(int bytesPerLine) const;
-	void drawHexLine(QPainter& painter, qsizetype offset, int y);
+	void drawHexLine(QPainter& painter, const HexColors& colors, qsizetype offset, int y);
 	[[nodiscard]] Region regionAtPos(const QPoint& pos) const;
 	// The column a click at pos selects in. Differs from regionAtPos only over the line label column, which selects in the hex column.
 	[[nodiscard]] Region selectionRegionAtPos(const QPoint& pos) const;
@@ -129,7 +151,15 @@ private:
 	[[nodiscard]] qsizetype hexPosToOffset(const QPoint& pos, Region region) const;
 
 	// Text mode methods
-	void drawTextLine(QPainter& painter, qsizetype lineIndex, int y);
+	struct TextColors
+	{
+		QColor text;
+		QColor selectedText;
+		QBrush highlight;
+	};
+	[[nodiscard]] static TextColors textColors(const QPalette& palette);
+
+	void drawTextLine(QPainter& painter, const TextColors& colors, qsizetype lineIndex, int y);
 	[[nodiscard]] qsizetype textPosToOffset(const QPoint& pos) const;
 
 	// Offset in the line whose columns cover targetColumn, or the line's last offset when the column is past its end

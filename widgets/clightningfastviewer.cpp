@@ -67,47 +67,6 @@ static constexpr char16_t fallbackGlyph = '.';
 
 namespace {
 
-// Byte classes carry their own colours: QPalette has no categorical colour set to borrow, and the hues have to hold up on either background.
-struct ByteColors
-{
-	QColor null;
-	QColor whitespace;
-	QColor printable;
-	QColor control;
-	QColor nonAscii;
-	QColor filler;
-
-	[[nodiscard]] const QColor& forByte(uint8_t byte) const
-	{
-		if (byte == 0x00)
-			return null;
-		if (byte == 0xFF)
-			return filler;
-		if (byte == 0x20 || (byte >= 0x09 && byte <= 0x0D))
-			return whitespace;
-		if (byte < 0x20 || byte == 0x7F)
-			return control;
-		if (byte >= 0x80)
-			return nonAscii;
-
-		return printable;
-	}
-};
-
-ByteColors byteColors(const QPalette& palette)
-{
-	const bool darkBackground = palette.color(QPalette::Base).lightness() < 128;
-
-	return {
-		.null = palette.color(QPalette::Disabled, QPalette::Text),
-		.whitespace = darkBackground ? QColor(0x7F, 0xD0, 0x7F) : QColor(0x18, 0x78, 0x18),
-		.printable = palette.color(QPalette::Text),
-		.control = darkBackground ? QColor(0x6F, 0xD0, 0xD0) : QColor(0x10, 0x68, 0x68),
-		.nonAscii = darkBackground ? QColor(0xD8, 0xB0, 0x60) : QColor(0x8A, 0x5A, 0x00),
-		.filler = darkBackground ? QColor(0xD0, 0x80, 0xC0) : QColor(0x9A, 0x0F, 0x7A)
-	};
-}
-
 struct LabelColors
 {
 	QColor band;
@@ -277,18 +236,17 @@ void CLightningFastViewerWidget::paintEvent(QPaintEvent*)
 	const qsizetype lastLine = qMin(firstLine + visibleLines() + 2, totalLines());
 
 	int y = 0;
-	for (qsizetype line = firstLine; line < lastLine; ++line)
+	if (_mode == Mode::Hex)
 	{
-		if (_mode == Mode::Hex)
-		{
-			const qsizetype offset = line * _bytesPerLine;
-			drawHexLine(painter, offset, y);
-		}
-		else
-		{
-			drawTextLine(painter, line, y);
-		}
-		y += _lineHeight;
+		const HexColors colors = hexColors(palette());
+		for (qsizetype line = firstLine; line < lastLine; ++line, y += _lineHeight)
+			drawHexLine(painter, colors, line * _bytesPerLine, y);
+	}
+	else
+	{
+		const TextColors colors = textColors(palette());
+		for (qsizetype line = firstLine; line < lastLine; ++line, y += _lineHeight)
+			drawTextLine(painter, colors, line, y);
 	}
 
 	drawLineLabelColumn(painter, firstLine, lastLine);
@@ -697,21 +655,51 @@ CLightningFastViewerWidget::LineLayout CLightningFastViewerWidget::calculateHexL
 	return layout;
 }
 
-void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset, int y)
+const QColor& CLightningFastViewerWidget::HexColors::forByte(uint8_t byte) const
+{
+	if (byte == 0x00)
+		return null;
+	if (byte == 0xFF)
+		return filler;
+	if (byte == 0x20 || (byte >= 0x09 && byte <= 0x0D))
+		return whitespace;
+	if (byte < 0x20 || byte == 0x7F)
+		return control;
+	if (byte >= 0x80)
+		return nonAscii;
+
+	return printable;
+}
+
+CLightningFastViewerWidget::HexColors CLightningFastViewerWidget::hexColors(const QPalette& palette)
+{
+	const bool darkBackground = palette.color(QPalette::Base).lightness() < 128;
+
+	return {
+		.null = palette.color(QPalette::Disabled, QPalette::Text),
+		.whitespace = darkBackground ? QColor(0x7F, 0xD0, 0x7F) : QColor(0x18, 0x78, 0x18),
+		.printable = palette.color(QPalette::Text),
+		.control = darkBackground ? QColor(0x6F, 0xD0, 0xD0) : QColor(0x10, 0x68, 0x68),
+		.nonAscii = darkBackground ? QColor(0xD8, 0xB0, 0x60) : QColor(0x8A, 0x5A, 0x00),
+		.filler = darkBackground ? QColor(0xD0, 0x80, 0xC0) : QColor(0x9A, 0x0F, 0x7A),
+		.selectedText = palette.highlightedText().color(),
+		.separator = palette.color(QPalette::Disabled, QPalette::Text),
+		.highlight = palette.highlight()
+	};
+}
+
+void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors& colors, qsizetype offset, int y)
 {
 	if (offset >= _data.size())
 		return;
 
 	const int originX = contentOriginX();
 	const int baseline = y + _fontMetrics.ascent();
-	const QPalette& pal = palette();
-	const ByteColors colors = byteColors(pal);
-	const QColor selectedColor = pal.highlightedText().color();
 
 	const qsizetype lineBytes = qMin(static_cast<qsizetype>(_bytesPerLine), _data.size() - offset);
 	const char* const dataPtr = _data.constData(); // QByteArray::operator[] is the detaching overload here
 
-	painter.setPen(pal.color(QPalette::Disabled, QPalette::Text));
+	painter.setPen(colors.separator);
 	painter.drawText(originX + _asciiStart - _charWidth * Layout::HEX_ASCII_SEPARATOR_CHARS, baseline, QStringLiteral("|"));
 
 	// Both columns paint in runs of one colour, so a stretch of same-class bytes costs one drawText rather than one per byte.
@@ -726,7 +714,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 			return;
 
 		if (runSelected)
-			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, pal.highlight());
+			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, colors.highlight);
 
 		painter.setPen(runColor);
 		painter.drawText(originX + runX, baseline, _paintScratch);
@@ -739,7 +727,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 		{
 			const uint8_t byte = static_cast<uint8_t>(dataPtr[offset + i]);
 			const bool selected = isSelected(offset + i);
-			const QColor color = selected ? selectedColor : colors.forByte(byte);
+			const QColor color = selected ? colors.selectedText : colors.forByte(byte);
 
 			if (!_paintScratch.isEmpty() && (color != runColor || selected != runSelected))
 				flushRun();
@@ -777,7 +765,16 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, qsizetype offset
 		[this](qsizetype, uint8_t byte) { _paintScratch += _hexGlyphs[byte]; });
 }
 
-void CLightningFastViewerWidget::drawTextLine(QPainter& painter, qsizetype lineIndex, int y)
+CLightningFastViewerWidget::TextColors CLightningFastViewerWidget::textColors(const QPalette& palette)
+{
+	return {
+		.text = palette.color(QPalette::Text),
+		.selectedText = palette.highlightedText().color(),
+		.highlight = palette.highlight()
+	};
+}
+
+void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColors& colors, qsizetype lineIndex, int y)
 {
 	const qsizetype lineStart = _lineOffsets[lineIndex];
 	const qsizetype lineEnd = _lineOffsets[lineIndex + 1];
@@ -787,22 +784,19 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, qsizetype lineI
 	const int baseline = y + _fontMetrics.ascent();
 	const int originX = contentOriginX();
 
-	const QColor normalColor = palette().color(QPalette::Text);
-	const QColor selectedColor = palette().highlightedText().color();
-
 	qsizetype column = 0;
 	qsizetype runStart = -1; // Offset where the pending run of literal ASCII begins; -1 when there is no pending run
 	qsizetype runColumn = 0;
 	bool runSelected = false;
 
 	const auto highlight = [&](qsizetype fromColumn, qsizetype toColumn) {
-		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, palette().highlight());
+		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, colors.highlight);
 	};
 
 	const auto drawChars = [&](const QChar* chars, qsizetype count, qsizetype atColumn, bool selected) {
 		_paintScratch.resize(count);
 		std::copy_n(chars, count, _paintScratch.data());
-		painter.setPen(selected ? selectedColor : normalColor);
+		painter.setPen(selected ? colors.selectedText : colors.text);
 		painter.drawText(originX + int(atColumn) * _charWidth, baseline, _paintScratch);
 	};
 
