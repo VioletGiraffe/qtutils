@@ -9,7 +9,8 @@ HEADERS += \
     $$PWD/chistorycombobox.h \
     $$PWD/layouts/coverlaylayout.h \
     $$PWD/cpersistentwindow.h \
-    $$PWD/clightningfastviewer.h
+    $$PWD/clightningfastviewer.h \
+    $$PWD/clightningfastviewer_glyphs.h
 
 SOURCES += \
     $$PWD/clabelelided.cpp \

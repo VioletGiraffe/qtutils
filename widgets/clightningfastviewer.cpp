@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <limits>
 
+using GlyphSubstitution::isPrintableAscii;
+
 static constexpr char hexChars[] = "0123456789ABCDEF";
 static constexpr int autoScrollIntervalMs = 50;
 
@@ -38,32 +40,6 @@ namespace Layout {
 	// Line width used when word wrap is off: never reached, and constant, so resizing cannot invalidate the index.
 	static constexpr qsizetype NO_WRAP_COLUMNS = std::numeric_limits<qsizetype>::max();
 }
-
-// The CP437 glyphs for the C0 controls, as a DOS-era dump showed them. Code points rather than literal glyphs: the sources are ASCII-only and MSVC is not passed /utf-8.
-// Slot 0 is ours, not CP437's: CP437 draws NUL as a blank, which would be indistinguishable from a space.
-static constexpr char16_t cp437ControlGlyphs[0x20] = {
-	0x2205, 0x263A, 0x263B, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022, // empty set, smilies, card suits, bullet
-	0x25D8, 0x25CB, 0x25D9, 0x2642, 0x2640, 0x266A, 0x266B, 0x263C, // circles, gender signs, notes, sun
-	0x25BA, 0x25C4, 0x2195, 0x203C, 0x00B6, 0x00A7, 0x25AC, 0x21A8, // triangles, arrows, pilcrow, section, bar
-	0x2191, 0x2193, 0x2192, 0x2190, 0x221F, 0x2194, 0x25B2, 0x25BC  // arrows, right angle, triangles
-};
-
-static constexpr char16_t cp437DeleteGlyph = 0x2302;   // house
-
-// The CP437 glyphs for 0x80 to 0xFF, indexed by byte minus 0x80. The last slot is ours: CP437 puts a no-break space there, which would read as a blank.
-static constexpr char16_t cp437HighGlyphs[0x80] = {
-	0x00C7, 0x00FC, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7, 0x00EA, 0x00EB, 0x00E8, 0x00EF, 0x00EE, 0x00EC, 0x00C4, 0x00C5, // 0x80
-	0x00C9, 0x00E6, 0x00C6, 0x00F4, 0x00F6, 0x00F2, 0x00FB, 0x00F9, 0x00FF, 0x00D6, 0x00DC, 0x00A2, 0x00A3, 0x00A5, 0x20A7, 0x0192, // 0x90
-	0x00E1, 0x00ED, 0x00F3, 0x00FA, 0x00F1, 0x00D1, 0x00AA, 0x00BA, 0x00BF, 0x2310, 0x00AC, 0x00BD, 0x00BC, 0x00A1, 0x00AB, 0x00BB, // 0xA0
-	0x2591, 0x2592, 0x2593, 0x2502, 0x2524, 0x2561, 0x2562, 0x2556, 0x2555, 0x2563, 0x2551, 0x2557, 0x255D, 0x255C, 0x255B, 0x2510, // 0xB0, shading and box drawing
-	0x2514, 0x2534, 0x252C, 0x251C, 0x2500, 0x253C, 0x255E, 0x255F, 0x255A, 0x2554, 0x2569, 0x2566, 0x2560, 0x2550, 0x256C, 0x2567, // 0xC0
-	0x2568, 0x2564, 0x2565, 0x2559, 0x2558, 0x2552, 0x2553, 0x256B, 0x256A, 0x2518, 0x250C, 0x2588, 0x2584, 0x258C, 0x2590, 0x2580, // 0xD0
-	0x03B1, 0x00DF, 0x0393, 0x03C0, 0x03A3, 0x03C3, 0x00B5, 0x03C4, 0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229, // 0xE0, Greek and math
-	0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248, 0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x25A9  // 0xF0
-};
-static constexpr char16_t openBoxGlyph = 0x2423;       // marks a no-break space
-static constexpr char16_t invisibleMarkerGlyph = 0x25AF; // white vertical rectangle
-static constexpr char16_t fallbackGlyph = '.';
 
 namespace {
 
@@ -103,11 +79,6 @@ int lineLabelColumnWidth(int digits, int charWidth)
 }
 
 } // namespace
-
-inline constexpr bool isPrintableAscii(char16_t code)
-{
-	return code >= 0x20 && code < 0x7F;
-}
 
 // True for characters that must be painted as a stand-in: no glyph, or a glyph that shows nothing.
 static bool isSubstituted(QChar ch)
@@ -764,7 +735,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 
 	paintColumn(
 		[this](qsizetype i) { return _asciiStart + static_cast<int>(i) * _charWidth; },
-		[this](qsizetype, uint8_t byte) { _paintScratch += _hexGlyphs[byte]; });
+		[this](qsizetype, uint8_t byte) { _paintScratch += _glyphs.hex[byte]; });
 }
 
 CLightningFastViewerWidget::TextColors CLightningFastViewerWidget::textColors(const QPalette& palette)
@@ -853,7 +824,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 		{
 			if (isSubstituted(ch))
 			{
-				const QChar substitute = nonPrintableGlyph(ch);
+				const QChar substitute = _glyphs.substituteFor(ch);
 				drawChars(&substitute, 1, column, selected);
 			}
 			else
@@ -1252,48 +1223,9 @@ void CLightningFastViewerWidget::updateFontMetrics()
 	_charWidth = _fontMetrics.horizontalAdvance('0');
 	assert_r(_lineHeight > 0 && _charWidth > 0);
 
-	buildGlyphTables();
+	_glyphs = GlyphSubstitution::buildTables(_fontMetrics, _charWidth);
 	_charColumns.clear();
 	_wrappedForMaxColumns = -1; // Measured column counts, and the wrap width itself, follow the font
-}
-
-void CLightningFastViewerWidget::buildGlyphTables()
-{
-	// A glyph the font lacks arrives from a fallback font at its own advance. Text mode draws each stand-in on its own column origin, so anything that
-	// fits the cell is safe there; the hex columns batch glyphs into one drawText, where each advances the next, so only an exact fit stays on the grid.
-	const auto usable = [this](char16_t code, bool exactWidthRequired) {
-		const QChar glyph(code);
-		const bool inFont = _fontMetrics.inFont(glyph);
-		const int advance = _fontMetrics.horizontalAdvance(glyph);
-		const bool fits = exactWidthRequired ? advance == _charWidth : (advance > 0 && advance <= _charWidth);
-		return inFont && fits ? glyph : QChar(fallbackGlyph);
-	};
-
-	_invisibleMarker = usable(invisibleMarkerGlyph, false);
-
-	_nonPrintableGlyphs.fill(_invisibleMarker); // Covers the C1 controls, the soft hyphen, and every printable slot, which is never read
-	for (char16_t code = 0; code < 0x20; ++code)
-		_nonPrintableGlyphs[code] = usable(cp437ControlGlyphs[code], false);
-	_nonPrintableGlyphs[0x7F] = usable(cp437DeleteGlyph, false);
-	_nonPrintableGlyphs[0xA0] = usable(openBoxGlyph, false);
-
-	for (char16_t byte = 0; byte < 256; ++byte)
-	{
-		if (isPrintableAscii(byte))
-			_hexGlyphs[byte] = QChar(byte);
-		else if (byte < 0x20)
-			_hexGlyphs[byte] = usable(cp437ControlGlyphs[byte], true);
-		else if (byte == 0x7F)
-			_hexGlyphs[byte] = usable(cp437DeleteGlyph, true);
-		else
-			_hexGlyphs[byte] = usable(cp437HighGlyphs[byte - 0x80], true);
-	}
-}
-
-QChar CLightningFastViewerWidget::nonPrintableGlyph(QChar ch) const
-{
-	const char16_t code = ch.unicode();
-	return code < 0x100 ? _nonPrintableGlyphs[code] : _invisibleMarker;
 }
 
 qsizetype CLightningFastViewerWidget::findLineContainingOffset(qsizetype offset) const

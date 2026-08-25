@@ -1,5 +1,7 @@
 #pragma once
 
+#include "clightningfastviewer_glyphs.h"
+
 #include <QAbstractScrollArea>
 #include <QBrush>
 #include <QByteArray>
@@ -7,7 +9,6 @@
 #include <QRegularExpression>
 #include <QTextDocument>
 
-#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -172,8 +173,6 @@ private:
 	// Columns occupied by ch starting at the given column. 'next' is the following character, which resolves CR-LF and surrogate pairs.
 	[[nodiscard]] int columnsForChar(QChar ch, QChar next, qsizetype column) const;
 	[[nodiscard]] int columnsForNonAsciiChar(QChar ch) const;
-	[[nodiscard]] QChar nonPrintableGlyph(QChar ch) const;
-	void buildGlyphTables();
 
 	void rebuildLineIndexIfNeeded();
 	[[nodiscard]] qsizetype findLineContainingOffset(qsizetype offset) const;
@@ -207,10 +206,7 @@ private:
 	mutable std::vector<uint8_t> _charColumns;
 	QString _paintScratch; // Reused by both painters: QPainter::drawText has no QStringView overload. Emptied with resize(0), which keeps the buffer.
 
-	// Stand-in glyphs, rebuilt per font: every entry is known to exist in it and to measure exactly one column.
-	std::array<QChar, 256> _nonPrintableGlyphs; // Text mode, indexed by code point
-	std::array<QChar, 256> _hexGlyphs;          // Hex mode ASCII column, indexed by byte
-	QChar _invisibleMarker;                     // Text mode, for the non-printables above U+00FF
+	GlyphSubstitution::Tables _glyphs; // Rebuilt on every font change
 	QFontMetrics _fontMetrics;
 	Selection _selection;
 	QPoint _dragPos;          // Last position of a drag in progress, in viewport coordinates
