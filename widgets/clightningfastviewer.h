@@ -188,5 +188,5 @@ private:
 
 	// Hex layout positions
 	int _asciiStart = 0;
-	int _nDigits = 0; // Cached number of digits for offset display
+	int _nDigits = 0; // Digits in the largest offset, which is what sizes the label column
 };

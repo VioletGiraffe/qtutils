@@ -21,7 +21,6 @@ static constexpr char hexChars[] = "0123456789ABCDEF";
 static constexpr int autoScrollIntervalMs = 50;
 
 namespace Layout {
-	static constexpr int MIN_OFFSET_DIGITS = 4;
 	static constexpr int OFFSET_SUFFIX_CHARS = 1; // ":"
 	static constexpr int HEX_CHARS_PER_BYTE = 3; // "XX "
 	static constexpr int HEX_BYTES_PER_GROUP = 8;
@@ -306,20 +305,16 @@ void CLightningFastViewerWidget::drawLineLabelColumn(QPainter& painter, qsizetyp
 	int y = 0;
 	for (qsizetype line = firstLine; line < lastLine; ++line, y += _lineHeight)
 	{
-		const int baseline = y + _fontMetrics.ascent();
-
+		QString label;
 		if (_mode == Mode::Hex)
-		{
-			painter.drawText(Layout::LABEL_LEFT_PADDING_PIXELS, baseline, QStringLiteral("%1:").arg(line * _bytesPerLine, _nDigits, 10, QChar('0')));
-			continue;
-		}
-
-		if (line > 0 && _logicalLineNumbers[line] == _logicalLineNumbers[line - 1])
+			label = QString::number(line * _bytesPerLine) + QChar(':');
+		else if (line == 0 || _logicalLineNumbers[line] != _logicalLineNumbers[line - 1])
+			label = QString::number(_logicalLineNumbers[line]);
+		else
 			continue; // A wrapped continuation carries no number of its own
 
-		const uint32_t number = _logicalLineNumbers[line];
-		// Right-aligned, and the font is fixed pitch, so the digit count places the left edge
-		painter.drawText(labelRight - decimalDigits(number) * _charWidth, baseline, QString::number(number));
+		// Right-aligned, and the font is fixed pitch, so the character count places the left edge
+		painter.drawText(labelRight - static_cast<int>(label.size()) * _charWidth, y + _fontMetrics.ascent(), label);
 	}
 }
 
@@ -669,7 +664,7 @@ int CLightningFastViewerWidget::visibleLines() const
 void CLightningFastViewerWidget::calculateHexLayout()
 {
 	// Sized for the last byte's offset rather than the last line's: _bytesPerLine is derived from this count
-	_nDigits = qMax(Layout::MIN_OFFSET_DIGITS, decimalDigits(_data.size() - 1));
+	_nDigits = decimalDigits(_data.size() - 1);
 	_lineLabelColumnWidth = lineLabelColumnWidth(_nDigits + Layout::OFFSET_SUFFIX_CHARS, _charWidth);
 
 	const int availableWidth = visibleContentWidth();
