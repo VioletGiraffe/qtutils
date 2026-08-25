@@ -1,6 +1,5 @@
 #include "chistorycombobox.h"
 #include "container/set_operations.hpp"
-#include "settings/csettings.h"
 
 #include "../qtcore_helpers/qstring_helpers.hpp"
 
@@ -9,6 +8,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QSettings>
 RESTORE_COMPILER_WARNINGS
 
 CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
@@ -32,7 +32,7 @@ void CHistoryComboBox::enableAutoSave(const QString& settingName)
 	_settingName = settingName;
 
 	if (!settingName.isEmpty())
-		addItems(CSettings().value(settingName).toStringList());
+		addItems(QSettings().value(settingName).toStringList());
 }
 
 void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
@@ -189,5 +189,5 @@ QStringList CHistoryComboBox::itemsToSave() const
 void CHistoryComboBox::saveState()
 {
 	if (!_settingName.isEmpty())
-		CSettings().setValue(_settingName, itemsToSave());
+		QSettings().setValue(_settingName, itemsToSave());
 }

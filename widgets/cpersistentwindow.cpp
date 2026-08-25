@@ -1,12 +1,12 @@
 #include "cpersistentwindow.h"
 
-#include "../settings/csettings.h"
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QMainWindow>
 #include <QScreen>
+#include <QSettings>
 #include <QStyle>
 RESTORE_COMPILER_WARNINGS
 
@@ -41,7 +41,7 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 	{
 		auto* widget = static_cast<QWidget*>(watched);
 		auto* window = dynamic_cast<QMainWindow*>(watched);
-		CSettings s;
+		QSettings s;
 
 		s.setValue(GEOMETRY_KEY, widget->saveGeometry());
 		if (window)
@@ -54,7 +54,7 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 void CPersistenceEnabler::restoreState(QWidget* widget)
 {
 	auto* window = dynamic_cast<QMainWindow*>(widget);
-	CSettings s;
+	QSettings s;
 
 	if (!widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()))
 	{

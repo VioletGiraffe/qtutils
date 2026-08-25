@@ -2,12 +2,14 @@
 
 #include "clightningfastviewer_glyphs.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QAbstractScrollArea>
 #include <QBrush>
 #include <QByteArray>
 #include <QFontMetrics>
 #include <QRegularExpression>
 #include <QTextDocument>
+RESTORE_COMPILER_WARNINGS
 
 #include <cstdint>
 #include <vector>

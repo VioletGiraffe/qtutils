@@ -1,10 +1,10 @@
 #include "cthemecontroller.h"
 
 #include "assert/advanced_assert.h"
-#include "settings/csettings.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QGuiApplication>
+#include <QSettings>
 #include <QStyleHints>
 RESTORE_COMPILER_WARNINGS
 
@@ -47,7 +47,7 @@ CThemeController& CThemeController::instance()
 
 CThemeController::CThemeController()
 {
-	const CSettings settings;
+	const QSettings settings;
 	_schemePreference = schemeFromString(settings.value(SchemeKey).toString());
 	_lightThemeName = settings.value(LightThemeKey).toString();
 	_darkThemeName = settings.value(DarkThemeKey).toString();
@@ -65,7 +65,7 @@ void CThemeController::setSchemePreference(Qt::ColorScheme preference)
 		return;
 
 	_schemePreference = preference;
-	CSettings{}.setValue(SchemeKey, schemeToString(preference));
+	QSettings{}.setValue(SchemeKey, schemeToString(preference));
 
 	// Qt emits colorSchemeChanged if this alters the effective scheme, and that is what reaches
 	// themeChanged(). When it does not - pinning Light while the system is already light - nothing
@@ -90,7 +90,7 @@ void CThemeController::setThemeName(bool dark, const QString& name)
 		return;
 
 	stored = name;
-	CSettings{}.setValue(dark ? DarkThemeKey : LightThemeKey, name);
+	QSettings{}.setValue(dark ? DarkThemeKey : LightThemeKey, name);
 
 	if (dark == darkActive())
 		emit themeChanged(); // the other polarity's theme is not on screen, so nothing to redraw

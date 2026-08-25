@@ -2,8 +2,12 @@
 
 // UTF-8 source: MSVC requires /utf-8, set in qtutils.pro and global.pri.
 
+#include "compiler/compiler_warnings_control.h"
+
+DISABLE_COMPILER_WARNINGS
 #include <QChar>
 #include <QFontMetrics>
+RESTORE_COMPILER_WARNINGS
 
 #include <array>
 

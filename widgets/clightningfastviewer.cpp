@@ -1,6 +1,7 @@
 #include "clightningfastviewer.h"
 #include "assert/advanced_assert.h"
 
+DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QClipboard>
 #include <QEvent>
@@ -13,6 +14,7 @@
 #include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
+RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
 #include <limits>

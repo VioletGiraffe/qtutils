@@ -2,11 +2,11 @@
 #include "ui_csettingsdialog.h"
 
 #include "csettingspage.h"
-#include "../settings/csettings.h"
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QMessageBox>
+#include <QSettings>
 #include <QShortcut>
 RESTORE_COMPILER_WARNINGS
 
@@ -110,7 +110,7 @@ void CSettingsDialog::wipeSettings()
 {
 	if (QMessageBox::question(this, tr("Wipe settings"), tr("Wipe all settings?")) == QMessageBox::Yes)
 	{
-		CSettings{}.clear();
+		QSettings{}.clear();
 		_Exit(0); // Exiting immediately so that the current application state cannot be re-saved upon next normal exit
 	}
 }
