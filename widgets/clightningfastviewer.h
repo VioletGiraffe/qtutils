@@ -123,6 +123,8 @@ private:
 	[[nodiscard]] LineLayout calculateHexLineLayout(int bytesPerLine) const;
 	void drawHexLine(QPainter& painter, qsizetype offset, int y);
 	[[nodiscard]] Region regionAtPos(const QPoint& pos) const;
+	// The column a click at pos selects in. Differs from regionAtPos only over the line label column, which selects in the hex column.
+	[[nodiscard]] Region selectionRegionAtPos(const QPoint& pos) const;
 	// Byte at pos read within the given column, so a drag stays in the column it started in. An x outside that column clamps to the line's first or last byte.
 	[[nodiscard]] qsizetype hexPosToOffset(const QPoint& pos, Region region) const;
 

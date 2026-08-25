@@ -354,7 +354,7 @@ void CLightningFastViewerWidget::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		const Region region = (_mode == Mode::Hex) ? regionAtPos(event->pos()) : Region::Ascii;
+		const Region region = (_mode == Mode::Hex) ? selectionRegionAtPos(event->pos()) : Region::Ascii;
 		const qsizetype offset = (_mode == Mode::Hex) ? hexPosToOffset(event->pos(), region) : textPosToOffset(event->pos());
 		if (offset >= 0)
 		{
@@ -494,7 +494,7 @@ void CLightningFastViewerWidget::mouseDoubleClickEvent(QMouseEvent* event)
 	{
 		if (_mode == Mode::Hex)
 		{
-			const Region region = regionAtPos(event->pos());
+			const Region region = selectionRegionAtPos(event->pos());
 			const qsizetype offset = hexPosToOffset(event->pos(), region);
 			if (offset >= 0 && offset < _data.size())
 			{
@@ -914,6 +914,13 @@ CLightningFastViewerWidget::Region CLightningFastViewerWidget::regionAtPos(const
 	if (x >= _asciiStart)
 		return Region::Ascii;
 	return Region::None;
+}
+
+CLightningFastViewerWidget::Region CLightningFastViewerWidget::selectionRegionAtPos(const QPoint& pos) const
+{
+	const Region region = regionAtPos(pos);
+	// An x left of the hex column clamps to the line's first byte, which is what a click on a label selects
+	return region == Region::Offset ? Region::Hex : region;
 }
 
 qsizetype CLightningFastViewerWidget::hexPosToOffset(const QPoint& pos, Region region) const
