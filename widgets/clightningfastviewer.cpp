@@ -177,7 +177,9 @@ void CLightningFastViewerWidget::setText(const QString& text)
 	_data.clear();
 
 	// The largest number the labels will show. Counted here rather than while indexing: the index is built to a wrap width the label column takes its share of.
-	_logicalLineCount = std::count(_text.cbegin(), _text.cend(), QChar(u'\n')) + (_text.isEmpty() || _text.endsWith(u'\n') ? 0 : 1);
+	// Counted as char16_t, not QChar: std::count only takes its vectorized path over integral elements.
+	const char16_t* const chars = reinterpret_cast<const char16_t*>(_text.constData());
+	_logicalLineCount = std::count(chars, chars + _text.size(), u'\n') + (_text.isEmpty() || _text.endsWith(u'\n') ? 0 : 1);
 
 	contentChanged();
 }
