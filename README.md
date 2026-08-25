@@ -33,6 +33,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/clineedit.h` | `QLineEdit` with configurable queued select-all-on-focus behavior. |
 | `widgets/clabelelided.h` | Label that paints elided text, in the middle unless told otherwise, and automatically shows the full text as a tooltip only when elided. |
 | `widgets/ctexteditwithlinenumbers.h` | `QTextEdit` with a synchronized line-number gutter. |
+| `widgets/clightningfastviewer.h` | Read-only text and hex viewer that indexes visual lines instead of laying out a document, so arbitrarily large files open at once; stands in CP437 glyphs for non-printable characters, colours hex bytes by class, and offers word wrap, selection, clipboard, and literal or regex search. |
 | `widgets/circularprogressindicator/ccircularprogressindicator.h` | Configurable indeterminate spinner with color, animation interval, and stopped-state visibility properties. |
 | `widgets/cpersistentwindow.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `CSettings`, with delayed first-show restoration by default. |
 | `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |

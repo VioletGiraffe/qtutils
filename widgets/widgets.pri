@@ -8,7 +8,8 @@ HEADERS += \
     $$PWD/circularprogressindicator/ccircularprogressindicator.h \
     $$PWD/chistorycombobox.h \
     $$PWD/layouts/coverlaylayout.h \
-    $$PWD/cpersistentwindow.h
+    $$PWD/cpersistentwindow.h \
+    $$PWD/clightningfastviewer.h
 
 SOURCES += \
     $$PWD/clabelelided.cpp \
@@ -20,4 +21,5 @@ SOURCES += \
     $$PWD/circularprogressindicator/ccircularprogressindicator.cpp \
     $$PWD/chistorycombobox.cpp \
     $$PWD/layouts/coverlaylayout.cpp \
-    $$PWD/cpersistentwindow.cpp
+    $$PWD/cpersistentwindow.cpp \
+    $$PWD/clightningfastviewer.cpp
