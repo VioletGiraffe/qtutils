@@ -112,7 +112,12 @@ qreal CTextEditWithLineNumbers::documentYAtViewportTop() const
 // index lays out however deep its probes reach.
 QTextBlock CTextEditWithLineNumbers::firstVisibleBlock() const
 {
-	const int position = document()->documentLayout()->hitTest(QPointF{ 0.0, documentYAtViewportTop() }, Qt::FuzzyHit);
+	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
+	// The probe must land inside a block: hitTest() walks from the first block and stops only at a block containing y.
+	// A block below the lazily laid out region has an empty QTextLayout at y 0, so a probe at y 0 stops on that one.
+	// At scroll position 0 the viewport top is above the first block: the document's top margin belongs to no block.
+	const qreal y = qMax(documentYAtViewportTop(), layout->blockBoundingRect(document()->firstBlock()).top());
+	const int position = layout->hitTest(QPointF{ 0.0, y }, Qt::FuzzyHit);
 	assert_r(position >= 0); // Qt::FuzzyHit always resolves to a position
 	return document()->findBlock(position);
 }
