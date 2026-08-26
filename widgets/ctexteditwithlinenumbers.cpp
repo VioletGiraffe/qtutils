@@ -130,7 +130,8 @@ void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
 	baseColor = darkTheme ? baseColor.lighter(250) : baseColor.darker(113);
 
 	painter.fillRect(event->rect(), baseColor);
-	painter.setPen(!darkTheme ? baseColor.darker(250) : baseColor.lighter(200));
+	// Qt derives PlaceholderText from Text at 50% alpha where a palette leaves it unset, so any palette yields dim text here
+	painter.setPen(palette().color(QPalette::PlaceholderText));
 
 	const QAbstractTextDocumentLayout* layout = document()->documentLayout();
 	// The number area shares the viewport's top and height, so the same shift places a block in both

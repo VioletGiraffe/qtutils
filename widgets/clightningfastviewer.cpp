@@ -62,7 +62,8 @@ LabelColors labelColors(const QPalette& palette)
 		? alternate
 		: (darkBackground ? base.lighter(250) : base.darker(113));
 
-	return { .band = band, .text = darkBackground ? band.lighter(200) : band.darker(250) };
+	// Qt derives PlaceholderText from Text at 50% alpha where a palette leaves it unset, so any palette yields dim text here
+	return { .band = band, .text = palette.color(QPalette::PlaceholderText) };
 }
 
 // Never fewer than one, so an empty count still reserves a digit
