@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractTextDocumentLayout>
+#include <QColor>
 #include <QEvent>
 #include <QPainter>
 #include <QScrollBar>
@@ -13,6 +14,29 @@ RESTORE_COMPILER_WARNINGS
 // Padding on either side of the number within the number area
 static constexpr int LeftNumberMargin = 3;
 static constexpr int RightNumberMargin = 4;
+
+// Band on a dark surface: an absolute lift plus a share of the surface's own lightness, so the darkest themes get the smallest one
+static constexpr int BandLightnessLift = 20;
+static constexpr int BandLightnessLiftPercent = 80;
+// Band on a light surface: a share off every channel, which leaves hue and saturation untouched
+static constexpr int BandShadePercent = 12;
+
+// A shade is a share of each channel; a lift cannot be, since a near-black surface has almost nothing to scale.
+static QColor bandColorFor(const QColor& surface)
+{
+	int h, s, l, a;
+	surface.getHsl(&h, &s, &l, &a);
+
+	if (l >= 128)
+	{
+		const float shade = (100 - BandShadePercent) / 100.0f;
+		return QColor::fromRgbF(surface.redF() * shade, surface.greenF() * shade, surface.blueF() * shade, surface.alphaF());
+	}
+
+	// Below mid-lightness HSL saturation tracks the chroma-to-lightness ratio, so raising l alone preserves the surface's tint.
+	// l < 128 here, so the lift cannot overshoot 255.
+	return QColor::fromHsl(h, s, l + BandLightnessLift + l * BandLightnessLiftPercent / 100, a).toRgb();
+}
 
 class CLineNumberArea final : public QWidget
 {
@@ -125,11 +149,7 @@ QTextBlock CTextEditWithLineNumbers::firstVisibleBlock() const
 void CTextEditWithLineNumbers::lineNumberAreaPaintEvent(QPaintEvent* event)
 {
 	QPainter painter{ _lineNumberArea };
-	auto baseColor = palette().color(QPalette::Base);
-	const bool darkTheme = baseColor.lightness() < 128;
-	baseColor = darkTheme ? baseColor.lighter(250) : baseColor.darker(113);
-
-	painter.fillRect(event->rect(), baseColor);
+	painter.fillRect(event->rect(), bandColorFor(palette().color(QPalette::Base)));
 	// Qt derives PlaceholderText from Text at 50% alpha where a palette leaves it unset, so any palette yields dim text here
 	painter.setPen(palette().color(QPalette::PlaceholderText));
 

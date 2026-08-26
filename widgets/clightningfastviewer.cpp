@@ -38,6 +38,11 @@ namespace Layout {
 	static constexpr int TEXT_HORIZONTAL_MARGIN_CHARS = 2;
 	// Below this, QPalette::AlternateBase is too close to Base to read as a band
 	static constexpr int MIN_BAND_LIGHTNESS_DELTA = 10;
+	// Band on a dark surface: an absolute lift plus a share of the surface's own lightness, so the darkest themes get the smallest one
+	static constexpr int BAND_LIGHTNESS_LIFT = 20;
+	static constexpr int BAND_LIGHTNESS_LIFT_PERCENT = 80;
+	// Band on a light surface: a share off every channel, which leaves hue and saturation untouched
+	static constexpr int BAND_SHADE_PERCENT = 12;
 
 	// Line width used when word wrap is off: never reached, and constant, so resizing cannot invalidate the index.
 	static constexpr qsizetype NO_WRAP_COLUMNS = std::numeric_limits<qsizetype>::max();
@@ -51,16 +56,32 @@ struct LabelColors
 	QColor text;
 };
 
+// A shade is a share of each channel; a lift cannot be, since a near-black surface has almost nothing to scale.
+QColor bandColorFor(const QColor& surface)
+{
+	int h, s, l, a;
+	surface.getHsl(&h, &s, &l, &a);
+
+	if (l >= 128)
+	{
+		const float shade = (100 - Layout::BAND_SHADE_PERCENT) / 100.0f;
+		return QColor::fromRgbF(surface.redF() * shade, surface.greenF() * shade, surface.blueF() * shade, surface.alphaF());
+	}
+
+	// Below mid-lightness HSL saturation tracks the chroma-to-lightness ratio, so raising l alone preserves the surface's tint.
+	// l < 128 here, so the lift cannot overshoot 255.
+	return QColor::fromHsl(h, s, l + Layout::BAND_LIGHTNESS_LIFT + l * Layout::BAND_LIGHTNESS_LIFT_PERCENT / 100, a).toRgb();
+}
+
 // The theme's alternate surface where the style sets one apart from Base, otherwise a shade derived from Base
 LabelColors labelColors(const QPalette& palette)
 {
 	const QColor base = palette.color(QPalette::Base);
 	const QColor alternate = palette.color(QPalette::AlternateBase);
-	const bool darkBackground = base.lightness() < 128;
 
 	const QColor band = qAbs(alternate.lightness() - base.lightness()) >= Layout::MIN_BAND_LIGHTNESS_DELTA
 		? alternate
-		: (darkBackground ? base.lighter(250) : base.darker(113));
+		: bandColorFor(base);
 
 	// Qt derives PlaceholderText from Text at 50% alpha where a palette leaves it unset, so any palette yields dim text here
 	return { .band = band, .text = palette.color(QPalette::PlaceholderText) };
