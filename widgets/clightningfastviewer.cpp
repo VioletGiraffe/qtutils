@@ -759,7 +759,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 
 	paintColumn(
 		[this](qsizetype i) { return _asciiStart + static_cast<int>(i) * _charWidth; },
-		[this](qsizetype, uint8_t byte) { _paintScratch += _glyphs.hex[byte]; });
+		[this](qsizetype, uint8_t byte) { _paintScratch += _glyphs.byCode[byte]; });
 }
 
 CLightningFastViewerWidget::TextColors CLightningFastViewerWidget::textColors(const QPalette& palette)
@@ -1247,7 +1247,7 @@ void CLightningFastViewerWidget::updateFontMetrics()
 	_charWidth = _fontMetrics.horizontalAdvance('0');
 	assert_r(_lineHeight > 0 && _charWidth > 0);
 
-	_glyphs = GlyphSubstitution::buildTables(_fontMetrics, _charWidth);
+	_glyphs = GlyphSubstitution::buildTable(_fontMetrics, _charWidth);
 	_charColumns.clear();
 	_wrappedForMaxColumns = -1; // Measured column counts, and the wrap width itself, follow the font
 }

@@ -208,7 +208,7 @@ private:
 	mutable std::vector<uint8_t> _charColumns;
 	QString _paintScratch; // Reused by both painters: QPainter::drawText has no QStringView overload. Emptied with resize(0), which keeps the buffer.
 
-	GlyphSubstitution::Tables _glyphs; // Rebuilt on every font change
+	GlyphSubstitution::Table _glyphs; // Rebuilt on every font change
 	QFontMetrics _fontMetrics;
 	Selection _selection;
 	QPoint _dragPos;          // Last position of a drag in progress, in viewport coordinates
