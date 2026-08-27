@@ -31,6 +31,7 @@ QT = core gui widgets
 DEFINES += QT_MESSAGELOGCONTEXT
 
 INCLUDEPATH += \
+	$$PWD \
 	../cpputils \
 	../cpp-template-utils \
 
