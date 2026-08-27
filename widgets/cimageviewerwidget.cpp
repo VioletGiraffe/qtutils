@@ -97,10 +97,8 @@ bool CImageViewerWidget::displayImage(const QString& imagePath)
 	if (const auto format = img.format(); format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale16 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBX64)
 	{
 		img.convertTo(img.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
-		qInfo() << "Converted image format from" << format << "to" << img.format();
+		qInfo() << "CImageViewerWidget::displayImage: converted image format from" << format << "to" << img.format();
 	}
-
-	qInfo().nospace() << "Loaded image " << imagePath << " as file format " << fileFormat << ", image format " << img.format() << ", " << img.width() << 'x' << img.height();
 
 	const qint64 fileSize = reader.device()->size();
 	const bool displayed = displayImage(img);
