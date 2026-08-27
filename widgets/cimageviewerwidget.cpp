@@ -11,6 +11,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QImageReader>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QRegion>
 #include <QResizeEvent>
 #include <QScreen>
 #include <QWheelEvent>
@@ -22,6 +23,11 @@ RESTORE_COMPILER_WARNINGS
 #include <utility>
 
 static constexpr qreal kMaxScale = 40.0; // device px per source px; the maximum magnification.
+
+static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
+static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
+static constexpr int kNavigatorThumbnailSize = kNavigatorMaxSize * 2; // device px; covers kNavigatorMaxSize at a device pixel ratio of 2
+static constexpr int kNavigatorCropMinSize = 3;     // logical px; a thinner crop box would have nothing left to outline
 
 namespace
 {
@@ -68,6 +74,8 @@ bool CImageViewerWidget::displayImage(const QImage& image)
 	_currentImageFormat.clear();
 	_currentImageFileSize = 0;
 	_isPanning = false;
+	_isNavigatorSteering = false;
+	_navigatorThumbnail = QImage{};
 	_cacheKey = 0;
 	_viewInitialized = false; // Refit to the new image on the next paint.
 	updateGeometry(); // Because the image affects sizeHint()
@@ -149,9 +157,9 @@ QIcon CImageViewerWidget::imageIcon() const
 	return QIcon{ new CIconEngineQImage{_sourceImage, resizeImage} };
 }
 
-void CImageViewerWidget::setInfoStripVisible(bool visible)
+void CImageViewerWidget::setOverlayVisible(bool visible)
 {
-	_infoStripVisible = visible;
+	_overlayVisible = visible;
 	update();
 }
 
@@ -308,7 +316,9 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	const QPoint targetDevice = (_offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale).toPoint();
 	p.drawImage(QPointF{ targetDevice } / dpr, _displayImage);
 
-	if (_infoStripVisible)
+	paintNavigator(p);
+
+	if (_overlayVisible)
 		paintInfoStrip(p);
 }
 
@@ -339,6 +349,88 @@ void CImageViewerWidget::paintInfoStrip(QPainter& painter) const
 	const int infoWidth = textRect.width() - fm.horizontalAdvance(magnification) - padding;
 	if (infoWidth > 0)
 		painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fm.elidedText(imageInfoString(), Qt::ElideRight, infoWidth));
+}
+
+QRect CImageViewerWidget::navigatorRect() const
+{
+	if (!_overlayVisible || !isPannable())
+		return {};
+
+	const int longerSide = std::min(std::min(width(), height()) / 4, kNavigatorMaxSize);
+	if (longerSide < kNavigatorMinSize)
+		return {};
+
+	const QSize navigatorSize = _sourceImage.size().scaled(longerSide, longerSide, Qt::KeepAspectRatio);
+	if (navigatorSize.isEmpty()) // An aspect ratio past kNavigatorMaxSize:1 truncates the shorter side to nothing.
+		return {};
+
+	const int padding = fontMetrics().height() / 2; // Same inset as the info strip's.
+	return QRect{ QPoint{ width() - padding - navigatorSize.width(), padding }, navigatorSize };
+}
+
+QRect CImageViewerWidget::navigatorCropBox(const QRect& navigator) const noexcept
+{
+	const QRect crop = visibleSourceRect();
+	const qreal xScale = (qreal)navigator.width() / _sourceImage.width();
+	const qreal yScale = (qreal)navigator.height() / _sourceImage.height();
+
+	// At high magnification the crop maps to less than a navigator pixel, so the box is floored and then kept
+	// inside the navigator by position: clipping it at the far edge would leave nothing to outline.
+	const int boxWidth = std::min(navigator.width(), std::max(kNavigatorCropMinSize, qRound(crop.width() * xScale)));
+	const int boxHeight = std::min(navigator.height(), std::max(kNavigatorCropMinSize, qRound(crop.height() * yScale)));
+
+	return QRect{
+		std::clamp(navigator.x() + qRound(crop.x() * xScale), navigator.x(), navigator.right() + 1 - boxWidth),
+		std::clamp(navigator.y() + qRound(crop.y() * yScale), navigator.y(), navigator.bottom() + 1 - boxHeight),
+		boxWidth,
+		boxHeight
+	};
+}
+
+void CImageViewerWidget::paintNavigator(QPainter& painter)
+{
+	const QRect navigator = navigatorRect();
+	if (navigator.isEmpty())
+		return;
+
+	// Not the injected scaler: that one serves the view, and a thumbnail this small does not need it.
+	if (_navigatorThumbnail.isNull())
+		_navigatorThumbnail = _sourceImage.scaled(kNavigatorThumbnailSize, kNavigatorThumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+	painter.save();
+
+	painter.setRenderHint(QPainter::SmoothPixmapTransform);
+	painter.drawImage(navigator, _navigatorThumbnail);
+
+	// Dim outside the crop rather than only outlining it: an outline alone is lost against busy image content.
+	const QRect cropBox = navigatorCropBox(navigator);
+	QRegion outsideCrop{ navigator };
+	outsideCrop -= cropBox;
+	for (const QRect& r : outsideCrop)
+		painter.fillRect(r, QColor(0, 0, 0, 110));
+
+	painter.setPen(QColor(0xe8, 0xe8, 0xe8));
+	painter.drawRect(cropBox.adjusted(0, 0, -1, -1));
+	painter.setPen(QColor(0, 0, 0, 140));
+	painter.drawRect(navigator.adjusted(0, 0, -1, -1));
+
+	painter.restore();
+}
+
+void CImageViewerWidget::centerViewOnNavigatorPoint(QPointF widgetPos)
+{
+	const QRect navigator = navigatorRect();
+	if (navigator.isEmpty())
+		return;
+
+	const QPointF sourcePos{
+		(widgetPos.x() - navigator.x()) * _sourceImage.width() / navigator.width(),
+		(widgetPos.y() - navigator.y()) * _sourceImage.height() / navigator.height()
+	};
+
+	_offset = centerOf(viewportDeviceSize()) - sourcePos * _scale;
+	clampOffset();
+	update();
 }
 
 void CImageViewerWidget::resizeEvent(QResizeEvent* e)
@@ -395,6 +487,14 @@ void CImageViewerWidget::mousePressEvent(QMouseEvent* e)
 		return;
 	}
 
+	if (navigatorRect().contains(e->position().toPoint()))
+	{
+		_isNavigatorSteering = true;
+		centerViewOnNavigatorPoint(e->position());
+		e->accept();
+		return;
+	}
+
 	_isPanning = true;
 	_panStartOffset = _offset;
 	_panStartMouseDevice = e->position() * devicePixelRatioF();
@@ -404,6 +504,13 @@ void CImageViewerWidget::mousePressEvent(QMouseEvent* e)
 
 void CImageViewerWidget::mouseMoveEvent(QMouseEvent* e)
 {
+	if (_isNavigatorSteering)
+	{
+		centerViewOnNavigatorPoint(e->position());
+		e->accept();
+		return;
+	}
+
 	if (!_isPanning || _sourceImage.isNull())
 	{
 		QWidget::mouseMoveEvent(e);
@@ -418,6 +525,13 @@ void CImageViewerWidget::mouseMoveEvent(QMouseEvent* e)
 
 void CImageViewerWidget::mouseReleaseEvent(QMouseEvent* e)
 {
+	if (e->button() == Qt::LeftButton && _isNavigatorSteering)
+	{
+		_isNavigatorSteering = false;
+		e->accept();
+		return;
+	}
+
 	if (e->button() == Qt::LeftButton && _isPanning)
 	{
 		_isPanning = false;

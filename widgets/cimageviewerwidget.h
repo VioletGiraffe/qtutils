@@ -46,9 +46,10 @@ public:
 	void fitToWindow() noexcept;
 	void zoomToActualPixels() noexcept;
 
-	// A strip along the bottom of the image, showing imageInfoString() and the current magnification. Shown by default.
-	void setInfoStripVisible(bool visible);
-	[[nodiscard]] bool isInfoStripVisible() const noexcept { return _infoStripVisible; }
+	// The strip along the bottom, showing imageInfoString() and the current magnification, plus the navigator
+	// shown while the view can pan. Visible by default.
+	void setOverlayVisible(bool visible);
+	[[nodiscard]] bool isOverlayVisible() const noexcept { return _overlayVisible; }
 	// Appended to the strip. The widget binds no shortcut, so naming the key that hides it is the caller's to do.
 	void setInfoStripHint(QString hint);
 
@@ -76,12 +77,19 @@ private:
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
 	void paintInfoStrip(QPainter& painter) const;
 
+	// The navigator: the whole image as a thumbnail in the top right corner, with the visible crop boxed on it.
+	[[nodiscard]] QRect navigatorRect() const;                                     // widget coords; empty unless the overlay is on and the view can pan
+	[[nodiscard]] QRect navigatorCropBox(const QRect& navigator) const noexcept;   // visibleSourceRect() mapped into the navigator
+	void paintNavigator(QPainter& painter);
+	void centerViewOnNavigatorPoint(QPointF widgetPos);
+
 private:
 	ImageScaleFunction _imageScaler;
 	QString _infoStripHint;
-	bool _infoStripVisible = true;
+	bool _overlayVisible = true;
 	QImage _sourceImage;
 	QImage _displayImage;
+	QImage _navigatorThumbnail;    // the whole source, scaled down; built on first use, dropped with the image
 	size_t _cacheKey = 0;
 
 	QString _currentImageFormat;
@@ -95,4 +103,5 @@ private:
 	QPointF _panStartOffset;
 	QPointF _panStartMouseDevice;
 	bool _isPanning = false;
+	bool _isNavigatorSteering = false;
 };
