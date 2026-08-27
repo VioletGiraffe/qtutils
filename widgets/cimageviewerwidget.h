@@ -12,10 +12,10 @@ RESTORE_COMPILER_WARNINGS
 
 #include <functional>
 
+class QPainter;
+
 class CImageViewerWidget final : public QWidget
 {
-	Q_OBJECT
-
 public:
 	// Scales srcRect of source into dest, which arrives at the exact target size and the source's format. An empty
 	// srcRect means the whole source. An implementation may replace dest, so its format is not guaranteed on return.
@@ -46,9 +46,11 @@ public:
 	void fitToWindow() noexcept;
 	void zoomToActualPixels() noexcept;
 
-signals:
-	// magnification is the ratio of on-screen pixels to source-image pixels, i.e. 1.0 = native resolution ("100%")
-	void displayedSizeChanged(QSize size, qreal magnification);
+	// A strip along the bottom of the image, showing imageInfoString() and the current magnification. Shown by default.
+	void setInfoStripVisible(bool visible);
+	[[nodiscard]] bool isInfoStripVisible() const noexcept { return _infoStripVisible; }
+	// Appended to the strip. The widget binds no shortcut, so naming the key that hides it is the caller's to do.
+	void setInfoStripHint(QString hint);
 
 protected:
 	void paintEvent(QPaintEvent* e) override;
@@ -71,8 +73,13 @@ private:
 	void setScale(qreal scale) noexcept;                                           // the only writer of _scale and _fitToWindow
 	void resetToFit() noexcept;
 
+	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
+	void paintInfoStrip(QPainter& painter) const;
+
 private:
 	ImageScaleFunction _imageScaler;
+	QString _infoStripHint;
+	bool _infoStripVisible = true;
 	QImage _sourceImage;
 	QImage _displayImage;
 	size_t _cacheKey = 0;

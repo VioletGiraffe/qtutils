@@ -4,7 +4,9 @@
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QClipboard>
+#include <QColor>
 #include <QDebug>
+#include <QFontMetrics>
 #include <QHash>
 #include <QImageReader>
 #include <QMouseEvent>
@@ -17,6 +19,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
 #include <math.h>
+#include <utility>
 
 static constexpr qreal kMaxScale = 40.0; // device px per source px; the maximum magnification.
 
@@ -61,6 +64,9 @@ void CImageViewerWidget::smoothScale(QImage& dest, const QImage& source, const Q
 bool CImageViewerWidget::displayImage(const QImage& image)
 {
 	_sourceImage = image;
+	// No file behind a bare image; the overload below fills these in after calling here.
+	_currentImageFormat.clear();
+	_currentImageFileSize = 0;
 	_isPanning = false;
 	_cacheKey = 0;
 	_viewInitialized = false; // Refit to the new image on the next paint.
@@ -75,14 +81,10 @@ bool CImageViewerWidget::displayImage(const QString& imagePath)
 	reader.setAutoDetectImageFormat(true);
 	reader.setAutoTransform(true);
 
-	_currentImageFormat = QString::fromLatin1(reader.format());
+	const QString fileFormat = QString::fromLatin1(reader.format());
 	QImage img = reader.read();
 	if (img.isNull())
-	{
-		_currentImageFileSize = 0;
-		_currentImageFormat.clear();
 		return false;
-	}
 
 	if (const auto format = img.format(); format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale16 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBX64)
 	{
@@ -90,10 +92,13 @@ bool CImageViewerWidget::displayImage(const QString& imagePath)
 		qInfo() << "Converted image format from" << format << "to" << img.format();
 	}
 
-	qInfo().nospace() << "Loaded image " << imagePath << " as file format " << _currentImageFormat << ", image format " << img.format() << ", " << img.width() << 'x' << img.height();
+	qInfo().nospace() << "Loaded image " << imagePath << " as file format " << fileFormat << ", image format " << img.format() << ", " << img.width() << 'x' << img.height();
 
-	_currentImageFileSize = reader.device()->size();
-	return displayImage(img);
+	const qint64 fileSize = reader.device()->size();
+	const bool displayed = displayImage(img);
+	_currentImageFormat = fileFormat;
+	_currentImageFileSize = fileSize;
+	return displayed;
 }
 
 QString CImageViewerWidget::imageInfoString() const
@@ -102,12 +107,17 @@ QString CImageViewerWidget::imageInfoString() const
 		return QString();
 
 	const int numChannels = _sourceImage.isGrayscale() ? 1 : (3 + (_sourceImage.hasAlphaChannel() ? 1 : 0));
-	return _currentImageFormat.toUpper() + ' ' + tr("%1x%2 (%3 MP), %4 channels, %5 bits per pixel, compressed to %6 bits per pixel").
+	const QString imageInfo = tr("%1x%2 (%3 MP), %4 channels, %5 bits per pixel").
 		arg(_sourceImage.width()).
 		arg(_sourceImage.height()).
 		arg(_sourceImage.width() * _sourceImage.height() * 1e-6, 0, 'f', 1).
 		arg(numChannels).
-		arg(_sourceImage.bitPlaneCount()).
+		arg(_sourceImage.bitPlaneCount());
+
+	if (_currentImageFileSize <= 0) // Displayed from a QImage: there is no file to name a format or a compression ratio for
+		return imageInfo;
+
+	return _currentImageFormat.toUpper() + ' ' + imageInfo + tr(", compressed to %1 bits per pixel").
 		arg(QString::number(8.0 * (double)_currentImageFileSize / double(_sourceImage.width() * _sourceImage.height()), 'f', 2));
 }
 
@@ -137,6 +147,18 @@ QIcon CImageViewerWidget::imageIcon() const
 	};
 
 	return QIcon{ new CIconEngineQImage{_sourceImage, resizeImage} };
+}
+
+void CImageViewerWidget::setInfoStripVisible(bool visible)
+{
+	_infoStripVisible = visible;
+	update();
+}
+
+void CImageViewerWidget::setInfoStripHint(QString hint)
+{
+	_infoStripHint = std::move(hint);
+	update();
 }
 
 void CImageViewerWidget::copyToClipboard() noexcept
@@ -276,8 +298,6 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	{
 		_cacheKey = newCacheKey;
 		scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
-
-		emit displayedSizeChanged(_displayImage.size(), _scale); // _scale is the magnification (source px : device px).
 	}
 
 	// Set after scaling: a scaler is free to replace the buffer.
@@ -287,6 +307,38 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	// Snap the blit to a whole device pixel so a 1:1 view stays pixel-exact; a fractional origin would make the painter resample the buffer.
 	const QPoint targetDevice = (_offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale).toPoint();
 	p.drawImage(QPointF{ targetDevice } / dpr, _displayImage);
+
+	if (_infoStripVisible)
+		paintInfoStrip(p);
+}
+
+QString CImageViewerWidget::magnificationString() const
+{
+	// _scale is the magnification: on-screen (device) pixels per source pixel, so 1.0 is native resolution.
+	return tr("Viewing at %1x%2 (%3% / %4x)").arg(_displayImage.width()).arg(_displayImage.height()).
+		arg(qRound(_scale * 100.0)).arg(_scale, 0, 'f', 2);
+}
+
+void CImageViewerWidget::paintInfoStrip(QPainter& painter) const
+{
+	const QFontMetrics fm = painter.fontMetrics();
+	const int padding = fm.height() / 2;
+	const QRect strip{ 0, height() - fm.height() - padding, width(), fm.height() + padding };
+	const QRect textRect = strip.adjusted(padding, 0, -padding, 0);
+
+	painter.fillRect(strip, QColor(0, 0, 0, 140));
+	// Light on a dark scrim whatever the palette: what shows through is image content, not the window.
+	painter.setPen(QColor(0xe8, 0xe8, 0xe8));
+
+	QString magnification = magnificationString();
+	if (!_infoStripHint.isEmpty())
+		magnification += " • " + _infoStripHint;
+
+	painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignRight, magnification);
+
+	const int infoWidth = textRect.width() - fm.horizontalAdvance(magnification) - padding;
+	if (infoWidth > 0)
+		painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fm.elidedText(imageInfoString(), Qt::ElideRight, infoWidth));
 }
 
 void CImageViewerWidget::resizeEvent(QResizeEvent* e)
