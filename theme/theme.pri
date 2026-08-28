@@ -6,6 +6,7 @@ QT += core-private
 # CTintedSvgIconEngine (the qsvg plugin also renders QSS-referenced SVGs).
 HEADERS += \
     $$PWD/cbasepalette.h \
+    $$PWD/colorutils.h \
     $$PWD/cstylefixups.h \
     $$PWD/cthemecontroller.h \
     $$PWD/cthemeiconhandler.h \
