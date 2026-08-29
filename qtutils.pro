@@ -16,8 +16,8 @@ exists(../global.pri){
 }
 
 
-Release:OUTPUT_DIR=release/$${ARCHITECTURE}
-Debug:OUTPUT_DIR=debug/$${ARCHITECTURE}
+Release:OUTPUT_DIR=release
+Debug:OUTPUT_DIR=debug
 
 DESTDIR = ../bin/$${OUTPUT_DIR}
 OBJECTS_DIR = ../build/$${OUTPUT_DIR}/$${TARGET}
