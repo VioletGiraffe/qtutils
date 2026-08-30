@@ -23,6 +23,7 @@ RESTORE_COMPILER_WARNINGS
 #include <utility>
 
 static constexpr qreal kMaxScale = 40.0; // device px per source px; the maximum magnification.
+static constexpr qreal kMinScaledImageSize = 6.0; // logical px; the longer side of the image at the most zoomed-out scale.
 
 static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
 static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
@@ -209,8 +210,10 @@ qreal CImageViewerWidget::fitScale() const noexcept
 
 qreal CImageViewerWidget::minScale() const noexcept
 {
-	// Zoom out until the whole image fits, but never below 1:1 so a small image can still be shown at native size.
-	return std::min(fitScale(), 1.0);
+	// Zoom out until the longer side is down to kMinScaledImageSize. Fit and 1:1 lower the floor further for an image
+	// already at or below that size, so both stay reachable.
+	const qreal longerSide = (qreal)std::max(_sourceImage.width(), _sourceImage.height());
+	return std::min({ kMinScaledImageSize * devicePixelRatioF() / longerSide, fitScale(), 1.0 });
 }
 
 QPointF CImageViewerWidget::centeredOffset() const noexcept
