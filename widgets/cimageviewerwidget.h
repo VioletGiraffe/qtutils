@@ -11,6 +11,7 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #include <functional>
+#include <optional>
 
 class QPainter;
 
@@ -24,10 +25,12 @@ public:
 	using QWidget::QWidget;
 
 public:
-	// Without one, every scale goes through smoothScale().
+	// Without one, every scale goes through smoothScaleQt().
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
 	// QImage::scaled with a smooth transform. Public so an injected scaler can delegate the formats it cannot handle.
-	static void smoothScale(QImage& dest, const QImage& source, const QRect& srcRect);
+	static void smoothScaleQt(QImage& dest, const QImage& source, const QRect& srcRect);
+	// While enabled, upscales bypass the scaler for a nearest-neighbor blit; downscales are unaffected.
+	void setNearestNeighborUpscaling(bool enabled);
 
 	bool displayImage(const QImage& image);
 	// Reports nothing to the user: the caller owns the error UI.
@@ -73,6 +76,7 @@ private:
 	void clampOffset() noexcept;                                                   // per-axis: center if smaller, keep inside if larger
 	void setScale(qreal scale) noexcept;                                           // the only writer of _scale and _fitToWindow
 	void resetToFit() noexcept;
+	void invalidateDisplayImageCache();                                            // repaints, so paintEvent must never call it
 
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
 	void paintInfoStrip(QPainter& painter) const;
@@ -87,10 +91,11 @@ private:
 	ImageScaleFunction _imageScaler;
 	QString _infoStripHint;
 	bool _overlayVisible = true;
+	bool _nearestNeighborUpscaling = false;
 	QImage _sourceImage;
 	QImage _displayImage;
 	QImage _navigatorThumbnail;    // the whole source, scaled down; built on first use, dropped with the image
-	size_t _cacheKey = 0;
+	std::optional<size_t> _cacheKey;    // absent while _displayImage is stale
 
 	QString _currentImageFormat;
 	qint64 _currentImageFileSize = 0;

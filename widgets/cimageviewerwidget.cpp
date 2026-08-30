@@ -48,12 +48,18 @@ namespace
 		return QPointF{ size.width() / 2.0, size.height() / 2.0 };
 	}
 
+	inline void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
+	{
+		const QSize targetSize = dest.size();
+		dest = (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
+	}
+
 	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect)
 	{
 		if (scaler)
 			scaler(dest, source, srcRect);
 		else
-			CImageViewerWidget::smoothScale(dest, source, srcRect);
+			CImageViewerWidget::smoothScaleQt(dest, source, srcRect);
 	}
 }
 
@@ -62,10 +68,15 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 	_imageScaler = std::move(scaler);
 }
 
-void CImageViewerWidget::smoothScale(QImage& dest, const QImage& source, const QRect& srcRect)
+void CImageViewerWidget::smoothScaleQt(QImage& dest, const QImage& source, const QRect& srcRect)
 {
-	const QSize targetSize = dest.size();
-	dest = (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+	scaleWithQt(dest, source, srcRect, Qt::SmoothTransformation);
+}
+
+void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
+{
+	_nearestNeighborUpscaling = enabled;
+	invalidateDisplayImageCache();
 }
 
 bool CImageViewerWidget::displayImage(const QImage& image)
@@ -77,10 +88,9 @@ bool CImageViewerWidget::displayImage(const QImage& image)
 	_isPanning = false;
 	_isNavigatorSteering = false;
 	_navigatorThumbnail = QImage{};
-	_cacheKey = 0;
 	_viewInitialized = false; // Refit to the new image on the next paint.
 	updateGeometry(); // Because the image affects sizeHint()
-	update();
+	invalidateDisplayImageCache();
 	return !_sourceImage.isNull();
 }
 
@@ -249,6 +259,12 @@ void CImageViewerWidget::resetToFit() noexcept
 	_viewInitialized = true;
 }
 
+void CImageViewerWidget::invalidateDisplayImageCache()
+{
+	_cacheKey.reset();
+	update();
+}
+
 void CImageViewerWidget::fitToWindow() noexcept
 {
 	if (_sourceImage.isNull() || size().isEmpty())
@@ -302,11 +318,14 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	if (_displayImage.size() != bufferPx || _displayImage.format() != _sourceImage.format())
 		_displayImage = QImage(bufferPx.width(), bufferPx.height(), _sourceImage.format());
 
-	const size_t newCacheKey = qHashMulti(4 /* true random number, chosen by a fair dice throw */, sourceRect, bufferPx);
+	const size_t newCacheKey = qHashMulti(4 /* true random seed, chosen by a fair dice throw */, sourceRect, bufferPx);
 	if (newCacheKey != _cacheKey)
 	{
 		_cacheKey = newCacheKey;
-		scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
+		if (_nearestNeighborUpscaling && _scale > 1.0)
+			scaleWithQt(_displayImage, _sourceImage, sourceRect, Qt::FastTransformation);
+		else
+			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
 	}
 
 	// Set after scaling: a scaler is free to replace the buffer.
