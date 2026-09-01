@@ -8,10 +8,11 @@ RESTORE_COMPILER_WARNINGS
 
 class QPainter;
 
-// The layout is free to make this label any size: the minimum width is one ellipsis, the minimum height one line, and
-// hasHeightForWidth() is false, so a wrapped label doesn't demand the height its text would need - it elides into
-// whatever it is given. Both size hints are still QLabel's un-elided ones, so a caller that needs the preferred size
-// bounded as well must constrain it itself - QSizePolicy::Ignored, or an explicit maximum.
+// The layout is free to make this label any size: the minimum width is one ellipsis (or the text given to
+// setMinimumTextSample()), the minimum height one line, and hasHeightForWidth() is false, so a wrapped label doesn't
+// demand the height its text would need - it elides into whatever it is given. Both size hints are still QLabel's
+// un-elided ones, so a caller that needs the preferred size bounded as well must constrain it itself -
+// QSizePolicy::Ignored, or an explicit maximum.
 // The text is split into lines at newlines, and at wrap points too when wordWrap() is set. Every line is elided to the
 // available width, and the lines that don't fit in the height collapse into a single ellipsis line placed according to
 // elideMode() - the head and the tail of the dropped text survive around it. Under ElideNone the overflow is clipped
@@ -24,6 +25,11 @@ public:
 
 	void setElideMode(Qt::TextElideMode mode);
 	[[nodiscard]] Qt::TextElideMode elideMode() const;
+
+	// The minimum width fits this text un-elided instead of just an ellipsis.
+	// Measured on demand, so a later change of font, frame or stylesheet padding needs no re-set.
+	void setMinimumTextSample(const QString& text);
+	[[nodiscard]] QString minimumTextSample() const;
 
 	[[nodiscard]] QSize minimumSizeHint() const override;
 	[[nodiscard]] bool hasHeightForWidth() const override;
@@ -42,5 +48,6 @@ private:
 	[[nodiscard]] int textFlags() const; // visualAlignment() plus the mnemonic handling the style asks for
 
 	Qt::TextElideMode _elideMode = Qt::ElideMiddle;
+	QString _minimumTextSample; // Empty: an ellipsis is the floor
 	bool _textIsTruncated = false; // Determined while painting, read by the tooltip handler
 };

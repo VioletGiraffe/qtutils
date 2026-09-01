@@ -81,6 +81,20 @@ Qt::TextElideMode CLabelElided::elideMode() const
 	return _elideMode;
 }
 
+void CLabelElided::setMinimumTextSample(const QString& text)
+{
+	if (text == _minimumTextSample)
+		return;
+
+	_minimumTextSample = text;
+	updateGeometry();
+}
+
+QString CLabelElided::minimumTextSample() const
+{
+	return _minimumTextSample;
+}
+
 QSize CLabelElided::minimumSizeHint() const
 {
 	if (_elideMode == Qt::ElideNone)
@@ -88,8 +102,9 @@ QSize CLabelElided::minimumSizeHint() const
 
 	constexpr QChar ellipsis{0x2026}; // What QFontMetrics::elidedText substitutes
 	const QFontMetrics fm(font());
+	const int textWidth = fm.horizontalAdvance(_minimumTextSample.isEmpty() ? QString{ ellipsis } : _minimumTextSample);
 	const int widthUnavailableForText = width() - textRect().width();
-	return { fm.horizontalAdvance(ellipsis) + widthUnavailableForText, QLabel::minimumSizeHint().height() };
+	return { textWidth + widthUnavailableForText, QLabel::minimumSizeHint().height() };
 }
 
 bool CLabelElided::hasHeightForWidth() const
