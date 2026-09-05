@@ -1,4 +1,5 @@
 HEADERS += \
+    $$PWD/chighlightoverlay.h \
     $$PWD/cimageviewerwidget.h \
     $$PWD/clabelelided.h \
     $$PWD/clineedit.h \
@@ -14,6 +15,7 @@ HEADERS += \
     $$PWD/clightningfastviewer_glyphs.h
 
 SOURCES += \
+    $$PWD/chighlightoverlay.cpp \
     $$PWD/cimageviewerwidget.cpp \
     $$PWD/clabelelided.cpp \
     $$PWD/clineedit.cpp \
