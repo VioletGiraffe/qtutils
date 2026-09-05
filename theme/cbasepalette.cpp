@@ -52,6 +52,7 @@ QPalette qtPaletteFor(const CBasePalette& p)
 	palette.setColor(QPalette::Mid, p.textDim);
 	palette.setColor(QPalette::Highlight, p.selectionBg);
 	palette.setColor(QPalette::HighlightedText, p.selectionFg);
+	palette.setColor(QPalette::Accent, p.accent); // Qt derives this one from Highlight, which is the selection, not the accent
 	palette.setColor(QPalette::PlaceholderText, p.textDim);
 	palette.setColor(QPalette::Link, p.accentText);
 	palette.setColor(QPalette::LinkVisited, p.accentText);
