@@ -85,6 +85,28 @@ stale-state repair.
 `QSplitterHandle` does not enable `WA_Hover`, so `QSplitter::handle:hover` is otherwise inert.
 `CSplitterHandleHoverEnabler` sets the attribute when internally created handles are polished.
 
+Item view hover depends on the platform style. `QWindowsVistaStyle::polish` sets `WA_Hover` on a `QTreeView`'s or
+`QListView`'s viewport; `QMacStyle::polish` sets it on scroll bars and document-mode tab bars only. Without the
+attribute the viewport receives no hover events, `QAbstractItemViewPrivate::hover` stays invalid, and
+`State_MouseOver` never reaches the delegate: the hover look works on Windows and is inert on macOS. Set
+`view->viewport()->setAttribute(Qt::WA_Hover)` explicitly. A QSS `:hover` rule matching the view also sets it, through
+`QStyleSheetStyle::polish` and its viewport indirection, so the gap shows up only where a delegate paints the hover.
+
+## Item view focus rect
+
+`QMacStyle::drawPrimitive(PE_FrameFocusRect)` does nothing - macOS draws focus rings through `QFocusFrame` on real
+widgets, and an item view row is not one. Every focus indication routed through that primitive is invisible there.
+
+- `setAllColumnsShowFocus(true)` withholds `State_HasFocus` from the delegate. `QTreeView::drawRow` draws the row
+  focus rect itself instead, through `PE_FrameFocusRect`. For a single-column view that routing is its only effect.
+- That call passes no widget, so `QStyleSheetStyle` finds no rule and defers to the base style. `outline: none` does
+  not suppress it.
+- `outline: none` does suppress the per-item focus rect that `QCommonStyle::drawControl(CE_ItemViewItem)` draws when
+  `State_HasFocus` is set.
+
+Paint the current-row indicator in the delegate off `State_HasFocus`, leaving `allColumnsShowFocus` unset, for one
+indicator that looks the same on every platform.
+
 ## Palette and selection
 
 - `palette(role)` follows a palette change automatically. QSS values generated from theme colors require rebuilding
@@ -103,6 +125,6 @@ spelling is not re-derived each time, not because they are the right choice ever
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 
-/* No dotted focus rectangle in item views */
+/* No dotted focus rectangle on item view items - the row rect of allColumnsShowFocus survives it */
 QTreeView, QListView, QTableView { outline: none; }
 ```
