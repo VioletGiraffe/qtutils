@@ -3,6 +3,7 @@
 #include "theme/cthemecontroller.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QAbstractSlider>
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
@@ -309,11 +310,6 @@ template <typename W>
 	slider->setTickPosition(QSlider::TicksBelow);
 	slider->setTickInterval(10);
 
-	auto* dial = new QDial;
-	dial->setRange(0, LinkedValueMaximum);
-	dial->setNotchesVisible(true);
-	dial->setFixedSize(DialSize, DialSize);
-
 	auto* linkedSpin = new QSpinBox;
 	linkedSpin->setRange(0, LinkedValueMaximum);
 	linkedSpin->setSuffix(QStringLiteral(" %"));
@@ -321,20 +317,24 @@ template <typename W>
 	auto* progress = new QProgressBar;
 	progress->setRange(0, LinkedValueMaximum);
 
-	// One value behind four controls: what a style does to a handle, a spin box's text and a chunk while they
+	// One value behind three controls: what a style does to a handle, a spin box's text and a chunk while they
 	// move is what a static page cannot show. setValue emits nothing when the value is unchanged, so no loop.
-	QObject::connect(slider, &QSlider::valueChanged, dial, &QDial::setValue);
 	QObject::connect(slider, &QSlider::valueChanged, linkedSpin, &QSpinBox::setValue);
 	QObject::connect(slider, &QSlider::valueChanged, progress, &QProgressBar::setValue);
-	QObject::connect(dial, &QDial::valueChanged, slider, &QSlider::setValue);
 	QObject::connect(linkedSpin, &QSpinBox::valueChanged, slider, &QSlider::setValue);
-	slider->setValue(40); // after the connections, so the other three start in step
+	slider->setValue(40); // after the connections, so the other two start in step
 
 	auto* verticalSlider = new QSlider{ Qt::Vertical };
-	verticalSlider->setValue(60);
+	verticalSlider->setRange(0, LinkedValueMaximum);
 	verticalSlider->setFixedHeight(VerticalSampleHeight);
 
+	auto* dial = new QDial;
+	dial->setRange(0, LinkedValueMaximum);
+	dial->setNotchesVisible(true);
+	dial->setFixedSize(DialSize, DialSize);
+
 	auto* scrollBar = new QScrollBar{ Qt::Vertical };
+	scrollBar->setRange(0, LinkedValueMaximum);
 	scrollBar->setFixedHeight(VerticalSampleHeight);
 
 	auto* withoutText = new QProgressBar;
@@ -352,8 +352,19 @@ template <typename W>
 
 	auto* verticalProgress = new QProgressBar;
 	verticalProgress->setOrientation(Qt::Vertical);
-	verticalProgress->setValue(50);
+	verticalProgress->setRange(0, LinkedValueMaximum);
 	verticalProgress->setFixedHeight(VerticalSampleHeight);
+
+	// A second shared value, this one behind the whole vertical row
+	// Two-way per input: setValue emits nothing when the value is unchanged, so the ring does not loop
+	QAbstractSlider* const followers[] = { dial, scrollBar };
+	for (QAbstractSlider* follower : followers)
+	{
+		QObject::connect(verticalSlider, &QAbstractSlider::valueChanged, follower, &QAbstractSlider::setValue);
+		QObject::connect(follower, &QAbstractSlider::valueChanged, verticalSlider, &QAbstractSlider::setValue);
+	}
+	QObject::connect(verticalSlider, &QAbstractSlider::valueChanged, verticalProgress, &QProgressBar::setValue);
+	verticalSlider->setValue(60); // after the connections, so the other three start in step
 
 	auto* disabledSlider = disabled(new QSlider{ Qt::Horizontal });
 	disabledSlider->setMinimumWidth(SliderWidth);
@@ -364,7 +375,8 @@ template <typename W>
 		row({ slider, linkedSpin }),
 		progress, // straight into the section, so the bar spans its width
 		row({ captioned(QStringLiteral("QSlider, disabled"), disabledSlider) }),
-		row({ captioned(QStringLiteral("QSlider"), verticalSlider), captioned(QStringLiteral("QDial, shares the value"), dial),
+		new QLabel{ QStringLiteral("The row below shares a second value") },
+		row({ captioned(QStringLiteral("QSlider"), verticalSlider), captioned(QStringLiteral("QDial"), dial),
 			captioned(QStringLiteral("QScrollBar"), scrollBar), captioned(QStringLiteral("QProgressBar"), verticalProgress) }),
 		row({ captioned(QStringLiteral("QProgressBar, no text"), withoutText), indeterminate })
 	});
