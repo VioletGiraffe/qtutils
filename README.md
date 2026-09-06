@@ -13,6 +13,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `dialogs/messagebox.h` | Arbitrary-label question boxes returning the selected option index, plus bounded notices whose long selectable details scroll instead of growing off-screen. |
 | `settingsui/csettingspage.h`, `settingsui/csettingsdialog.h` | Abstract settings-page contract and a multi-page settings dialog that applies every page, emits `settingsChanged`, manages focus order, and offers an explicit wipe-and-exit shortcut. |
 | `ui/ui-inspector/cuiinspector.h` | Live widget/layout hierarchy inspector with property details, refresh/filter controls, selection highlighting, and focus-change reporting. |
+| `ui/widget-gallery/cwidgetgallery.h` | Scrollable page of every commonly used stock control, in the states a style draws separately, for finding what a custom style or stylesheet does not cover; a colour scheme strip drives `CThemeController` so the same page can be read in both polarities. `CWidgetGalleryWindow` adds the menu bar, toolbar, dock widget and status bar, and `showNew()` opens one as a self-deleting window. |
 | `ui/CProxyStyle.h` | Subclassing base that forwards a broad `QStyle` surface to the current application style, allowing a derived style to override only selected operations. |
 
 ### Settings, history, and logging
