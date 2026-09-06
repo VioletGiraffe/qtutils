@@ -94,6 +94,18 @@ constexpr int WindowHeight = 800;
 	return box;
 }
 
+// Names a sample whose own text cannot: a spin box shows a number, a scroll bar shows nothing at all.
+// A plain QLabel with no font or palette of its own, so the page still shows only what the application's style draws.
+[[nodiscard]] QWidget* captioned(const QString& caption, QWidget* sample)
+{
+	auto* container = new QWidget;
+	auto* layout = new QVBoxLayout{ container };
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(new QLabel{ caption });
+	layout->addWidget(sample);
+	return container;
+}
+
 // Returning the argument keeps a one-off state change inline in the sample list.
 // checked() requires an already checkable button: QAbstractButton::setChecked does nothing otherwise.
 template <typename W>
@@ -213,6 +225,7 @@ template <typename W>
 	auto* tristate = new QCheckBox{ QStringLiteral("Partially checked") };
 	tristate->setTristate(true);
 	tristate->setCheckState(Qt::PartiallyChecked);
+	tristate->setToolTip(QStringLiteral("Tristate: clicking cycles unchecked → partially checked → checked"));
 
 	// One row is one parent widget, so these radio buttons are exclusive among themselves
 	return section(QStringLiteral("Choices"), {
@@ -229,6 +242,7 @@ template <typename W>
 	auto* placeholder = new QLineEdit;
 	placeholder->setPlaceholderText(QStringLiteral("Placeholder"));
 	placeholder->setClearButtonEnabled(true);
+	placeholder->setToolTip(QStringLiteral("The clear button appears only once the field has text"));
 
 	auto* readOnly = new QLineEdit{ QStringLiteral("Read-only") };
 	readOnly->setReadOnly(true);
@@ -251,7 +265,8 @@ template <typename W>
 		row({ new QLineEdit{ QStringLiteral("Editable") }, placeholder, readOnly }),
 		row({ password, withInlineAction, disabled(new QLineEdit{ QStringLiteral("Disabled") }) }),
 		row({ richText, plainText }),
-		row({ new QKeySequenceEdit{ QKeySequence{ QKeySequence::Copy } } })
+		row({ captioned(QStringLiteral("QKeySequenceEdit - click it and press a shortcut"),
+			new QKeySequenceEdit{ QKeySequence{ QKeySequence::Copy } }) })
 	});
 }
 
@@ -276,10 +291,13 @@ template <typename W>
 	date->setCalendarPopup(true); // the popup is a whole calendar widget, styled apart from the field
 
 	return section(QStringLiteral("Numbers and pickers"), {
-		row({ spin, doubleSpin, disabled(new QSpinBox) }),
+		row({ captioned(QStringLiteral("QSpinBox"), spin), captioned(QStringLiteral("QDoubleSpinBox"), doubleSpin),
+			captioned(QStringLiteral("QSpinBox, disabled"), disabled(new QSpinBox)) }),
 		row({ combo, editableCombo, disabled(new QComboBox) }),
-		row({ new QFontComboBox }),
-		row({ date, new QTimeEdit{ QTime::currentTime() }, new QDateTimeEdit{ QDateTime::currentDateTime() } })
+		row({ captioned(QStringLiteral("QFontComboBox"), new QFontComboBox) }),
+		row({ captioned(QStringLiteral("QDateEdit, calendar popup"), date),
+			captioned(QStringLiteral("QTimeEdit"), new QTimeEdit{ QTime::currentTime() }),
+			captioned(QStringLiteral("QDateTimeEdit"), new QDateTimeEdit{ QDateTime::currentDateTime() }) })
 	});
 }
 
@@ -342,11 +360,13 @@ template <typename W>
 	disabledSlider->setValue(40); // the same position as the live one, so the two differ only in state
 
 	return section(QStringLiteral("Ranges and progress"), {
+		new QLabel{ QStringLiteral("The slider, the spin box and the bar below share one value") },
 		row({ slider, linkedSpin }),
 		progress, // straight into the section, so the bar spans its width
-		row({ disabledSlider }),
-		row({ verticalSlider, dial, scrollBar, verticalProgress }),
-		row({ withoutText, indeterminate })
+		row({ captioned(QStringLiteral("QSlider, disabled"), disabledSlider) }),
+		row({ captioned(QStringLiteral("QSlider"), verticalSlider), captioned(QStringLiteral("QDial, shares the value"), dial),
+			captioned(QStringLiteral("QScrollBar"), scrollBar), captioned(QStringLiteral("QProgressBar"), verticalProgress) }),
+		row({ captioned(QStringLiteral("QProgressBar, no text"), withoutText), indeterminate })
 	});
 }
 
@@ -442,18 +462,18 @@ template <typename W>
 	splitter->setFixedHeight(SplitterHeight);
 
 	return section(QStringLiteral("Containers"), {
-		tabs,
+		captioned(QStringLiteral("QTabWidget - the tabs are movable as well as closable"), tabs),
 		toolBox,
 		checkableGroup,
 		row({ framedLabel(QStringLiteral("StyledPanel")), framedLabel(QStringLiteral("Box sunken"), QFrame::Box, QFrame::Sunken),
 			framedLabel(QStringLiteral("Panel raised"), QFrame::Panel, QFrame::Raised), verticalLine() }),
-		splitter
+		captioned(QStringLiteral("QSplitter - drag the handle between the panes"), splitter)
 	});
 }
 
 [[nodiscard]] QGroupBox* labelsSection()
 {
-	// The tooltip names the enumerator: which standard pixmaps a style actually supplies is the question here
+	// Which standard pixmaps a style actually supplies is the question here, so each sample carries its enumerator name
 	const struct { QStyle::StandardPixmap pixmap; QString name; } standardPixmaps[] = {
 		{ QStyle::SP_MessageBoxInformation, QStringLiteral("SP_MessageBoxInformation") },
 		{ QStyle::SP_MessageBoxWarning, QStringLiteral("SP_MessageBoxWarning") },
@@ -492,7 +512,7 @@ template <typename W>
 		row({ new QLabel{ QStringLiteral("Plain label") }, disabled(new QLabel{ QStringLiteral("Disabled label") }) }),
 		selectable,
 		row({ link, withTooltip }),
-		icons
+		captioned(QStringLiteral("QStyle standard icons - hover one for its enumerator name"), icons)
 	});
 }
 
