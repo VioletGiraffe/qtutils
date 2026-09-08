@@ -37,13 +37,7 @@ QMainWindow* WidgetUtils::findParentMainWindow(QWidget* child)
 
 QMainWindow* WidgetUtils::findTopLevelWindow()
 {
-	for (QWidget* topLevelWidget: QApplication::topLevelWidgets())
-	{
-		if (topLevelWidget->inherits("QMainWindow"))
-			return qobject_cast<QMainWindow*>(topLevelWidget);
-	}
-
-	return nullptr;
+	return findTopLevelWindow<QMainWindow>();
 }
 
 void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)

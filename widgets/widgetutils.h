@@ -2,8 +2,12 @@
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QApplication>
 #include <QSize>
+#include <QWidget>
 RESTORE_COMPILER_WARNINGS
+
+#include <vector>
 
 class QLayout;
 class QMainWindow;
@@ -16,6 +20,33 @@ namespace WidgetUtils
 	void setLayoutVisible(QLayout* layout, bool visible);
 	QMainWindow* findParentMainWindow(QWidget* child);
 	QMainWindow* findTopLevelWindow();
+
+	// Every top-level window of this type, in no particular order.
+	// dynamic_cast, not qobject_cast: a window class declaring no meta-object is matched too.
+	template <typename T>
+	[[nodiscard]] std::vector<T*> findTopLevelWindows()
+	{
+		std::vector<T*> windows;
+		for (QWidget* widget : QApplication::topLevelWidgets())
+		{
+			if (auto* window = dynamic_cast<T*>(widget))
+				windows.push_back(window);
+		}
+		return windows;
+	}
+
+	// The first of them, or none
+	template <typename T>
+	[[nodiscard]] T* findTopLevelWindow()
+	{
+		for (QWidget* widget : QApplication::topLevelWidgets())
+		{
+			if (auto* window = dynamic_cast<T*>(widget))
+				return window;
+		}
+		return nullptr;
+	}
+
 	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
 	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
 	void* nativeOwnerWinId(const QWidget* widget);
