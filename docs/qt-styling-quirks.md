@@ -107,6 +107,19 @@ widgets, and an item view row is not one. Every focus indication routed through 
 Paint the current-row indicator in the delegate off `State_HasFocus`, leaving `allColumnsShowFocus` unset, for one
 indicator that looks the same on every platform.
 
+## Item view row height
+
+`QWindows11Style` inflates `CT_ItemViewItem`, spacing rows far apart.
+
+- QSS `padding` cannot shrink a row: the rule's box is added to the base style's size, not substituted for it.
+  Only an explicit `height`, `min-height` or `max-height` on `::item` overrides it.
+- A literal pixel height ignores the system font. Compute from `fontMetrics().lineSpacing()` and build the
+  stylesheet string.
+- Styling `::item` routes item painting through `QStyleSheetStyle`, which drops palette-driven selection colors.
+  Safe on a `NoSelection` view; otherwise restyle selection explicitly.
+- A delegate overriding `sizeHint` sets the height with no painting consequences - the better lever on an
+  interactive view.
+
 ## Palette and selection
 
 - `palette(role)` follows a palette change automatically. QSS values generated from theme colors require rebuilding
