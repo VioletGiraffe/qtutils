@@ -31,7 +31,6 @@ void ReportBugDialog::show(QWidget* parent, const CLoggerInterface& logger, cons
 
 	QPlainTextEdit* logView = new QPlainTextEdit(&dialog);
 	logView->setReadOnly(true);
-	logView->setLineWrapMode(QPlainTextEdit::NoWrap);
 	logView->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	logView->setPlainText(logger.contents().join('\n'));
 	logView->moveCursor(QTextCursor::End); // Reveal the most recent entries
