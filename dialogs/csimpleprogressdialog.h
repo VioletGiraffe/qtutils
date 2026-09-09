@@ -3,17 +3,17 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QDialog>
+#include <QString>
 RESTORE_COMPILER_WARNINGS
 
-namespace Ui {
-class CSimpleProgressDialog;
-}
+class QLabel;
+class QProgressBar;
+class QPushButton;
 
 class CSimpleProgressDialog : public QDialog
 {
 public:
 	explicit CSimpleProgressDialog(QWidget *parent = nullptr) noexcept;
-	~CSimpleProgressDialog() noexcept override;
 
 	void setLabelText(const QString& text);
 
@@ -31,7 +31,9 @@ private:
 	void showOrHideAsNecessary();
 
 private:
-	Ui::CSimpleProgressDialog *ui;
+	QLabel* _label = nullptr;
+	QProgressBar* _progressBar = nullptr;
+	QPushButton* _cancelButton = nullptr;
 	bool _autoShow = false;
 	bool _autoClose = false;
 };

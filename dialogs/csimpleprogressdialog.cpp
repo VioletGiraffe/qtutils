@@ -1,55 +1,72 @@
 #include "csimpleprogressdialog.h"
 
 DISABLE_COMPILER_WARNINGS
-#include "ui_csimpleprogressdialog.h"
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
 
 CSimpleProgressDialog::CSimpleProgressDialog(QWidget *parent) noexcept :
-	QDialog(parent),
-	ui(new Ui::CSimpleProgressDialog)
+	QDialog(parent)
 {
-	ui->setupUi(this);
+	_label = new QLabel(tr("Making everything better, please wait..."), this);
 
-	connect(ui->_cancelButton, &QPushButton::clicked, this, &CSimpleProgressDialog::reject);
-}
+	_progressBar = new QProgressBar(this);
+	_progressBar->setValue(0); // Not the default of -1, which paints an empty bar with no percentage
 
-CSimpleProgressDialog::~CSimpleProgressDialog() noexcept
-{
-	delete ui;
+	_cancelButton = new QPushButton(tr("&Cancel"), this);
+
+	QHBoxLayout* buttonRow = new QHBoxLayout;
+	buttonRow->setContentsMargins(0, 0, 0, 0); // A nested layout takes the parent layout's spacing as its margin, insetting the row
+	buttonRow->addStretch();
+	buttonRow->addWidget(_cancelButton);
+
+	QVBoxLayout* layout = new QVBoxLayout(this);
+	layout->addWidget(_label);
+	layout->addWidget(_progressBar);
+	layout->addLayout(buttonRow);
+	layout->addStretch();
+
+	// Fixed, not derived from the label: setLabelText may be called while the dialog is visible, and the dialog must not jump
+	resize(307, 92);
+
+	connect(_cancelButton, &QPushButton::clicked, this, &CSimpleProgressDialog::reject);
 }
 
 void CSimpleProgressDialog::setLabelText(const QString &text)
 {
-	ui->_label->setText(text);
+	_label->setText(text);
 }
 
 void CSimpleProgressDialog::setValue(int value)
 {
-	ui->_progressBar->setValue(value);
+	_progressBar->setValue(value);
 	showOrHideAsNecessary();
 }
 
 void CSimpleProgressDialog::setMinValue(int value)
 {
-	ui->_progressBar->setMinimum(value);
+	_progressBar->setMinimum(value);
 	showOrHideAsNecessary();
 }
 
 void CSimpleProgressDialog::setMaxValue(int value)
 {
-	ui->_progressBar->setMaximum(value);
+	_progressBar->setMaximum(value);
 	showOrHideAsNecessary();
 }
 
 void CSimpleProgressDialog::setCancellable(bool visible)
 {
-	ui->_cancelButton->setVisible(visible);
+	_cancelButton->setVisible(visible);
 	setWindowFlag(Qt::WindowCloseButtonHint, visible);
 }
 
 void CSimpleProgressDialog::setCancelButtonText(const QString& text)
 {
-	ui->_cancelButton->setText(text);
+	_cancelButton->setText(text);
 }
 
 void CSimpleProgressDialog::setAutoShow(bool autoShow)
@@ -66,8 +83,8 @@ void CSimpleProgressDialog::setAutoClose(bool autoClose)
 
 void CSimpleProgressDialog::showOrHideAsNecessary()
 {
-	if (_autoClose && ui->_progressBar->value() >= ui->_progressBar->maximum())
+	if (_autoClose && _progressBar->value() >= _progressBar->maximum())
 		close();
-	else if (_autoShow && ui->_progressBar->value() > ui->_progressBar->minimum())
+	else if (_autoShow && _progressBar->value() > _progressBar->minimum())
 		show();
 }

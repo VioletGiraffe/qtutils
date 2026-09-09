@@ -1,6 +1,3 @@
-FORMS += \
-    $$PWD/csimpleprogressdialog.ui
-
 HEADERS += \
     $$PWD/csimpleprogressdialog.h \
     $$PWD/messagebox.h
