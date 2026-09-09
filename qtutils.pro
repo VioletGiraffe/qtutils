@@ -61,12 +61,11 @@ linux*|mac*|freebsd{
 }
 
 include(logger/logger.pri)
-include(aboutdialog/aboutdialog.pri)
+include(appdialogs/appdialogs.pri)
 include(settings/settings.pri)
 include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
 include(theme/theme.pri)
-include(settingsui/settingsui.pri)
 include(string/string.pri)
 include(mouseclickdetector/mouseclickdetector.pri)
 include(historylist/historylist.pri)
