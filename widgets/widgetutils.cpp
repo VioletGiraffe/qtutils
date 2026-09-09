@@ -40,6 +40,17 @@ QMainWindow* WidgetUtils::findTopLevelWindow()
 	return findTopLevelWindow<QMainWindow>();
 }
 
+void WidgetUtils::bringWindowToFront(QWidget* window)
+{
+	assert_r(window->isWindow());
+
+	window->show();
+	if (window->isMinimized())
+		window->setWindowState(window->windowState() & ~Qt::WindowMinimized);
+	window->raise();
+	window->activateWindow();
+}
+
 void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)
 {
 	assert_and_return_r(widget, nullptr);

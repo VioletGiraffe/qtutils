@@ -47,6 +47,10 @@ namespace WidgetUtils
 		return nullptr;
 	}
 
+	// Shows, un-minimizes, raises and activates a window: neither show() nor raise() restores a minimized one.
+	// A window minimized from maximized comes back maximized.
+	void bringWindowToFront(QWidget* window);
+
 	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
 	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
 	void* nativeOwnerWinId(const QWidget* widget);
