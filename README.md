@@ -23,7 +23,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 |---|---|
 | `settings/csettings.h` | Thin `QSettings` wrapper with process-wide application, organization, and format overrides plus value/key/clear operations. |
 | `historylist/chistorylist.h` | Bounded, deduplicating generic history with cursor navigation, bulk restore, endpoint queries, and iteration. |
-| `widgets/chistorycombobox.h` | Editable history combo box with move-to-front mode, activation signaling, previous-item shortcut, optional editor clearing, and automatic `CSettings` persistence. |
+| `widgets/chistorycombobox.h` | Editable history combo box with move-to-front mode, activation signaling, previous-item shortcut, optional editor clearing, and automatic `QSettings` persistence. |
 | `logger/cloggerinterface.h`, `logger/cloggerinmemory.h` | Logger interface, per-type singleton accessor, and thread-safe bounded in-memory logger that snapshots its retained lines. |
 
 ### Input and widgets
@@ -36,7 +36,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/clabelelided.h` | Label that paints elided text, in the middle unless told otherwise, and automatically shows the full text as a tooltip only when elided. |
 | `widgets/ctexteditwithlinenumbers.h` | `QTextEdit` with a synchronized line-number gutter. |
 | `widgets/clightningfastviewer.h` | Read-only text and hex viewer that indexes visual lines instead of laying out a document, so arbitrarily large files open at once; stands in CP437 glyphs for non-printable characters, colours hex bytes by class, and offers word wrap, selection, clipboard, and literal or regex search. |
-| `widgets/cpersistentwindow.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `CSettings`, with delayed first-show restoration by default. |
+| `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `QSettings`, with delayed first-show restoration by default. |
 | `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |
 | `widgets/layouts/coverlaylayout.h` | Expanding layout that gives every child the same geometry, stacking items over one another. |
 

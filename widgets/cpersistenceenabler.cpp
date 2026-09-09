@@ -1,4 +1,4 @@
-#include "cpersistentwindow.h"
+#include "cpersistenceenabler.h"
 
 #include "assert/advanced_assert.h"
 

@@ -9,6 +9,7 @@ HEADERS += \
     $$PWD/widgetutils.h \
     $$PWD/chistorycombobox.h \
     $$PWD/layouts/coverlaylayout.h \
+    $$PWD/cpersistenceenabler.h \
     $$PWD/cpersistentwindow.h \
     $$PWD/clightningfastviewer.h \
     $$PWD/clightningfastviewer_glyphs.h
@@ -24,5 +25,5 @@ SOURCES += \
     $$PWD/widgetutils.cpp \
     $$PWD/chistorycombobox.cpp \
     $$PWD/layouts/coverlaylayout.cpp \
-    $$PWD/cpersistentwindow.cpp \
+    $$PWD/cpersistenceenabler.cpp \
     $$PWD/clightningfastviewer.cpp
