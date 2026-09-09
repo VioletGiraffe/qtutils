@@ -26,7 +26,7 @@ CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* wi
 	// A quit closes no window, so the state is saved from here as well as on the close event
 	connect(qApp, &QCoreApplication::aboutToQuit, this, [this] {
 		// Before the restore the widget holds a geometry that is not the stored one, and must not replace it
-		if (_windowStateRestored)
+		if (_stateRestored)
 			saveState();
 	});
 
@@ -36,7 +36,7 @@ CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* wi
 
 bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 {
-	if (_delayed && !_windowStateRestored && e->type() == QEvent::Show) [[unlikely]]
+	if (_delayed && !_stateRestored && e->type() == QEvent::Show) [[unlikely]]
 		restoreState();
 	else if (e->type() == QEvent::Close) [[unlikely]]
 		saveState();
@@ -54,7 +54,7 @@ void CPersistenceEnabler::saveState() const
 
 void CPersistenceEnabler::restoreState()
 {
-	_windowStateRestored = true;
+	_stateRestored = true;
 
 	auto* window = dynamic_cast<QMainWindow*>(_widget);
 	QSettings s;

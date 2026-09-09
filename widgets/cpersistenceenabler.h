@@ -32,7 +32,7 @@ private:
 private:
 	const QString _settingsPath;
 	QWidget* const _widget; // the parent, so it outlives this filter
-	bool _windowStateRestored = false;
+	bool _stateRestored = false;
 	const bool _delayed;
 	const bool _setDefaultSize;
 };
