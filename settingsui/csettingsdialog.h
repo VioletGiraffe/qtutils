@@ -4,15 +4,15 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QDialog>
+#include <QString>
 RESTORE_COMPILER_WARNINGS
-
-namespace Ui {
-class CSettingsDialog;
-}
 
 class CSettingsPage;
 
+class QDialogButtonBox;
+class QListWidget;
 class QListWidgetItem;
+class QStackedWidget;
 
 // Announces stored settings to whoever holds state derived from them - fonts, cached layout, a
 // process path. A dialog announces on accept, once every page has stored its values; a setting a
@@ -38,7 +38,6 @@ class CSettingsDialog : public QDialog
 {
 public:
 	explicit CSettingsDialog(QWidget *parent = nullptr) noexcept;
-	~CSettingsDialog() override;
 
 	CSettingsDialog& addSettingsPage(CSettingsPage * page, const QString& pageName = QString());
 
@@ -51,6 +50,8 @@ private:
 	void accept() override;
 	void reject() override;
 
-	Ui::CSettingsDialog *ui;
+	QListWidget* _pageList = nullptr;
+	QStackedWidget* _pages = nullptr;
+	QDialogButtonBox* _buttonBox = nullptr;
 	bool _firstShow = true;
 };

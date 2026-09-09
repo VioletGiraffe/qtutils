@@ -1,6 +1,3 @@
-FORMS += \
-    settingsui/csettingsdialog.ui
-
 HEADERS += \
     settingsui/csettingsdialog.h \
     settingsui/csettingspage.h

@@ -1,13 +1,18 @@
 #include "csettingsdialog.h"
-#include "ui_csettingsdialog.h"
 
 #include "csettingspage.h"
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QAbstractScrollArea>
+#include <QDialogButtonBox>
+#include <QListWidget>
 #include <QMessageBox>
 #include <QSettings>
 #include <QShortcut>
+#include <QSplitter>
+#include <QStackedWidget>
+#include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
 
 static void buildFocusChain(QList<QWidget*>& chain, QWidget* root)
@@ -28,39 +33,56 @@ static void buildFocusChain(QList<QWidget*>& chain, QWidget* root)
 }
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
-	QDialog(parent),
-	ui(new Ui::CSettingsDialog)
+	QDialog(parent)
 {
-	ui->setupUi(this);
+	setWindowTitle(tr("Settings"));
 
+	// Pages arrive after construction, so the automatic adjustSize() on first show is what fits the dialog to them.
+	// A minimum rather than resize(): resize() sets WA_Resized, which suppresses that.
+	setMinimumSize(600, 400);
+
+	QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
+	splitter->setOpaqueResize(false);
+	splitter->setChildrenCollapsible(false);
+
+	_pageList = new QListWidget(splitter);
+	_pageList->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	_pageList->setResizeMode(QListWidget::Adjust);
+	_pageList->setStyleSheet("QListWidget::item { padding: 6px; }");
+
+	_pages = new QStackedWidget(splitter);
+	_pages->setMinimumWidth(50);
+
+	splitter->addWidget(_pageList);
+	splitter->addWidget(_pages);
 	// The list doesn't expand, the settings pane does
-	ui->splitter->setStretchFactor(0, 0);
-	ui->splitter->setStretchFactor(1, 1);
+	splitter->setStretchFactor(0, 0);
+	splitter->setStretchFactor(1, 1);
 
-	ui->pageList->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-	ui->pageList->setStyleSheet("QListWidget::item { padding: 6px; }");
+	_buttonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
+	_buttonBox->setFocusPolicy(Qt::TabFocus);
 
-	connect(ui->pageList, &QListWidget::currentItemChanged, this, &CSettingsDialog::pageChanged);
-	ui->pageList->setResizeMode(QListWidget::Adjust);
+	QVBoxLayout* layout = new QVBoxLayout(this);
+	layout->addWidget(splitter);
+	layout->addWidget(_buttonBox);
+
+	connect(_pageList, &QListWidget::currentItemChanged, this, &CSettingsDialog::pageChanged);
+	connect(_buttonBox, &QDialogButtonBox::accepted, this, &CSettingsDialog::accept);
+	connect(_buttonBox, &QDialogButtonBox::rejected, this, &CSettingsDialog::reject);
 
 	new QShortcut(QKeySequence("Ctrl+Shift+W"), this, this, &CSettingsDialog::wipeSettings);
-}
-
-CSettingsDialog::~CSettingsDialog()
-{
-	delete ui;
 }
 
 CSettingsDialog& CSettingsDialog::addSettingsPage(CSettingsPage* page, const QString &pageName)
 {
 	// The page comes in parented to the dialog; addWidget() would re-parent it anyway, but warns while doing so
-	page->setParent(ui->pages);
-	ui->pages->addWidget(page);
+	page->setParent(_pages);
+	_pages->addWidget(page);
 
 	QListWidgetItem * item = new QListWidgetItem(pageName.isEmpty() ? page->windowTitle() : pageName);
-	item->setData(Qt::UserRole, ui->pages->count()-1);
-	ui->pageList->addItem(item);
-	ui->pageList->adjustSize();
+	item->setData(Qt::UserRole, _pages->count()-1);
+	_pageList->addItem(item);
+	_pageList->adjustSize();
 
 	return *this;
 }
@@ -71,8 +93,8 @@ void CSettingsDialog::showEvent(QShowEvent* event)
 
 	if (_firstShow)
 	{
-		ui->pageList->setFocus();
-		ui->pageList->setCurrentItem(ui->pageList->item(0));
+		_pageList->setFocus();
+		_pageList->setCurrentItem(_pageList->item(0));
 		_firstShow = false;
 	}
 }
@@ -83,10 +105,10 @@ void CSettingsDialog::pageChanged(QListWidgetItem * item)
 		return;
 
 	const int pageIndex = item->data(Qt::UserRole).toInt();
-	ui->pages->setCurrentIndex(pageIndex);
+	_pages->setCurrentIndex(pageIndex);
 
 	// Everything below is for focus order control only
-	QWidget* currentPage = ui->pages->widget(pageIndex);
+	QWidget* currentPage = _pages->widget(pageIndex);
 	assert_and_return_r(currentPage, );
 
 	if (!currentPage->isVisible())
@@ -95,9 +117,9 @@ void CSettingsDialog::pageChanged(QListWidgetItem * item)
 	currentPage->clearFocus();
 
 	QList<QWidget*> chain;
-	chain.push_back(ui->pageList);
+	chain.push_back(_pageList);
 	buildFocusChain(chain, currentPage);
-	chain.push_back(ui->buttonBox);
+	chain.push_back(_buttonBox);
 
 	for (size_t i = 1, n = chain.size(); i < n; ++i)
 	{
@@ -117,9 +139,9 @@ void CSettingsDialog::wipeSettings()
 
 void CSettingsDialog::accept()
 {
-	for (int i = 0; i < ui->pages->count(); ++i)
+	for (int i = 0; i < _pages->count(); ++i)
 	{
-		CSettingsPage * page = dynamic_cast<CSettingsPage*>(ui->pages->widget(i));
+		CSettingsPage * page = dynamic_cast<CSettingsPage*>(_pages->widget(i));
 		assert_r(page);
 		page->acceptSettings();
 	}
@@ -131,9 +153,9 @@ void CSettingsDialog::accept()
 
 void CSettingsDialog::reject()
 {
-	for (int i = 0; i < ui->pages->count(); ++i)
+	for (int i = 0; i < _pages->count(); ++i)
 	{
-		CSettingsPage * page = dynamic_cast<CSettingsPage*>(ui->pages->widget(i));
+		CSettingsPage * page = dynamic_cast<CSettingsPage*>(_pages->widget(i));
 		assert_r(page);
 		page->rejectSettings();
 	}
