@@ -4,6 +4,7 @@ HEADERS += \
     $$PWD/clabelelided.h \
     $$PWD/clineedit.h \
     $$PWD/cclickablelabel.h \
+    $$PWD/cplaintexteditwithlinenumbers.h \
     $$PWD/ctexteditwithlinenumbers.h \
     $$PWD/layouts/cflowlayout.h \
     $$PWD/widgetutils.h \
@@ -20,7 +21,7 @@ SOURCES += \
     $$PWD/clabelelided.cpp \
     $$PWD/clineedit.cpp \
     $$PWD/cclickablelabel.cpp \
-    $$PWD/ctexteditwithlinenumbers.cpp \
+    $$PWD/cplaintexteditwithlinenumbers.cpp \
     $$PWD/layouts/cflowlayout.cpp \
     $$PWD/widgetutils.cpp \
     $$PWD/chistorycombobox.cpp \

@@ -1,5 +1,6 @@
 #include "reportbugdialog.h"
 #include "logger/cloggerinterface.h"
+#include "widgets/cplaintexteditwithlinenumbers.h"
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
@@ -9,7 +10,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QFontDatabase>
 #include <QLabel>
 #include <QObject>
-#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTextCursor>
 #include <QUrl>
@@ -29,7 +29,7 @@ void ReportBugDialog::show(QWidget* parent, const CLoggerInterface& logger, cons
 	instructions->setWordWrap(true);
 	layout->addWidget(instructions);
 
-	QPlainTextEdit* logView = new QPlainTextEdit(&dialog);
+	CPlainTextEditWithLineNumbers* logView = new CPlainTextEditWithLineNumbers(&dialog);
 	logView->setReadOnly(true);
 	logView->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	logView->setPlainText(logger.contents().join('\n'));
