@@ -16,6 +16,12 @@ RESTORE_COMPILER_WARNINGS
 
 class QPalette;
 
+// Read-only text and hex viewer for content too large to lay out as a document: it indexes visual lines
+// instead, so open time and memory follow the line count rather than the file size.
+//   setText enters text mode, setData enters hex mode.
+//   Beyond the API below: a wrap-aware line number column, keyboard navigation, clipboard, context menu.
+//   Both find() overloads honour FindBackward, FindWholeWords and FindCaseSensitively.
+//   No syntax highlighting and no rich text: those need a QTextEdit, which must lay the document out.
 class CLightningFastViewerWidget final : public QAbstractScrollArea
 {
 public:
