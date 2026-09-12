@@ -15,9 +15,10 @@ namespace MessageBox {
 // fixed Yes/No/... buttons - and returns the 0-based index of the chosen option, matching `options` order,
 // or nullopt if the user cancelled or dismissed the dialog. `defaultIndex` is the option pre-selected for
 // Enter. With `cancellable`, a Cancel button is added and Escape maps to it; without it the user must pick.
+// Non-empty `details` go below `text` in the same scrollable body as notice(): not native on macOS, unlike the plain box.
 [[nodiscard]] std::optional<int> question(QWidget* parent, const QString& title, const QString& text,
 	const QStringList& options, int defaultIndex = 0, bool cancellable = true,
-	QMessageBox::Icon icon = QMessageBox::Question);
+	QMessageBox::Icon icon = QMessageBox::Question, const QString& details = {});
 
 // An OK-only message box that shows `text` above `details` in a scrollable, height-capped body, where a plain
 // QMessageBox instead grows to fit its whole message. Use it wherever the message carries a part whose length is

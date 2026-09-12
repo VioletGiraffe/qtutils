@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractButton>
+#include <QAccessible>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
@@ -36,42 +37,37 @@ QStyle::StandardPixmap standardPixmapFor(QMessageBox::Icon icon)
 	}
 }
 
-}
-
-std::optional<int> question(QWidget* parent, const QString& title, const QString& text,
-	const QStringList& options, int defaultIndex, bool cancellable, QMessageBox::Icon icon)
+// Sends QAccessible::Alert on show, matching QMessageBox.
+class AlertDialog final : public QDialog
 {
-	assert_and_return_r(!options.empty(), std::nullopt);
+public:
+	// Without `dismissable`, Escape and the window's close button do nothing.
+	AlertDialog(QWidget* parent, bool dismissable) : QDialog(parent), _dismissable(dismissable) {}
 
-	QMessageBox box(icon, title, text, QMessageBox::NoButton, parent);
+	void reject() override
+	{
+		if (_dismissable)
+			QDialog::reject();
+	}
 
-	// All option buttons share one role so QDialogButtonBox keeps them contiguous and in insertion order on
-	// every platform - that is what lets the returned index map back to `options`. Cancel alone takes
-	// RejectRole, so Escape maps to it and each platform still positions it conventionally.
-	std::vector<QPushButton*> optionButtons;
-	optionButtons.reserve(static_cast<size_t>(options.size()));
-	for (const QString& label : options)
-		optionButtons.push_back(box.addButton(label, QMessageBox::ActionRole));
+protected:
+	void showEvent(QShowEvent* e) override
+	{
+		QDialog::showEvent(e);
+#if QT_CONFIG(accessibility)
+		QAccessibleEvent event(this, QAccessible::Alert);
+		QAccessible::updateAccessibility(&event);
+#endif
+	}
 
-	if (cancellable)
-		box.addButton(QMessageBox::Cancel);
+private:
+	const bool _dismissable;
+};
 
-	if (defaultIndex >= 0 && defaultIndex < static_cast<int>(optionButtons.size()))
-		box.setDefaultButton(optionButtons[static_cast<size_t>(defaultIndex)]);
-
-	box.exec();
-
-	const QAbstractButton* clicked = box.clickedButton();
-	for (size_t i = 0; i < optionButtons.size(); ++i)
-		if (optionButtons[i] == clicked)
-			return static_cast<int>(i);
-
-	return std::nullopt;   // Cancel, Escape, or the dialog was closed
-}
-
-void notice(QWidget* parent, const QString& title, const QString& text, const QString& details, QMessageBox::Icon icon)
+// Titles `dialog` and lays out the style's icon beside `text`, with `details` below in a read-only view whose height
+// is capped. Returns the layout for the caller to append its buttons to.
+QVBoxLayout* buildAlertBody(QDialog& dialog, const QString& title, const QString& text, const QString& details, QMessageBox::Icon icon)
 {
-	QDialog dialog(parent);
 	dialog.setWindowTitle(title);
 	dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
@@ -114,6 +110,84 @@ void notice(QWidget* parent, const QString& title, const QString& text, const QS
 
 		layout->addWidget(detailsView);
 	}
+
+	return layout;
+}
+
+// The index of `clicked` among `optionButtons`; nullopt for Cancel, Escape, or a closed dialog.
+std::optional<int> indexOfOption(const std::vector<QPushButton*>& optionButtons, const QAbstractButton* clicked)
+{
+	const auto it = std::find(optionButtons.cbegin(), optionButtons.cend(), clicked);
+	return it != optionButtons.cend() ? std::optional<int>{ static_cast<int>(it - optionButtons.cbegin()) } : std::nullopt;
+}
+
+}
+
+std::optional<int> question(QWidget* parent, const QString& title, const QString& text,
+	const QStringList& options, int defaultIndex, bool cancellable, QMessageBox::Icon icon, const QString& details)
+{
+	assert_and_return_r(!options.empty(), std::nullopt);
+
+	std::vector<QPushButton*> optionButtons;
+	optionButtons.reserve(static_cast<size_t>(options.size()));
+	const bool hasDefault = defaultIndex >= 0 && defaultIndex < static_cast<int>(options.size());
+
+	if (details.isEmpty())
+	{
+		// A plain QMessageBox stays native where the platform has a native one.
+		QMessageBox box(icon, title, text, QMessageBox::NoButton, parent);
+
+		// All option buttons share one role so QDialogButtonBox keeps them contiguous and in insertion order on
+		// every platform - that is what lets the returned index map back to `options`. Cancel alone takes
+		// RejectRole, so Escape maps to it and each platform still positions it conventionally.
+		for (const QString& label : options)
+			optionButtons.push_back(box.addButton(label, QMessageBox::ActionRole));
+
+		if (cancellable)
+			box.addButton(QMessageBox::Cancel);
+
+		if (hasDefault)
+			box.setDefaultButton(optionButtons[static_cast<size_t>(defaultIndex)]);
+
+		box.exec();
+		return indexOfOption(optionButtons, box.clickedButton());
+	}
+
+	AlertDialog dialog(parent, cancellable);
+	QVBoxLayout* layout = buildAlertBody(dialog, title, text, details, icon);
+
+	QDialogButtonBox* buttons = new QDialogButtonBox(&dialog);
+	for (const QString& label : options)
+		optionButtons.push_back(buttons->addButton(label, QDialogButtonBox::ActionRole));
+
+	if (cancellable)
+		buttons->addButton(QDialogButtonBox::Cancel);
+
+	if (hasDefault)
+	{
+		QPushButton* defaultButton = optionButtons[static_cast<size_t>(defaultIndex)];
+		defaultButton->setDefault(true);
+		// Focused as in QMessageBox: the details view comes first in the focus chain.
+		defaultButton->setFocus();
+	}
+
+	// Cancel is recorded like an option and maps to nullopt.
+	// Escape calls reject() and records nothing.
+	const QAbstractButton* clicked = nullptr;
+	QObject::connect(buttons, &QDialogButtonBox::clicked, &dialog, [&](QAbstractButton* button) {
+		clicked = button;
+		dialog.accept();
+	});
+
+	layout->addWidget(buttons);
+	dialog.exec();
+	return indexOfOption(optionButtons, clicked);
+}
+
+void notice(QWidget* parent, const QString& title, const QString& text, const QString& details, QMessageBox::Icon icon)
+{
+	AlertDialog dialog(parent, /*dismissable=*/true);
+	QVBoxLayout* layout = buildAlertBody(dialog, title, text, details, icon);
 
 	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok, &dialog);
 	QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);

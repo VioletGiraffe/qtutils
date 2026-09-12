@@ -10,7 +10,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 |---|---|
 | `appdialogs/caboutdialog.h` | About dialog populated from `QApplication` metadata, build date/time, Qt version, and optional application version/copyright values. `customContentLayout()` accepts application-specific widgets, placed between the version and copyright lines. |
 | `dialogs/csimpleprogressdialog.h` | Cancellable progress dialog with configurable text/range and optional automatic show-on-progress and close-on-completion behavior. |
-| `dialogs/messagebox.h` | Arbitrary-label question boxes returning the selected option index, plus bounded notices whose long selectable details scroll instead of growing off-screen. |
+| `dialogs/messagebox.h` | Arbitrary-label question boxes returning the selected option index, and OK-only notices; either can carry long selectable details that scroll instead of growing off-screen. |
 | `appdialogs/csettingspage.h`, `appdialogs/csettingsdialog.h` | Abstract settings-page contract and a multi-page settings dialog that applies every page, emits `settingsChanged`, manages focus order, and offers an explicit wipe-and-exit shortcut. |
 | `appdialogs/reportbugdialog.h` | Bug-report dialog showing a supplied logger's contents for copying, with a button opening the application's issue tracker. |
 | `ui/ui-inspector/cuiinspector.h` | Live widget/layout hierarchy inspector with property details, refresh/filter controls, selection highlighting, and focus-change reporting. |
