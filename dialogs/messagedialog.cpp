@@ -1,4 +1,4 @@
-#include "messagebox.h"
+#include "messagedialog.h"
 
 #include "assert/advanced_assert.h"
 
@@ -20,7 +20,7 @@ RESTORE_COMPILER_WARNINGS
 #include <algorithm>
 #include <vector>
 
-namespace MessageBox {
+namespace MessageDialog {
 
 namespace {
 

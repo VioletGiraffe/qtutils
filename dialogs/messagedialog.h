@@ -9,7 +9,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <optional>
 
-namespace MessageBox {
+namespace MessageDialog {
 
 // Poses `text` with one button per entry of `options` - arbitrary labels, unlike QMessageBox::question's
 // fixed Yes/No/... buttons - and returns the 0-based index of the chosen option, matching `options` order,
