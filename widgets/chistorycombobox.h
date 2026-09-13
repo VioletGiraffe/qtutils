@@ -4,7 +4,6 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QComboBox>
-#include <QKeySequence>
 RESTORE_COMPILER_WARNINGS
 
 class CHistoryComboBox final : public QComboBox
@@ -18,8 +17,6 @@ public:
 	void enableAutoSave(const QString& settingName);
 	void setClearEditorOnItemActivation(bool clear);
 	void setSaveCurrentText(bool save);
-
-	void setSelectPreviousItemShortcut(const QKeySequence& selectPreviousItemShortcut);
 
 	[[nodiscard]] QStringList items() const;
 	[[nodiscard]] bool historyMode() const;
@@ -35,7 +32,6 @@ signals:
 	void itemActivated(QString itemText);
 
 protected:
-	bool eventFilter(QObject *, QEvent *) override;
 	void keyPressEvent(QKeyEvent * e) override;
 
 private:
@@ -47,8 +43,6 @@ private:
 	void saveState();
 
 private:
-	// QShortcut doesn't work properly with this class for some reason, so here's a hack for creating a keyboard shortcut to selectPreviousItem
-	QKeySequence _selectPreviousItemShortcut;
 	QString _settingName;
 	bool _bHistoryMode = true;
 	bool _bClearEditorOnItemActivation = false;

@@ -24,7 +24,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 |---|---|
 | `settings/csettings.h` | Thin `QSettings` wrapper with process-wide application, organization, and format overrides plus value/key/clear operations. |
 | `historylist/chistorylist.h` | Bounded, deduplicating generic history with cursor navigation, bulk restore, endpoint queries, and iteration. |
-| `widgets/chistorycombobox.h` | Editable history combo box with move-to-front mode, activation signaling, previous-item shortcut, optional editor clearing, and automatic `QSettings` persistence. |
+| `widgets/chistorycombobox.h` | Editable history combo box with move-to-front mode, activation signaling, previous-item selection, optional editor clearing, and automatic `QSettings` persistence. |
 | `logger/cloggerinterface.h`, `logger/cloggerinmemory.h` | Logger interface, per-type singleton accessor, and thread-safe bounded in-memory logger that snapshots its retained lines. |
 
 ### Input and widgets

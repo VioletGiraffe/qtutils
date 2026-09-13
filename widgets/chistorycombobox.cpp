@@ -1,8 +1,6 @@
 #include "chistorycombobox.h"
 #include "container/set_operations.hpp"
 
-#include "../qtcore_helpers/qstring_helpers.hpp"
-
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractItemView>
 #include <QDebug>
@@ -16,8 +14,6 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 {
 	// without this call lineEdit is not created so it would be impossible to access it
 	setEditable(true);
-
-	installEventFilter(this);
 
 	connect(this, &QComboBox::activated, this, &CHistoryComboBox::onItemSelected);
 }
@@ -45,12 +41,6 @@ void CHistoryComboBox::setSaveCurrentText(bool save)
 	_bSaveCurrentText = save;
 }
 
-void CHistoryComboBox::setSelectPreviousItemShortcut(const QKeySequence& selectPreviousItemShortcut)
-{
-	_selectPreviousItemShortcut = selectPreviousItemShortcut;
-}
-
-// Enables or disables history mode (moving activated item to the top)
 void CHistoryComboBox::setHistoryMode(bool historyMode)
 {
 	_bHistoryMode = historyMode;
@@ -61,7 +51,6 @@ bool CHistoryComboBox::historyMode() const
 	return _bHistoryMode;
 }
 
-// Switch to the next combobox item (which means going back through the history if history mode is set)
 void CHistoryComboBox::selectPreviousItem()
 {
 	if (count() <= 0)
@@ -72,7 +61,7 @@ void CHistoryComboBox::selectPreviousItem()
 	else if (currentIndex() < count() - 1)
 		setCurrentIndex(currentIndex() + 1);
 
-	lineEdit()->selectAll(); // Causes a bug
+	lineEdit()->selectAll();
 }
 
 void CHistoryComboBox::resetToLastSelected(bool clearLineEdit)
@@ -83,37 +72,6 @@ void CHistoryComboBox::resetToLastSelected(bool clearLineEdit)
 		lineEdit()->clear(); // To clear the current item text set by setCurrentIndex()
 
 	clearFocus();
-}
-
-// TODO: this does not belong inside this class
-bool CHistoryComboBox::eventFilter(QObject* receiver, QEvent* e)
-{
-	if (e->type() == QEvent::KeyPress)
-	{
-		QKeyEvent * keyEvent = static_cast<QKeyEvent*>(e);
-
-		if (keyEvent->text().isEmpty())
-			return QComboBox::eventFilter(receiver, e);
-
-		QString modifierString;
-		if (keyEvent->modifiers() & Qt::ShiftModifier)
-			modifierString = QSL("Shift+");
-		if (keyEvent->modifiers() & Qt::ControlModifier)
-			modifierString = QSL("Ctrl+");
-		if (keyEvent->modifiers() & Qt::AltModifier)
-			modifierString = QSL("Alt+");
-		if (keyEvent->modifiers() & Qt::MetaModifier)
-			modifierString = QSL("Meta+");
-
-		QKeySequence fullSequence(modifierString + QKeySequence(keyEvent->key()).toString());
-		if (!_selectPreviousItemShortcut.isEmpty() && fullSequence == _selectPreviousItemShortcut)
-		{
-			selectPreviousItem();
-			return true;
-		}
-	}
-
-	return QComboBox::eventFilter(receiver, e);
 }
 
 QStringList CHistoryComboBox::items() const
@@ -146,7 +104,6 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	saveState();
 }
 
-// Moves the currently selected item to the top
 void CHistoryComboBox::currentItemActivated()
 {
 	const QString newItem = currentText();
