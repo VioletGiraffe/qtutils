@@ -68,13 +68,14 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 
 	_statusLabel = new QLabel;
 
-	const auto addOptionBox = [&](const QString& text, const QString& settingName) {
+	const auto addOptionBox = [&](const QString& text, const QString& settingName, bool checkedByDefault = false) {
 		auto* box = new QCheckBox{ text };
 		box->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard; the mnemonics toggle the boxes
+		box->setChecked(checkedByDefault);
 		if (!_settingsRootKey.isEmpty())
 		{
 			const QString settingKey = _settingsRootKey + '/' + settingName;
-			box->setChecked(QSettings{}.value(settingKey).toBool());
+			box->setChecked(QSettings{}.value(settingKey, checkedByDefault).toBool());
 			connect(box, &QCheckBox::toggled, this, [settingKey](bool checked) { QSettings{}.setValue(settingKey, checked); });
 		}
 		layout->addWidget(box);
@@ -83,7 +84,7 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	_caseSensitiveBox = addOptionBox(tr("Match &case"), QStringLiteral("CaseSensitive"));
 	_wholeWordsBox = addOptionBox(tr("&Whole words"), QStringLiteral("WholeWords"));
 	_regexBox = addOptionBox(tr("Re&gex"), QStringLiteral("Regex"));
-	_highlightAllBox = addOptionBox(tr("&Highlight all"), QStringLiteral("HighlightAll"));
+	_highlightAllBox = addOptionBox(tr("&Highlight all"), QStringLiteral("HighlightAll"), /*checkedByDefault=*/true);
 
 	for (QCheckBox* const box : { _caseSensitiveBox, _wholeWordsBox, _regexBox })
 		connect(box, &QCheckBox::toggled, this, &CFindBar::clearStatus);
