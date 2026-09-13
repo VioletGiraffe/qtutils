@@ -2,8 +2,6 @@
 #include "container/set_operations.hpp"
 
 DISABLE_COMPILER_WARNINGS
-#include <QAbstractItemView>
-#include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QSettings>
