@@ -43,6 +43,19 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |
 | `widgets/layouts/coverlaylayout.h` | Expanding layout that gives every child the same geometry, stacking items over one another. |
 
+### Theming
+
+| Header | Facility |
+|---|---|
+| `theme/cbasepalette.h` | Colour set shared by themed apps: nine authored core colours, seven derived ones that `resolvedPalette()` fills in when left unset, and the mapping onto `QPalette` roles. |
+| `theme/cthemecontroller.h` | Persisted colour scheme preference (system, light or dark) and one theme name per polarity, stored as opaque strings the app resolves against its own theme list; applies the polarity through `QStyleHints` and signals `themeChanged`. |
+| `theme/colorutils.h` | Colour maths: sRGB mixing, WCAG luminance and contrast, readable text on a fill, a hue distinct from the palette's accents, a saturated colour reaching a target contrast against a background, and search-match fills built from these. |
+| `theme/ctintedsvgiconengine.h` | Icons and pixmaps from monochrome SVGs, rendered per size and DPR in a colour read from a provider at each render, so icons follow a live theme change. |
+| `theme/cthemeiconhandler.h` | `themeicon:` virtual file scheme serving tinted copies of SVG resources, so stylesheet `url()`s can use theme-coloured glyphs; `themeIconUrl()` builds the URLs. Built on private Qt API. |
+| `theme/cstylefixups.h` | Startup-installed fixes for what QSS cannot do: rounded combo popups, hover on splitter handles, a wider push-button focus frame; each reads its parameters from a provider, so a theme change needs no reinstall. |
+
+[`docs/qt-styling-quirks.md`](docs/qt-styling-quirks.md) lists known QSS and `QStyle` traps with their remedies.
+
 ### Icons, resources, sorting, and widget helpers
 
 | Header | Facility |
@@ -75,4 +88,4 @@ The Qxt-derived tooltip sources under `taskbarprogress/taskbarprogress/{linux,fr
 
 ## Building
 
-Build `qtutils.pro` with qmake after making `cpputils` and `cpp-template-utils` available at the sibling paths expected by the project. The library links Qt Core, Gui, and Widgets; taskbar progress adds a native implementation only on Windows.
+Build `qtutils.pro` with qmake after making `cpputils` and `cpp-template-utils` available at the sibling paths expected by the project. The library links Qt Core, Gui, and Widgets; taskbar progress adds a native implementation only on Windows. The theming module, and any app including `theme/cthemeiconhandler.h`, needs Qt's private Core headers (`QT += core-private`); an app using `CTintedSvgIconEngine` must add `QT += svg` itself.
