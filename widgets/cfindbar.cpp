@@ -12,6 +12,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSettings>
+#include <QToolButton>
 RESTORE_COMPILER_WARNINGS
 
 #include <utility>
@@ -72,6 +73,14 @@ CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QSt
 
 	layout->addWidget(_statusLabel);
 
+	auto* closeButton = new QToolButton;
+	closeButton->setText(QStringLiteral("✕"));
+	closeButton->setToolTip(tr("Close (Esc)"));
+	closeButton->setAutoRaise(true);
+	closeButton->setFocusPolicy(Qt::NoFocus);
+	connect(closeButton, &QToolButton::clicked, this, &CFindBar::deactivate);
+	layout->addWidget(closeButton);
+
 	if (!_settingsRootKey.isEmpty())
 		_patternBox->enableAutoSave(_settingsRootKey + QStringLiteral("/Expressions"));
 
@@ -106,11 +115,7 @@ bool CFindBar::eventFilter(QObject* watched, QEvent* event)
 
 	// An accepted ShortcutOverride keeps the key from the window's shortcuts and delivers it as a KeyPress
 	if (type == QEvent::KeyPress)
-	{
-		if (_focusBeforeActivation && isAncestorOf(QApplication::focusWidget()))
-			_focusBeforeActivation->setFocus();
-		hide();
-	}
+		deactivate();
 
 	event->accept();
 	return true;
@@ -122,6 +127,13 @@ void CFindBar::showEvent(QShowEvent* event)
 
 	// Key events the focus widget and its parents ignore reach the window; installing again only moves the filter to the front
 	window()->installEventFilter(this);
+}
+
+void CFindBar::deactivate()
+{
+	if (_focusBeforeActivation && isAncestorOf(QApplication::focusWidget()))
+		_focusBeforeActivation->setFocus();
+	hide();
 }
 
 void CFindBar::findMatch(bool backward)
