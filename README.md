@@ -53,6 +53,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `theme/ctintedsvgiconengine.h` | Icons and pixmaps from monochrome SVGs, rendered per size and DPR in a colour read from a provider at each render, so icons follow a live theme change. |
 | `theme/cthemeiconhandler.h` | `themeicon:` virtual file scheme serving tinted copies of SVG resources, so stylesheet `url()`s can use theme-coloured glyphs; `themeIconUrl()` builds the URLs. Built on private Qt API. |
 | `theme/cstylefixups.h` | Startup-installed fixes for what QSS cannot do: rounded combo popups, hover on splitter handles, a wider push-button focus frame; each reads its parameters from a provider, so a theme change needs no reinstall. |
+| `theme/widgetcolorreport.h` | Text report of what determines a widget's colours: style chain, stylesheets, colour scheme, Qt version, state and background attributes, the full palette with its explicitly set roles, the class palette, ancestors' palettes, and pixels sampled from the widget's rendering and from the screen. |
 
 [`docs/qt-styling-quirks.md`](docs/qt-styling-quirks.md) lists known QSS and `QStyle` traps with their remedies.
 

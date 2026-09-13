@@ -120,6 +120,18 @@ indicator that looks the same on every platform.
 - A delegate overriding `sizeHint` sets the height with no painting consequences - the better lever on an
   interactive view.
 
+## Input field fill
+
+In Qt 6.11, `QWindows11Style` fills `QLineEdit`, editable `QComboBox` and `QAbstractSpinBox` with fixed WinUI3 colours per state: faint translucent white at rest and on hover, `#1E1E1E` at 70% when focused in dark mode. The last is a neutral grey that hides a tinted theme. Qt 6.9.3 still filled from `Base`.
+
+- The style takes the widget's background-role brush instead only when `isBrushSet()` holds on the widget's own palette.
+- A palette from `QApplication::setPalette`, global or per class, never counts: `QWidgetPrivate::naturalWidgetPalette` clears the resolve mask.
+- A QSS `background` rule does set the brush explicitly. The stylesheet engine then draws the field itself unless the rule also declares `-qt-style-features: background-color`, which hands drawing back to the base style.
+- Scope a combo rule to `QComboBox[editable="true"]`: a non-editable combo fills from `Button`, which `background` also sets.
+- The field then has one fill for all states; focus stays visible through the style's accent underline.
+
+`widgetColorReport()` ([`theme/widgetcolorreport.h`](../theme/widgetcolorreport.h)) shows which roles a widget's palette sets explicitly, the style chain, the Qt runtime version, and the painted pixels.
+
 ## Palette and selection
 
 - `palette(role)` follows a palette change automatically. QSS values generated from theme colors require rebuilding

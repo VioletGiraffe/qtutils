@@ -10,11 +10,13 @@ HEADERS += \
     $$PWD/cstylefixups.h \
     $$PWD/cthemecontroller.h \
     $$PWD/cthemeiconhandler.h \
-    $$PWD/ctintedsvgiconengine.h
+    $$PWD/ctintedsvgiconengine.h \
+    $$PWD/widgetcolorreport.h
 
 SOURCES += \
     $$PWD/cbasepalette.cpp \
     $$PWD/cstylefixups.cpp \
     $$PWD/cthemecontroller.cpp \
     $$PWD/cthemeiconhandler.cpp \
-    $$PWD/ctintedsvgiconengine.cpp
+    $$PWD/ctintedsvgiconengine.cpp \
+    $$PWD/widgetcolorreport.cpp
