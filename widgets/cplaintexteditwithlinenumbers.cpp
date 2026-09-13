@@ -36,6 +36,8 @@ static QColor bandColorFor(const QColor& surface)
 	return QColor::fromHsl(h, s, l + BandLightnessLift + l * BandLightnessLiftPercent / 100, a).toRgb();
 }
 
+namespace
+{
 class CLineNumberArea final : public QWidget
 {
 public:
@@ -55,6 +57,7 @@ protected:
 private:
 	CPlainTextEditWithLineNumbers* codeEditor = nullptr;
 };
+}
 
 CPlainTextEditWithLineNumbers::CPlainTextEditWithLineNumbers(QWidget* parent) noexcept :
 	QPlainTextEdit(parent)
