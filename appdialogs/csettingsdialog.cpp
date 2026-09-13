@@ -7,6 +7,7 @@
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractScrollArea>
 #include <QDialogButtonBox>
+#include <QList>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QSettings>
@@ -16,18 +17,23 @@ DISABLE_COMPILER_WARNINGS
 #include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
 
-static void buildFocusChain(QList<QWidget*>& chain, QWidget* root)
+// Moves the tab stops inside container to directly after anchor, keeping their focus chain order
+static void moveTabStopsAfter(QWidget* anchor, QWidget* container)
 {
-	assert_debug_only(root);
+	QList<QWidget*> tabStops;
+	for (QWidget* w = container->nextInFocusChain(); w != container; w = w->nextInFocusChain())
+	{
+		// Widgets with a focus proxy are skipped: setTabOrder() on a compound widget moves its proxied children along
+		if (container->isAncestorOf(w) && (w->focusPolicy() & Qt::TabFocus) && !w->focusProxy())
+			tabStops.push_back(w);
+	}
 
-	QWidget* current = root;
-	do {
-		const bool focusable = current->focusPolicy() != Qt::NoFocus && current->isVisible() && current->isEnabled();
-		if (focusable)
-			chain.push_back(current);
-
-		current = current->nextInFocusChain();
-	} while (current && current != root);
+	QWidget* previous = anchor;
+	for (QWidget* tabStop : tabStops)
+	{
+		QWidget::setTabOrder(previous, tabStop);
+		previous = tabStop;
+	}
 }
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
@@ -58,7 +64,6 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
 	splitter->setStretchFactor(1, 1);
 
 	_buttonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-	_buttonBox->setFocusPolicy(Qt::TabFocus);
 
 	QVBoxLayout* layout = new QVBoxLayout(this);
 	layout->addWidget(splitter);
@@ -91,6 +96,10 @@ void CSettingsDialog::showEvent(QShowEvent* event)
 
 	if (_firstShow)
 	{
+		// Page widgets follow the button box in the focus chain: pages are added after construction.
+		// One order serves every page: Tab skips widgets on hidden pages.
+		moveTabStopsAfter(_pageList, _pages);
+
 		_pageList->setFocus();
 		_pageList->setCurrentItem(_pageList->item(0));
 		_firstShow = false;
@@ -104,26 +113,6 @@ void CSettingsDialog::pageChanged(QListWidgetItem * item)
 
 	const int pageIndex = item->data(Qt::UserRole).toInt();
 	_pages->setCurrentIndex(pageIndex);
-
-	// Everything below is for focus order control only
-	QWidget* currentPage = _pages->widget(pageIndex);
-	assert_and_return_r(currentPage, );
-
-	if (!currentPage->isVisible())
-		return;
-
-	currentPage->clearFocus();
-
-	QList<QWidget*> chain;
-	chain.push_back(_pageList);
-	buildFocusChain(chain, currentPage);
-	chain.push_back(_buttonBox);
-
-	for (qsizetype i = 1, n = chain.size(); i < n; ++i)
-	{
-		setTabOrder(chain[i - 1], chain[i]);
-	}
-	setTabOrder(chain.back(), chain.front());
 }
 
 void CSettingsDialog::wipeSettings()
