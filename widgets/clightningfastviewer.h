@@ -39,13 +39,16 @@ public:
 	void setWordWrap(bool enabled);
 	void setTabWidth(int columns);
 
-	// NotFound leaves the selection and the scroll as they were. wrapAround: a miss continues from the far end.
+	// A match becomes the current match: highlighted apart from the selection, with the cursor at its start.
+	// NotFound leaves the view as it was. wrapAround: a miss continues from the far end.
 	FindResult find(const QString& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
 	FindResult find(const QRegularExpression& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
-	// Counts the matches a forward find() steps through from the start, numbering the selected one; ignores FindBackward.
-	// Stops at 'deadline'. A later call for the same pattern resumes only while the selection lies past the counted part.
+	// Counts the matches a forward find() steps through from the start, numbering the current one; ignores FindBackward.
+	// Stops at 'deadline'. A later call for the same pattern resumes only while the current match lies past the counted part.
 	[[nodiscard]] MatchCount countMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
 	[[nodiscard]] MatchCount countMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
+	// Paints the matches counted so far, besides the current one
+	void setCountedMatchesHighlighted(bool highlighted);
 	void moveToStart();
 	void moveToEnd();
 
@@ -115,6 +118,10 @@ private:
 	void copySelection(Region format);
 	void selectAll();
 	[[nodiscard]] bool isSelected(qsizetype offset) const;
+	enum class Highlight { None, OtherMatch, CurrentMatch, Selection };
+	// The strongest highlight on a cell: the current match, then the selection or the cursor block, then the other counted matches
+	[[nodiscard]] Highlight highlightAt(qsizetype offset) const;
+	[[nodiscard]] static QBrush fillFor(Highlight highlight, const QBrush& selectionFill);
 	void extendSelectionToDragPos();
 	void autoScroll();
 	void stopAutoScroll();
@@ -125,6 +132,15 @@ private:
 	// Offsets in hex mode, line numbers in text mode. Painted last: the band covers the content scrolled under it.
 	void drawLineLabelColumn(QPainter& painter, qsizetype firstLine, qsizetype lastLine);
 	void contentChanged();
+	struct MatchRange
+	{
+		qsizetype start = 0;
+		qsizetype length = 0;
+	};
+
+	// The match find() stopped at, while the cursor stays unselected at its start
+	[[nodiscard]] std::optional<MatchRange> currentMatch() const;
+	void setCurrentMatch(qsizetype start, qsizetype length);
 	[[nodiscard]] qsizetype searchStartOffset(bool backward, qsizetype haystackSize) const;
 	// The text a regex search runs over. In hex mode the bytes are converted once and kept until the content changes.
 	[[nodiscard]] const QString& regexHaystack();
@@ -136,7 +152,7 @@ private:
 	{
 		std::variant<QString, QRegularExpression> pattern;
 		QTextDocument::FindFlags options; // Without FindBackward
-		std::vector<qsizetype> matchStarts; // For numbering the selected match; capped, while 'total' counts on
+		std::vector<MatchRange> matches; // Sorted and non-overlapping, for numbering and highlighting; capped, while 'total' counts on
 		qsizetype total = 0;
 		qsizetype countedUpTo = 0; // Every match starting before this offset is counted
 	};
@@ -244,6 +260,8 @@ private:
 	QFontMetrics _fontMetrics;
 	Selection _selection;
 	std::optional<MatchCounting> _matchCounting; // Of the last pattern countMatches() was given, until the content changes
+	std::optional<MatchRange> _currentMatch; // The last find() result; currentMatch() drops it once the cursor moves off
+	bool _highlightCountedMatches = false;
 	QPoint _dragPos;          // Last position of a drag in progress, in viewport coordinates
 	int _autoScrollTimer = 0; // startTimer id while a drag is past a viewport edge; 0 otherwise
 	bool _dragging = false;   // Set only by a press that landed on content, so a drag cannot resume an older selection

@@ -71,7 +71,6 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	const auto addOptionBox = [&](const QString& text, const QString& settingName) {
 		auto* box = new QCheckBox{ text };
 		box->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard; the mnemonics toggle the boxes
-		connect(box, &QCheckBox::toggled, this, &CFindBar::clearStatus);
 		if (!_settingsRootKey.isEmpty())
 		{
 			const QString settingKey = _settingsRootKey + '/' + settingName;
@@ -84,6 +83,15 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	_caseSensitiveBox = addOptionBox(tr("Match &case"), QStringLiteral("CaseSensitive"));
 	_wholeWordsBox = addOptionBox(tr("&Whole words"), QStringLiteral("WholeWords"));
 	_regexBox = addOptionBox(tr("Re&gex"), QStringLiteral("Regex"));
+	_highlightAllBox = addOptionBox(tr("&Highlight all"), QStringLiteral("HighlightAll"));
+
+	for (QCheckBox* const box : { _caseSensitiveBox, _wholeWordsBox, _regexBox })
+		connect(box, &QCheckBox::toggled, this, &CFindBar::clearStatus);
+
+	connect(_highlightAllBox, &QCheckBox::toggled, this, [this] {
+		if (!_countLabel->text().isEmpty()) // A shown count belongs to the pattern and options in the bar
+			updateMatchCount();
+	});
 
 	layout->addWidget(_statusLabel);
 
@@ -120,6 +128,8 @@ void CFindBar::clearStatus()
 {
 	_countLabel->clear();
 	_statusLabel->clear();
+	if (_hostFunctions.clearHighlights)
+		_hostFunctions.clearHighlights();
 }
 
 bool CFindBar::eventFilter(QObject* watched, QEvent* event)
@@ -148,6 +158,7 @@ void CFindBar::deactivate()
 {
 	if (_focusBeforeActivation && isAncestorOf(QApplication::focusWidget()))
 		_focusBeforeActivation->setFocus();
+	clearStatus();
 	hide();
 }
 
@@ -168,11 +179,6 @@ void CFindBar::findMatch(bool backward)
 	// Before the search: rebuilding the history rewrites the pattern text, which clears the status
 	_patternBox->moveCurrentTextToTopOfHistory();
 
-	QTextDocument::FindFlags flags;
-	flags.setFlag(QTextDocument::FindBackward, backward);
-	flags.setFlag(QTextDocument::FindCaseSensitively, _caseSensitiveBox->isChecked());
-	flags.setFlag(QTextDocument::FindWholeWords, _wholeWordsBox->isChecked());
-
 	_countLabel->clear();
 
 	const bool isRegex = _regexBox->isChecked();
@@ -183,6 +189,8 @@ void CFindBar::findMatch(bool backward)
 		return;
 	}
 
+	QTextDocument::FindFlags flags = optionFlags();
+	flags.setFlag(QTextDocument::FindBackward, backward);
 	const FindResult result = isRegex ? _hostFunctions.findRegex(regex, flags) : _hostFunctions.findText(pattern, flags);
 
 	switch (result)
@@ -198,12 +206,32 @@ void CFindBar::findMatch(bool backward)
 		break;
 	}
 
-	const bool canCount = isRegex ? static_cast<bool>(_hostFunctions.countRegex) : static_cast<bool>(_hostFunctions.countText);
-	if (result == FindResult::NotFound || !canCount)
+	if (result != FindResult::NotFound)
+		updateMatchCount();
+}
+
+void CFindBar::updateMatchCount()
+{
+	const QString pattern = _patternBox->currentText();
+	const QDeadlineTimer deadline{ matchCountingBudget };
+	const bool highlight = _highlightAllBox->isChecked();
+
+	MatchCount count;
+	if (_regexBox->isChecked() && _hostFunctions.countRegex)
+		count = _hostFunctions.countRegex(QRegularExpression{ pattern }, optionFlags(), deadline, highlight);
+	else if (!_regexBox->isChecked() && _hostFunctions.countText)
+		count = _hostFunctions.countText(pattern, optionFlags(), deadline, highlight);
+	else
 		return;
 
-	const QDeadlineTimer deadline{ matchCountingBudget };
-	const MatchCount count = isRegex ? _hostFunctions.countRegex(regex, flags, deadline) : _hostFunctions.countText(pattern, flags, deadline);
 	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
 	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
+}
+
+QTextDocument::FindFlags CFindBar::optionFlags() const
+{
+	QTextDocument::FindFlags flags;
+	flags.setFlag(QTextDocument::FindCaseSensitively, _caseSensitiveBox->isChecked());
+	flags.setFlag(QTextDocument::FindWholeWords, _wholeWordsBox->isChecked());
+	return flags;
 }

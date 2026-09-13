@@ -19,6 +19,7 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <tuple>
 #include <type_traits>
@@ -216,6 +217,7 @@ void CLightningFastViewerWidget::contentChanged()
 	_hexSearchText.clear();
 	_foldedData.clear();
 	_matchCounting.reset();
+	_currentMatch.reset();
 	_lineOffsets.clear();
 	_logicalLineNumbers.clear();
 	_maxLineColumns = 0;
@@ -707,7 +709,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 	// Both columns paint in runs of one colour, so a stretch of same-class bytes costs one drawText rather than one per byte.
 	int runX = 0;
 	QColor runColor;
-	bool runSelected = false;
+	Highlight runHighlight = Highlight::None;
 
 	_paintScratch.resize(0);
 
@@ -715,8 +717,8 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 		if (_paintScratch.isEmpty())
 			return;
 
-		if (runSelected)
-			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, colors.highlight);
+		if (runHighlight != Highlight::None)
+			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, fillFor(runHighlight, colors.highlight));
 
 		painter.setPen(runColor);
 		painter.drawText(originX + runX, baseline, _paintScratch);
@@ -728,17 +730,17 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 		for (qsizetype i = 0; i < lineBytes; ++i)
 		{
 			const uint8_t byte = static_cast<uint8_t>(dataPtr[offset + i]);
-			const bool selected = isSelected(offset + i);
-			const QColor color = selected ? colors.selectedText : colors.forByte(byte);
+			const Highlight highlight = highlightAt(offset + i);
+			const QColor color = highlight == Highlight::Selection ? colors.selectedText : colors.forByte(byte);
 
-			if (!_paintScratch.isEmpty() && (color != runColor || selected != runSelected))
+			if (!_paintScratch.isEmpty() && (color != runColor || highlight != runHighlight))
 				flushRun();
 
 			if (_paintScratch.isEmpty())
 			{
 				runX = columnX(i);
 				runColor = color;
-				runSelected = selected;
+				runHighlight = highlight;
 			}
 
 			appendByte(i, byte);
@@ -789,16 +791,16 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 	qsizetype column = 0;
 	qsizetype runStart = -1; // Offset where the pending run of literal ASCII begins; -1 when there is no pending run
 	qsizetype runColumn = 0;
-	bool runSelected = false;
+	Highlight runHighlight = Highlight::None;
 
-	const auto highlight = [&](qsizetype fromColumn, qsizetype toColumn) {
-		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, colors.highlight);
+	const auto fill = [&](qsizetype fromColumn, qsizetype toColumn, Highlight highlight) {
+		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, fillFor(highlight, colors.highlight));
 	};
 
-	const auto drawChars = [&](const QChar* chars, qsizetype count, qsizetype atColumn, bool selected) {
+	const auto drawChars = [&](const QChar* chars, qsizetype count, qsizetype atColumn, Highlight highlight) {
 		_paintScratch.resize(count);
 		std::copy_n(chars, count, _paintScratch.data());
-		painter.setPen(selected ? colors.selectedText : colors.text);
+		painter.setPen(highlight == Highlight::Selection ? colors.selectedText : colors.text);
 		painter.drawText(originX + int(atColumn) * _charWidth, baseline, _paintScratch);
 	};
 
@@ -806,10 +808,10 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 		if (runStart < 0)
 			return;
 
-		if (runSelected)
-			highlight(runColumn, column);
+		if (runHighlight != Highlight::None)
+			fill(runColumn, column, runHighlight);
 
-		drawChars(chars + runStart, column - runColumn, runColumn, runSelected);
+		drawChars(chars + runStart, column - runColumn, runColumn, runHighlight);
 		runStart = -1;
 	};
 
@@ -825,19 +827,19 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 		if (columns == 0)
 			continue;
 
-		const bool selected = isSelected(offset);
+		const Highlight highlight = highlightAt(offset);
 
 		// Literal ASCII accumulates into a run: one drawText for the whole stretch instead of one per character
 		if (isPrintableAscii(ch.unicode()))
 		{
-			if (runStart >= 0 && selected != runSelected)
+			if (runStart >= 0 && highlight != runHighlight)
 				flushRun();
 
 			if (runStart < 0)
 			{
 				runStart = offset;
 				runColumn = column;
-				runSelected = selected;
+				runHighlight = highlight;
 			}
 
 			++column;
@@ -846,18 +848,18 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 
 		flushRun();
 
-		if (selected)
-			highlight(column, column + columns);
+		if (highlight != Highlight::None)
+			fill(column, column + columns, highlight);
 
 		if (ch != QChar('\t')) // A tab paints nothing, it only advances to its stop
 		{
 			if (isSubstituted(ch))
 			{
 				const QChar substitute = _glyphs.substituteFor(ch);
-				drawChars(&substitute, 1, column, selected);
+				drawChars(&substitute, 1, column, highlight);
 			}
 			else
-				drawChars(chars + offset, ch.isHighSurrogate() && offset + 1 < textLength ? 2 : 1, column, selected);
+				drawChars(chars + offset, ch.isHighSurrogate() && offset + 1 < textLength ? 2 : 1, column, highlight);
 		}
 
 		column += columns;
@@ -865,9 +867,9 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 
 	flushRun();
 
-	// A selected line terminator has no columns of its own, so a selection spanning lines would otherwise break at every line end
-	if (chars[lineEnd - 1] == u'\n' && isSelected(lineEnd - 1))
-		highlight(column, column + 1);
+	// A line terminator has no columns of its own, so a highlight spanning lines would otherwise break at every line end
+	if (const Highlight highlight = chars[lineEnd - 1] == u'\n' ? highlightAt(lineEnd - 1) : Highlight::None; highlight != Highlight::None)
+		fill(column, column + 1, highlight);
 }
 
 int CLightningFastViewerWidget::contentOriginX() const
@@ -1098,6 +1100,45 @@ void CLightningFastViewerWidget::selectAll()
 
 	_selection.selectRange(0, size, (_mode == Mode::Hex) ? Region::Hex : Region::Ascii);
 	viewport()->update();
+}
+
+CLightningFastViewerWidget::Highlight CLightningFastViewerWidget::highlightAt(qsizetype offset) const
+{
+	// Only the cursor block can overlap the current match, which paints over it: the cursor stands at the match start anyway
+	if (const std::optional<MatchRange> match = currentMatch(); match && offset >= match->start && offset < match->start + match->length)
+		return Highlight::CurrentMatch;
+
+	if (isSelected(offset))
+		return Highlight::Selection;
+
+	if (!_highlightCountedMatches || !_matchCounting)
+		return Highlight::None;
+
+	// Only the last match starting at or before 'offset' can cover it
+	const std::vector<MatchRange>& matches = _matchCounting->matches;
+	const auto next = std::upper_bound(matches.cbegin(), matches.cend(), offset, [](qsizetype at, const MatchRange& match) { return at < match.start; });
+	if (next != matches.cbegin() && offset < std::prev(next)->start + std::prev(next)->length)
+		return Highlight::OtherMatch;
+
+	return Highlight::None;
+}
+
+QBrush CLightningFastViewerWidget::fillFor(Highlight highlight, const QBrush& selectionFill)
+{
+	// The match fills are translucent, so the text keeps its colour and stays readable on either background
+	switch (highlight)
+	{
+	case Highlight::Selection:
+		return selectionFill;
+	case Highlight::CurrentMatch:
+		return QColor{ 255, 140, 0, 140 };
+	case Highlight::OtherMatch:
+		return QColor{ 255, 210, 0, 80 };
+	case Highlight::None:
+		break;
+	}
+
+	return Qt::NoBrush;
 }
 
 bool CLightningFastViewerWidget::isSelected(qsizetype offset) const
@@ -1389,7 +1430,7 @@ static qsizetype countLiteralMatches(const Haystack& haystack, const Needle& nee
 
 			if (accept(matchPos, needle.size()))
 			{
-				onMatch(matchPos);
+				onMatch(matchPos, needle.size());
 				from = matchPos + needle.size();
 			}
 			else
@@ -1413,7 +1454,7 @@ static qsizetype countRegexMatches(const QRegularExpression& rx, const QString& 
 	{
 		const QRegularExpressionMatch match = it.next();
 		if (accept(match.capturedStart(), match.capturedLength()))
-			onMatch(match.capturedStart());
+			onMatch(match.capturedStart(), match.capturedLength());
 
 		// A global match started at the end of this one picks up where the iterator is
 		if (deadline.hasExpired())
@@ -1489,8 +1530,27 @@ static std::tuple<qsizetype, qsizetype, FindResult> matchWithWrapAround(SearchFr
 	return { wrappedPos, wrappedLength, wrappedPos >= 0 ? FindResult::FoundAfterWrapAround : FindResult::NotFound };
 }
 
+std::optional<CLightningFastViewerWidget::MatchRange> CLightningFastViewerWidget::currentMatch() const
+{
+	if (_currentMatch && !_selection.hasSelection() && _selection.cursor == _currentMatch->start)
+		return _currentMatch;
+
+	return std::nullopt;
+}
+
+void CLightningFastViewerWidget::setCurrentMatch(qsizetype start, qsizetype length)
+{
+	_currentMatch = MatchRange{ start, length };
+	_selection.selectRange(start, 0, Region::Ascii);
+	ensureVisible(start);
+	viewport()->update();
+}
+
 qsizetype CLightningFastViewerWidget::searchStartOffset(bool backward, qsizetype haystackSize) const
 {
+	if (const std::optional<MatchRange> match = currentMatch())
+		return backward ? match->start - 1 : match->start + match->length;
+
 	if (!_selection.hasCursor())
 		return backward ? haystackSize - 1 : 0;
 
@@ -1561,9 +1621,7 @@ FindResult CLightningFastViewerWidget::find(const QString& exp, QTextDocument::F
 	if (result == FindResult::NotFound)
 		return result;
 
-	_selection.selectRange(matchPos, matchLen, Region::Ascii);
-	ensureVisible(matchPos);
-	viewport()->update();
+	setCurrentMatch(matchPos, matchLen);
 	return result;
 }
 
@@ -1582,9 +1640,7 @@ FindResult CLightningFastViewerWidget::find(const QRegularExpression& exp, QText
 	if (result == FindResult::NotFound)
 		return result;
 
-	_selection.selectRange(matchPos, matchLen, Region::Ascii);
-	ensureVisible(matchPos);
-	viewport()->update();
+	setCurrentMatch(matchPos, matchLen);
 	return result;
 }
 
@@ -1629,25 +1685,36 @@ CLightningFastViewerWidget::MatchCounting& CLightningFastViewerWidget::matchCoun
 	return *_matchCounting;
 }
 
-static constexpr size_t maxStoredMatchStarts = 1'000'000; // 8 MB
+void CLightningFastViewerWidget::setCountedMatchesHighlighted(bool highlighted)
+{
+	if (_highlightCountedMatches == highlighted)
+		return;
+
+	_highlightCountedMatches = highlighted;
+	viewport()->update();
+}
+
+static constexpr size_t maxStoredMatches = 1'000'000; // 16 MB
 
 template <typename ScanFrom>
 MatchCount CLightningFastViewerWidget::continueMatchCount(MatchCounting& counting, qsizetype haystackSize, ScanFrom scanFrom)
 {
-	const qsizetype selectionStart = _selection.hasSelection() ? _selection.first() : -1;
-	if (counting.countedUpTo < haystackSize && selectionStart >= counting.countedUpTo)
+	const std::optional<MatchRange> current = currentMatch();
+	const qsizetype currentStart = current ? current->start : -1;
+	if (counting.countedUpTo < haystackSize && currentStart >= counting.countedUpTo)
 	{
-		counting.countedUpTo = scanFrom(counting.countedUpTo, [&counting](qsizetype matchStart) {
-			if (counting.matchStarts.size() < maxStoredMatchStarts)
-				counting.matchStarts.push_back(matchStart);
+		counting.countedUpTo = scanFrom(counting.countedUpTo, [&counting](qsizetype start, qsizetype length) {
+			if (counting.matches.size() < maxStoredMatches)
+				counting.matches.push_back(MatchRange{ start, length });
 			++counting.total;
 		});
 	}
 
 	MatchCount count{ .total = counting.total, .complete = counting.countedUpTo >= haystackSize };
-	const auto stored = std::lower_bound(counting.matchStarts.cbegin(), counting.matchStarts.cend(), selectionStart);
-	if (stored != counting.matchStarts.cend() && *stored == selectionStart)
-		count.number = stored - counting.matchStarts.cbegin() + 1;
+	const auto stored = std::lower_bound(counting.matches.cbegin(), counting.matches.cend(), currentStart,
+		[](const MatchRange& match, qsizetype start) { return match.start < start; });
+	if (stored != counting.matches.cend() && stored->start == currentStart)
+		count.number = stored - counting.matches.cbegin() + 1;
 
 	return count;
 }

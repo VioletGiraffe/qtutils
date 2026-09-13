@@ -22,7 +22,7 @@ class QLabel;
 class QRegularExpression;
 class QShowEvent;
 
-// Find bar: a pattern field with history, previous and next, case, whole-word and regex toggles, a status label, a close button.
+// Find bar: a pattern field with history, previous and next, case, whole-word, regex and highlight-all toggles, a status label, a close button.
 //   Searches through the host's find functions, which must wrap around at either end.
 //   After a successful search, the host's count functions number the match, with a second to count per search.
 //   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
@@ -35,8 +35,9 @@ class CFindBar final : public QFrame
 public:
 	using FindText = std::function<FindResult (const QString& pattern, QTextDocument::FindFlags flags)>;
 	using FindRegex = std::function<FindResult (const QRegularExpression& pattern, QTextDocument::FindFlags flags)>;
-	using CountText = std::function<MatchCount (const QString& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
-	using CountRegex = std::function<MatchCount (const QRegularExpression& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
+	// highlight: also highlight the counted matches, until the next count or clearHighlights
+	using CountText = std::function<MatchCount (const QString& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline, bool highlight)>;
+	using CountRegex = std::function<MatchCount (const QRegularExpression& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline, bool highlight)>;
 
 	struct HostFunctions
 	{
@@ -45,6 +46,7 @@ public:
 		// Optional: without one, searches of that kind show no match count
 		CountText countText;
 		CountRegex countRegex;
+		std::function<void ()> clearHighlights; // Optional
 	};
 
 	struct Keys
@@ -63,7 +65,7 @@ public:
 	// Shows the bar and focuses the pattern field, its text selected
 	void activate();
 
-	// Clears the match count and the search message; the host calls this when the searched content changes
+	// Clears the match count, its highlights and the search message; the host calls this when the searched content changes
 	void clearStatus();
 
 protected:
@@ -75,6 +77,10 @@ private:
 
 	// Shows the bar; activates it instead of searching while the pattern is empty
 	void findMatch(bool backward);
+	// Counts the matches of the pattern and options in the bar, highlighting them if Highlight all is on
+	void updateMatchCount();
+	// FindCaseSensitively and FindWholeWords as the option boxes set them
+	[[nodiscard]] QTextDocument::FindFlags optionFlags() const;
 
 private:
 	const HostFunctions _hostFunctions;
@@ -89,6 +95,7 @@ private:
 	QCheckBox* _caseSensitiveBox = nullptr;
 	QCheckBox* _wholeWordsBox = nullptr;
 	QCheckBox* _regexBox = nullptr;
+	QCheckBox* _highlightAllBox = nullptr;
 	QLabel* _countLabel = nullptr;
 	QLabel* _statusLabel = nullptr;
 };
