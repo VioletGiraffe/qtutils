@@ -17,6 +17,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QVBoxLayout>
 RESTORE_COMPILER_WARNINGS
 
+#include <cstdlib>
+
 // Moves the tab stops inside container to directly after anchor, keeping their focus chain order
 static void moveTabStopsAfter(QWidget* anchor, QWidget* container)
 {
@@ -78,8 +80,6 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
 
 CSettingsDialog& CSettingsDialog::addSettingsPage(CSettingsPage* page, const QString &pageName)
 {
-	// The page comes in parented to the dialog; addWidget() would re-parent it anyway, but warns while doing so
-	page->setParent(_pages);
 	_pages->addWidget(page);
 
 	QListWidgetItem * item = new QListWidgetItem(pageName.isEmpty() ? page->windowTitle() : pageName);
@@ -120,7 +120,8 @@ void CSettingsDialog::wipeSettings()
 	if (QMessageBox::question(this, tr("Wipe settings"), tr("Wipe all settings?")) == QMessageBox::Yes)
 	{
 		QSettings{}.clear();
-		_Exit(0); // Exiting immediately so that the current application state cannot be re-saved upon next normal exit
+		// Skips the normal exit: it would save the current state back into the wiped settings
+		_Exit(0);
 	}
 }
 
