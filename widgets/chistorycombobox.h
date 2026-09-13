@@ -37,7 +37,6 @@ protected:
 
 private:
 	void currentItemActivated();
-	void onItemSelected();
 
 	void saveState();
 

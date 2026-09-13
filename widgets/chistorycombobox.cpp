@@ -12,8 +12,6 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 {
 	// without this call lineEdit is not created so it would be impossible to access it
 	setEditable(true);
-
-	connect(this, &QComboBox::activated, this, &CHistoryComboBox::onItemSelected);
 }
 
 CHistoryComboBox::~CHistoryComboBox()
@@ -112,16 +110,12 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 void CHistoryComboBox::currentItemActivated()
 {
 	const QString newItem = currentText();
-	onItemSelected();
-	emit itemActivated(newItem);
-}
-
-void CHistoryComboBox::onItemSelected()
-{
 	moveCurrentTextToTopOfHistory();
 
 	if (_bClearEditorOnItemActivation)
 		lineEdit()->clear();
+
+	emit itemActivated(newItem);
 }
 
 void CHistoryComboBox::saveState()
