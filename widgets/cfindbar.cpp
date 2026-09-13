@@ -98,29 +98,30 @@ void CFindBar::activate()
 	_patternBox->lineEdit()->selectAll();
 }
 
-bool CFindBar::event(QEvent* event)
+bool CFindBar::eventFilter(QObject* watched, QEvent* event)
 {
-	// Takes Esc from the window's shortcuts while the focus is in the bar; keyPressEvent() handles it
-	if (event->type() == QEvent::ShortcutOverride && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape)
+	const QEvent::Type type = event->type();
+	if ((type != QEvent::ShortcutOverride && type != QEvent::KeyPress) || static_cast<QKeyEvent*>(event)->key() != Qt::Key_Escape || !isVisible())
+		return QFrame::eventFilter(watched, event);
+
+	// An accepted ShortcutOverride keeps the key from the window's shortcuts and delivers it as a KeyPress
+	if (type == QEvent::KeyPress)
 	{
-		event->accept();
-		return true;
+		if (_focusBeforeActivation && isAncestorOf(QApplication::focusWidget()))
+			_focusBeforeActivation->setFocus();
+		hide();
 	}
 
-	return QFrame::event(event);
+	event->accept();
+	return true;
 }
 
-void CFindBar::keyPressEvent(QKeyEvent* event)
+void CFindBar::showEvent(QShowEvent* event)
 {
-	if (event->key() != Qt::Key_Escape)
-	{
-		QFrame::keyPressEvent(event);
-		return;
-	}
+	QFrame::showEvent(event);
 
-	if (_focusBeforeActivation)
-		_focusBeforeActivation->setFocus();
-	hide();
+	// Key events the focus widget and its parents ignore reach the window; installing again only moves the filter to the front
+	window()->installEventFilter(this);
 }
 
 void CFindBar::findMatch(bool backward)
@@ -131,6 +132,9 @@ void CFindBar::findMatch(bool backward)
 		activate();
 		return;
 	}
+
+	// Before the search: the status reports the result, and showing the bar shrinks the view the match gets scrolled into
+	show();
 
 	// Before the search: rebuilding the history rewrites the pattern text, which clears the status
 	_patternBox->moveCurrentTextToTopOfHistory();

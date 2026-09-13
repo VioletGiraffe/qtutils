@@ -17,15 +17,16 @@ RESTORE_COMPILER_WARNINGS
 class CHistoryComboBox;
 class QAction;
 class QCheckBox;
-class QKeyEvent;
 class QLabel;
 class QRegularExpression;
+class QShowEvent;
 
 // Find bar: a pattern field with history, previous and next, case, whole-word and regex toggles, a status label.
 //   Searches through the host's find functions, which must wrap around at either end.
 //   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
-//   Hidden until the Find action. Enter searches forward, Shift+Enter backward.
-//   Esc in the bar hides it and returns focus to the widget focused before activate().
+//   Hidden until any of its actions; only Find moves the focus into it. Enter searches forward, Shift+Enter backward.
+//   While visible, the bar takes Esc from its window's shortcuts and hides on it; a widget that handles Esc itself still gets it first.
+//   Hiding on Esc moves focus from the bar back to the widget focused before activate().
 //   Derives QFrame: a stylesheet background does not paint on a plain QWidget subclass.
 class CFindBar final : public QFrame
 {
@@ -50,11 +51,11 @@ public:
 	void activate();
 
 protected:
-	bool event(QEvent* event) override;
-	void keyPressEvent(QKeyEvent* event) override;
+	bool eventFilter(QObject* watched, QEvent* event) override;
+	void showEvent(QShowEvent* event) override;
 
 private:
-	// Opens the bar instead while the pattern is empty
+	// Shows the bar; activates it instead of searching while the pattern is empty
 	void findMatch(bool backward);
 
 private:
