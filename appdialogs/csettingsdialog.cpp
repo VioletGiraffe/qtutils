@@ -18,19 +18,16 @@ RESTORE_COMPILER_WARNINGS
 
 static void buildFocusChain(QList<QWidget*>& chain, QWidget* root)
 {
-	if (!root)
-		return;
+	assert_debug_only(root);
 
-	QWidget* start = root;  // Can be any widget in the chain; we'll loop until back
-	QWidget* current = start;
-
+	QWidget* current = root;
 	do {
 		const bool focusable = current->focusPolicy() != Qt::NoFocus && current->isVisible() && current->isEnabled();
 		if (focusable)
 			chain.push_back(current);
 
 		current = current->nextInFocusChain();
-	} while (current && current != start);
+	} while (current && current != root);
 }
 
 CSettingsDialog::CSettingsDialog(QWidget *parent) noexcept :
@@ -122,7 +119,7 @@ void CSettingsDialog::pageChanged(QListWidgetItem * item)
 	buildFocusChain(chain, currentPage);
 	chain.push_back(_buttonBox);
 
-	for (size_t i = 1, n = chain.size(); i < n; ++i)
+	for (qsizetype i = 1, n = chain.size(); i < n; ++i)
 	{
 		setTabOrder(chain[i - 1], chain[i]);
 	}
