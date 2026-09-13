@@ -54,8 +54,8 @@ namespace ColorUtils
 		return contrastRatio(Qt::black, fill) >= contrastRatio(Qt::white, fill) ? QColor{ Qt::black } : QColor{ Qt::white };
 	}
 
-	// Hues spread around the colour wheel, in order of preference: amber, green, magenta, cyan
-	inline constexpr std::array<int, 4> spreadHues{ 45, 120, 300, 180 };
+	// Hues spread around the colour wheel, in order of preference: yellow, magenta, green, cyan
+	inline constexpr std::array<int, 4> spreadHues{ 60, 300, 120, 180 };
 
 	// The first of 'candidateHues' at least 'minDistance' degrees from every saturated palette accent (Highlight, Accent, Link),
 	// or else the candidate furthest from its nearest accent. For marks meant to stand out from the theme. Requires a candidate.
