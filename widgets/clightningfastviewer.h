@@ -48,8 +48,6 @@ public:
 	[[nodiscard]] MatchCount countMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
 	void moveToStart();
 	void moveToEnd();
-	// Start of the selection, or -1 when nothing is selected
-	[[nodiscard]] qsizetype selectionStart() const;
 
 protected:
 	void paintEvent(QPaintEvent*) override;

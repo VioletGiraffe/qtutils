@@ -1652,11 +1652,6 @@ MatchCount CLightningFastViewerWidget::continueMatchCount(MatchCounting& countin
 	return count;
 }
 
-qsizetype CLightningFastViewerWidget::selectionStart() const
-{
-	return _selection.hasSelection() ? _selection.first() : -1;
-}
-
 void CLightningFastViewerWidget::updateCursorShape(const QPoint& pos)
 {
 	bool overText = false;
