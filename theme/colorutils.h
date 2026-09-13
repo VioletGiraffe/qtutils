@@ -4,10 +4,14 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QColor>
+#include <QPalette>
 RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdlib>
+#include <span>
 
 namespace ColorUtils
 {
@@ -39,5 +43,76 @@ namespace ColorUtils
 	{
 		const double la = relativeLuminance(a), lb = relativeLuminance(b);
 		return (std::max(la, lb) + 0.05) / (std::min(la, lb) + 0.05);
+	}
+
+	// 'preferred' while it keeps 'minContrast' on 'fill', otherwise black or white, whichever contrasts more
+	[[nodiscard]] inline QColor readableTextOn(const QColor& fill, const QColor& preferred, double minContrast = 4.5)
+	{
+		if (contrastRatio(preferred, fill) >= minContrast)
+			return preferred;
+
+		return contrastRatio(Qt::black, fill) >= contrastRatio(Qt::white, fill) ? QColor{ Qt::black } : QColor{ Qt::white };
+	}
+
+	// Hues spread around the colour wheel, in order of preference: amber, green, magenta, cyan
+	inline constexpr std::array<int, 4> spreadHues{ 45, 120, 300, 180 };
+
+	// The first of 'candidateHues' at least 'minDistance' degrees from every saturated palette accent (Highlight, Accent, Link),
+	// or else the candidate furthest from its nearest accent. For marks meant to stand out from the theme. Requires a candidate.
+	[[nodiscard]] inline int hueDistinctFromPalette(const QPalette& palette, std::span<const int> candidateHues = spreadHues, int minDistance = 60)
+	{
+		const auto distanceToNearestAccent = [&palette](int hue) {
+			int nearest = 180;
+			for (const QPalette::ColorRole role : { QPalette::Highlight, QPalette::Accent, QPalette::Link })
+			{
+				const QColor color = palette.color(role);
+				if (color.hsvSaturation() < 64) // A grey has no hue to clash with
+					continue;
+
+				const int distance = std::abs(hue - color.hsvHue());
+				nearest = std::min({ nearest, distance, 360 - distance });
+			}
+			return nearest;
+		};
+
+		for (const int hue : candidateHues)
+		{
+			if (distanceToNearestAccent(hue) >= minDistance)
+				return hue;
+		}
+
+		return *std::ranges::max_element(candidateHues, {}, distanceToNearestAccent);
+	}
+
+	// 'hue' at full saturation, its lightness stepped away from 'background' until it reaches 'targetContrast' against it.
+	// Ends at white or black when the contrast is out of reach.
+	[[nodiscard]] inline QColor saturatedColorWithContrast(int hue, const QColor& background, double targetContrast)
+	{
+		const double backgroundLuminance = relativeLuminance(background);
+		const bool lighterThanBackground = contrastRatio(background, Qt::white) > contrastRatio(background, Qt::black);
+
+		constexpr int steps = 50;
+		QColor color;
+		for (int step = 0; step <= steps; ++step)
+		{
+			const float lightness = static_cast<float>(lighterThanBackground ? step : steps - step) / steps;
+			color = QColor::fromHslF(static_cast<float>(hue) / 360.0f, 1.0f, lightness);
+
+			// A colour on the near side of the background's luminance reaches the contrast in the wrong direction
+			const double luminance = relativeLuminance(color);
+			const bool pastBackground = lighterThanBackground ? luminance > backgroundLuminance : luminance < backgroundLuminance;
+			if (pastBackground && contrastRatio(color, background) >= targetContrast)
+				break;
+		}
+
+		return color;
+	}
+
+	enum class SearchMatch { Current, Other };
+
+	// Fill marking a search match: a hue distinct from the palette, the current match contrasting more with Base than the others
+	[[nodiscard]] inline QColor searchMatchFill(const QPalette& palette, SearchMatch match)
+	{
+		return saturatedColorWithContrast(hueDistinctFromPalette(palette), palette.color(QPalette::Base), match == SearchMatch::Current ? 3.0 : 1.8);
 	}
 }

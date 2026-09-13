@@ -1,5 +1,6 @@
 #include "clightningfastviewer.h"
 #include "assert/advanced_assert.h"
+#include "theme/colorutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
@@ -13,6 +14,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPalette>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QStringView>
@@ -686,9 +688,8 @@ CLightningFastViewerWidget::HexColors CLightningFastViewerWidget::hexColors(cons
 		.control = darkBackground ? QColor(0x6F, 0xD0, 0xD0) : QColor(0x10, 0x68, 0x68),
 		.nonAscii = darkBackground ? QColor(0xD8, 0xB0, 0x60) : QColor(0x8A, 0x5A, 0x00),
 		.filler = darkBackground ? QColor(0xD0, 0x80, 0xC0) : QColor(0x9A, 0x0F, 0x7A),
-		.selectedText = palette.highlightedText().color(),
 		.separator = palette.color(QPalette::Disabled, QPalette::Text),
-		.highlight = palette.highlight()
+		.highlights = highlightColors(palette)
 	};
 }
 
@@ -718,7 +719,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 			return;
 
 		if (runHighlight != Highlight::None)
-			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, fillFor(runHighlight, colors.highlight));
+			painter.fillRect(originX + runX, y, static_cast<int>(_paintScratch.size()) * _charWidth, _lineHeight, colors.highlights.fill(runHighlight));
 
 		painter.setPen(runColor);
 		painter.drawText(originX + runX, baseline, _paintScratch);
@@ -731,7 +732,7 @@ void CLightningFastViewerWidget::drawHexLine(QPainter& painter, const HexColors&
 		{
 			const uint8_t byte = static_cast<uint8_t>(dataPtr[offset + i]);
 			const Highlight highlight = highlightAt(offset + i);
-			const QColor color = highlight == Highlight::Selection ? colors.selectedText : colors.forByte(byte);
+			const QColor color = highlight == Highlight::None ? colors.forByte(byte) : colors.highlights.text(highlight);
 
 			if (!_paintScratch.isEmpty() && (color != runColor || highlight != runHighlight))
 				flushRun();
@@ -773,8 +774,7 @@ CLightningFastViewerWidget::TextColors CLightningFastViewerWidget::textColors(co
 {
 	return {
 		.text = palette.color(QPalette::Text),
-		.selectedText = palette.highlightedText().color(),
-		.highlight = palette.highlight()
+		.highlights = highlightColors(palette)
 	};
 }
 
@@ -794,13 +794,13 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 	Highlight runHighlight = Highlight::None;
 
 	const auto fill = [&](qsizetype fromColumn, qsizetype toColumn, Highlight highlight) {
-		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, fillFor(highlight, colors.highlight));
+		painter.fillRect(originX + int(fromColumn) * _charWidth, y, int(toColumn - fromColumn) * _charWidth, _lineHeight, colors.highlights.fill(highlight));
 	};
 
 	const auto drawChars = [&](const QChar* chars, qsizetype count, qsizetype atColumn, Highlight highlight) {
 		_paintScratch.resize(count);
 		std::copy_n(chars, count, _paintScratch.data());
-		painter.setPen(highlight == Highlight::Selection ? colors.selectedText : colors.text);
+		painter.setPen(highlight == Highlight::None ? colors.text : colors.highlights.text(highlight));
 		painter.drawText(originX + int(atColumn) * _charWidth, baseline, _paintScratch);
 	};
 
@@ -1123,22 +1123,32 @@ CLightningFastViewerWidget::Highlight CLightningFastViewerWidget::highlightAt(qs
 	return Highlight::None;
 }
 
-QBrush CLightningFastViewerWidget::fillFor(Highlight highlight, const QBrush& selectionFill)
+const QBrush& CLightningFastViewerWidget::HighlightColors::fill(Highlight highlight) const
 {
-	// The match fills are translucent, so the text keeps its colour and stays readable on either background
-	switch (highlight)
-	{
-	case Highlight::Selection:
-		return selectionFill;
-	case Highlight::CurrentMatch:
-		return QColor{ 255, 140, 0, 140 };
-	case Highlight::OtherMatch:
-		return QColor{ 255, 210, 0, 80 };
-	case Highlight::None:
-		break;
-	}
+	assert_debug_only(highlight != Highlight::None);
+	return highlight == Highlight::Selection ? selectionFill : highlight == Highlight::CurrentMatch ? currentMatchFill : otherMatchFill;
+}
 
-	return Qt::NoBrush;
+const QColor& CLightningFastViewerWidget::HighlightColors::text(Highlight highlight) const
+{
+	assert_debug_only(highlight != Highlight::None);
+	return highlight == Highlight::Selection ? selectionText : highlight == Highlight::CurrentMatch ? currentMatchText : otherMatchText;
+}
+
+CLightningFastViewerWidget::HighlightColors CLightningFastViewerWidget::highlightColors(const QPalette& palette)
+{
+	const QColor text = palette.color(QPalette::Text);
+	const QColor currentMatchFill = ColorUtils::searchMatchFill(palette, ColorUtils::SearchMatch::Current);
+	const QColor otherMatchFill = ColorUtils::searchMatchFill(palette, ColorUtils::SearchMatch::Other);
+
+	return {
+		.selectionFill = palette.highlight(),
+		.selectionText = palette.highlightedText().color(),
+		.currentMatchFill = currentMatchFill,
+		.currentMatchText = ColorUtils::readableTextOn(currentMatchFill, text),
+		.otherMatchFill = otherMatchFill,
+		.otherMatchText = ColorUtils::readableTextOn(otherMatchFill, text),
+	};
 }
 
 bool CLightningFastViewerWidget::isSelected(qsizetype offset) const

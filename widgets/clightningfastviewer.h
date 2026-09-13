@@ -121,7 +121,23 @@ private:
 	enum class Highlight { None, OtherMatch, CurrentMatch, Selection };
 	// The strongest highlight on a cell: the current match, then the selection or the cursor block, then the other counted matches
 	[[nodiscard]] Highlight highlightAt(qsizetype offset) const;
-	[[nodiscard]] static QBrush fillFor(Highlight highlight, const QBrush& selectionFill);
+
+	// Fill and text colours of highlighted cells, resolved once per paint for either mode
+	struct HighlightColors
+	{
+		QBrush selectionFill;
+		QColor selectionText;
+		QBrush currentMatchFill;
+		QColor currentMatchText;
+		QBrush otherMatchFill;
+		QColor otherMatchText;
+
+		// Both require a highlighted cell
+		[[nodiscard]] const QBrush& fill(Highlight highlight) const;
+		[[nodiscard]] const QColor& text(Highlight highlight) const;
+	};
+	[[nodiscard]] static HighlightColors highlightColors(const QPalette& palette);
+
 	void extendSelectionToDragPos();
 	void autoScroll();
 	void stopAutoScroll();
@@ -180,9 +196,8 @@ private:
 		QColor nonAscii;
 		QColor filler;
 
-		QColor selectedText;
 		QColor separator; // The bar between the hex and ASCII columns
-		QBrush highlight;
+		HighlightColors highlights;
 
 		[[nodiscard]] const QColor& forByte(uint8_t byte) const;
 	};
@@ -205,8 +220,7 @@ private:
 	struct TextColors
 	{
 		QColor text;
-		QColor selectedText;
-		QBrush highlight;
+		HighlightColors highlights;
 	};
 	[[nodiscard]] static TextColors textColors(const QPalette& palette);
 
