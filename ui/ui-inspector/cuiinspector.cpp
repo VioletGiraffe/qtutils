@@ -311,7 +311,7 @@ void CUiInspector::inspectWidgetHierarchy(QLayout* layout, std::vector<struct Wi
 	}
 }
 
-inline void CUiInspector::showItemContextMenu(const QPoint& p)
+void CUiInspector::showItemContextMenu(const QPoint& p)
 {
 	auto* item = _ui->_tree->itemAt(p);
 	if (!item)
