@@ -20,7 +20,7 @@ class QPalette;
 // instead, so open time and memory follow the line count rather than the file size.
 //   setText enters text mode, setData enters hex mode.
 //   Beyond the API below: a wrap-aware line number column, keyboard navigation, clipboard, context menu.
-//   Both find() overloads honour FindBackward, FindWholeWords and FindCaseSensitively.
+//   Both find() overloads honour FindBackward, FindWholeWords and FindCaseSensitively, and wrap around at either end on request.
 //   No syntax highlighting and no rich text: those need a QTextEdit, which must lay the document out.
 class CLightningFastViewerWidget final : public QAbstractScrollArea
 {
@@ -35,8 +35,9 @@ public:
 	void setWordWrap(bool enabled);
 	void setTabWidth(int columns);
 
-	bool find(const QString& exp, QTextDocument::FindFlags options = {});
-	bool find(const QRegularExpression& exp, QTextDocument::FindFlags options = {});
+	// False leaves the selection and the scroll as they were. wrapAround: a miss continues from the far end.
+	bool find(const QString& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
+	bool find(const QRegularExpression& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
 	void moveToStart();
 	void moveToEnd();
 	// Start of the selection, or -1 when nothing is selected

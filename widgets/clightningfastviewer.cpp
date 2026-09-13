@@ -1377,6 +1377,17 @@ static std::pair<qsizetype, qsizetype> acceptedRegexMatch(
 	return found;
 }
 
+// The match searchFrom(from) returns; with 'wrapAround', a miss searches again from the far end
+template <typename SearchFrom>
+static std::pair<qsizetype, qsizetype> matchWithWrapAround(SearchFrom searchFrom, qsizetype from, qsizetype haystackSize, bool backward, bool wrapAround)
+{
+	const std::pair<qsizetype, qsizetype> found = searchFrom(from);
+	if (found.first >= 0 || !wrapAround)
+		return found;
+
+	return searchFrom(backward ? haystackSize - 1 : 0);
+}
+
 qsizetype CLightningFastViewerWidget::searchStartOffset(bool backward, qsizetype haystackSize) const
 {
 	if (!_selection.hasCursor())
@@ -1408,7 +1419,7 @@ const QByteArray& CLightningFastViewerWidget::foldedData()
 	return _foldedData;
 }
 
-bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFlags options)
+bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFlags options, bool wrapAround)
 {
 	if (exp.isEmpty())
 		return false;
@@ -1419,7 +1430,8 @@ bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFla
 
 	const auto search = [&](const auto& haystack, const auto& needle, Qt::CaseSensitivity sensitivity) {
 		const auto accept = [&](qsizetype pos, qsizetype len) { return !wholeWords || isWholeWordMatch(haystack, pos, len); };
-		return acceptedLiteralMatch(haystack, needle, searchStartOffset(backward, haystack.size()), backward, sensitivity, accept);
+		const auto searchFrom = [&](qsizetype from) { return acceptedLiteralMatch(haystack, needle, from, backward, sensitivity, accept); };
+		return matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
 	};
 
 	// No byte can hold a character above U+00FF, and toLatin1 would fold one to '?' and match those bytes instead
@@ -1445,7 +1457,7 @@ bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFla
 	return true;
 }
 
-bool CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocument::FindFlags options)
+bool CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocument::FindFlags options, bool wrapAround)
 {
 	if (!exp.isValid() || exp.pattern().isEmpty())
 		return false;
@@ -1466,7 +1478,8 @@ bool CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocume
 		return len > 0 && (!wholeWords || isWholeWordMatch(haystack, pos, len));
 	};
 
-	const auto [matchPos, matchLen] = acceptedRegexMatch(rx, haystack, searchStartOffset(backward, haystack.size()), backward, accept);
+	const auto searchFrom = [&](qsizetype from) { return acceptedRegexMatch(rx, haystack, from, backward, accept); };
+	const auto [matchPos, matchLen] = matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
 	if (matchPos < 0)
 		return false;
 

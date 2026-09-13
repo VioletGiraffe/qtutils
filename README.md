@@ -33,10 +33,11 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 |---|---|
 | `mouseclickdetector/cmouseclickdetector.h` | Global or directly notified event filter that disambiguates single and double left-clicks per object and emits their positions. |
 | `widgets/cclickablelabel.h` | `QLabel` emitting single- and double-click signals with global positions. |
-| `widgets/clineedit.h` | `QLineEdit` with configurable queued select-all-on-focus behavior. |
+| `widgets/clineedit.h` | `QLineEdit` with configurable queued select-all-on-focus behavior and a return-pressed signal carrying the modifiers. |
 | `widgets/clabelelided.h` | Label that paints elided text, in the middle unless told otherwise, and automatically shows the full text as a tooltip only when elided. |
 | `widgets/cplaintexteditwithlinenumbers.h` | `QPlainTextEdit` with a synchronized line-number gutter. |
-| `widgets/clightningfastviewer.h` | Read-only text and hex viewer that indexes visual lines instead of laying out a document, so arbitrarily large files open at once; stands in CP437 glyphs for non-printable characters, colours hex bytes by class, and offers word wrap, a wrap-aware line number column, selection, keyboard navigation, clipboard, and literal or regex search. |
+| `widgets/clightningfastviewer.h` | Read-only text and hex viewer that indexes visual lines instead of laying out a document, so arbitrarily large files open at once; stands in CP437 glyphs for non-printable characters, colours hex bytes by class, and offers word wrap, a wrap-aware line number column, selection, keyboard navigation, clipboard, and literal or regex search with optional wrap-around. |
+| `widgets/cfindbar.h` | Find bar for `CLightningFastViewerWidget`: pattern field, previous and next, case, whole-word and regex toggles, wrap-around, and the find shortcuts installed on the viewer's window. |
 | `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `QSettings`, with delayed first-show restoration by default. |
 | `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |
 | `widgets/layouts/coverlaylayout.h` | Expanding layout that gives every child the same geometry, stacking items over one another. |
