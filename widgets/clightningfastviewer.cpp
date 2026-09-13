@@ -1323,28 +1323,31 @@ static bool isWholeWordMatch(const Haystack& haystack, qsizetype pos, qsizetype 
 		&& (pos + len >= haystack.size() || !isWordCharAt(haystack, pos + len));
 }
 
-static qsizetype indexOfIn(const QString& haystack, const QString& needle, qsizetype from, bool backward, Qt::CaseSensitivity cs)
-{
-	return backward ? haystack.lastIndexOf(needle, from, cs) : haystack.indexOf(needle, from, cs);
-}
-
-// Only the exact bytes: QByteArray has no case-insensitive search, so a caller wanting one folds both sides first
-static qsizetype indexOfIn(const QByteArray& haystack, const QByteArray& needle, qsizetype from, bool backward, Qt::CaseSensitivity cs)
-{
-	assert_r(cs == Qt::CaseSensitive);
-	return backward ? haystack.lastIndexOf(needle, from) : haystack.indexOf(needle, from);
-}
-
 // First match lying entirely in [from, end)
 static qsizetype indexOfWithin(const QString& haystack, const QString& needle, qsizetype from, qsizetype end, Qt::CaseSensitivity cs)
 {
 	return QStringView{ haystack }.first(end).indexOf(needle, from, cs);
 }
 
+// Last match starting in [begin, from]. Requires from >= begin: a negative offset would search from the end.
+static qsizetype lastIndexOfWithin(const QString& haystack, const QString& needle, qsizetype begin, qsizetype from, Qt::CaseSensitivity cs)
+{
+	const qsizetype matchPos = QStringView{ haystack }.sliced(begin).lastIndexOf(needle, from - begin, cs);
+	return matchPos < 0 ? -1 : begin + matchPos;
+}
+
+// The byte overloads match only the exact bytes: QByteArray has no case-insensitive search, so a caller wanting one folds both sides first
 static qsizetype indexOfWithin(const QByteArray& haystack, const QByteArray& needle, qsizetype from, qsizetype end, Qt::CaseSensitivity cs)
 {
 	assert_r(cs == Qt::CaseSensitive);
 	return QByteArrayView{ haystack }.first(end).indexOf(needle, from);
+}
+
+static qsizetype lastIndexOfWithin(const QByteArray& haystack, const QByteArray& needle, qsizetype begin, qsizetype from, Qt::CaseSensitivity cs)
+{
+	assert_r(cs == Qt::CaseSensitive);
+	const qsizetype matchPos = QByteArrayView{ haystack }.sliced(begin).lastIndexOf(needle, from - begin);
+	return matchPos < 0 ? -1 : begin + matchPos;
 }
 
 // The matches find() stops at and countMatches() counts
@@ -1421,15 +1424,17 @@ static qsizetype countRegexMatches(const QRegularExpression& rx, const QString& 
 }
 
 // Nearest match to 'from' in the given direction that 'accept' allows, stepping one position past each rejected match.
-// A negative 'from' means nothing is left to search: lastIndexOf would read it as "start at the end".
+// Only matches starting short of 'stopAt' count: below it forward, above it backward.
 // Returns {-1, 0} when no match is accepted.
 template <typename Haystack, typename Needle, typename Accept>
 static std::pair<qsizetype, qsizetype> acceptedLiteralMatch(
-	const Haystack& haystack, const Needle& needle, qsizetype from, bool backward, Qt::CaseSensitivity cs, Accept accept)
+	const Haystack& haystack, const Needle& needle, qsizetype from, qsizetype stopAt, bool backward, Qt::CaseSensitivity cs, Accept accept)
 {
-	while (from >= 0)
+	while (backward ? from > stopAt : from < stopAt)
 	{
-		const qsizetype matchPos = indexOfIn(haystack, needle, from, backward, cs);
+		const qsizetype matchPos = backward
+			? lastIndexOfWithin(haystack, needle, stopAt + 1, from, cs)
+			: indexOfWithin(haystack, needle, from, std::min(haystack.size(), stopAt + needle.size() - 1), cs);
 		if (matchPos < 0)
 			break;
 
@@ -1467,17 +1472,20 @@ static std::pair<qsizetype, qsizetype> acceptedRegexMatch(
 	return found;
 }
 
-// The match searchFrom(from) returns; with 'wrapAround', a miss searches again from the far end
+// The match searchFrom(from, stopAt) returns; with 'wrapAround', a miss searches again from the far end up to where the first search began.
+// stopAt bounds the match starts: below it forward, above it backward. A searchFrom that cannot stop early may ignore it.
 template <typename SearchFrom>
 static std::tuple<qsizetype, qsizetype, FindResult> matchWithWrapAround(SearchFrom searchFrom, qsizetype from, qsizetype haystackSize, bool backward, bool wrapAround)
 {
-	const auto [pos, length] = searchFrom(from);
+	const auto [pos, length] = searchFrom(from, backward ? -1 : haystackSize);
 	if (pos >= 0)
 		return { pos, length, FindResult::Found };
-	if (!wrapAround)
+
+	const qsizetype wrapFrom = backward ? haystackSize - 1 : 0;
+	if (!wrapAround || from == wrapFrom) // A first search starting at the far end already covered everything
 		return { pos, length, FindResult::NotFound };
 
-	const auto [wrappedPos, wrappedLength] = searchFrom(backward ? haystackSize - 1 : 0);
+	const auto [wrappedPos, wrappedLength] = searchFrom(wrapFrom, from);
 	return { wrappedPos, wrappedLength, wrappedPos >= 0 ? FindResult::FoundAfterWrapAround : FindResult::NotFound };
 }
 
@@ -1541,7 +1549,9 @@ FindResult CLightningFastViewerWidget::find(const QString& exp, QTextDocument::F
 	const Qt::CaseSensitivity cs = (options & QTextDocument::FindCaseSensitively) ? Qt::CaseSensitive : Qt::CaseInsensitive;
 
 	const auto match = searchLiteral(exp, cs, [&](const auto& haystack, const auto& needle, Qt::CaseSensitivity sensitivity) {
-		const auto searchFrom = [&](qsizetype from) { return acceptedLiteralMatch(haystack, needle, from, backward, sensitivity, matchAcceptor(haystack, wholeWords)); };
+		const auto searchFrom = [&](qsizetype from, qsizetype stopAt) {
+			return acceptedLiteralMatch(haystack, needle, from, stopAt, backward, sensitivity, matchAcceptor(haystack, wholeWords));
+		};
 		return matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
 	});
 	if (!match)
@@ -1567,7 +1577,7 @@ FindResult CLightningFastViewerWidget::find(const QRegularExpression& exp, QText
 	const QRegularExpression rx = withCaseSensitivity(exp, options);
 	const QString& haystack = regexHaystack();
 
-	const auto searchFrom = [&](qsizetype from) { return acceptedRegexMatch(rx, haystack, from, backward, matchAcceptor(haystack, wholeWords)); };
+	const auto searchFrom = [&](qsizetype from, qsizetype /*stopAt*/) { return acceptedRegexMatch(rx, haystack, from, backward, matchAcceptor(haystack, wholeWords)); };
 	const auto [matchPos, matchLen, result] = matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
 	if (result == FindResult::NotFound)
 		return result;
