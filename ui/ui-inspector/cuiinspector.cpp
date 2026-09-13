@@ -35,7 +35,7 @@ struct CUiInspector::Ui final : QObject {
 	QAction* _actShowHiddenItems = nullptr;
 };
 
-inline QString getExtraWidgetString(const QWidget* widget)
+static inline QString getExtraWidgetString(const QWidget* widget)
 {
 	if (auto* b = dynamic_cast<const QAbstractButton*>(widget); b)
 		return QString{ "[text: '%1', checked: %2]" }.arg(b->text()).arg(b->isChecked());

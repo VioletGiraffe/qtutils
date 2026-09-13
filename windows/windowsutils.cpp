@@ -8,7 +8,7 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 template <size_t N>
-inline wchar_t* append(wchar_t* dst, const wchar_t (&src)[N])
+static inline wchar_t* append(wchar_t* dst, const wchar_t (&src)[N])
 {
 	::memcpy(dst, src, N * sizeof(wchar_t));
 	return dst + N - 1; // Null was already part of the input literal
