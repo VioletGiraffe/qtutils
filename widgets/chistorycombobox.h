@@ -30,13 +30,14 @@ public slots:
 	void resetToLastSelected(bool clearLineEdit);
 
 signals:
-	void itemActivated(QString itemText);
+	// Emitted on Enter, with the modifiers held
+	void itemActivated(QString itemText, Qt::KeyboardModifiers modifiers);
 
 protected:
 	void keyPressEvent(QKeyEvent * e) override;
 
 private:
-	void currentItemActivated();
+	void currentItemActivated(Qt::KeyboardModifiers modifiers);
 
 	void saveState();
 

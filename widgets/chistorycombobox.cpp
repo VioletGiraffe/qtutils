@@ -101,13 +101,13 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	if (lineEdit()->hasFocus() && (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter))
 	{
 		e->accept();
-		currentItemActivated();
+		currentItemActivated(e->modifiers());
 	}
 	else
 		QComboBox::keyPressEvent(e);
 }
 
-void CHistoryComboBox::currentItemActivated()
+void CHistoryComboBox::currentItemActivated(Qt::KeyboardModifiers modifiers)
 {
 	const QString newItem = currentText();
 	moveCurrentTextToTopOfHistory();
@@ -115,7 +115,7 @@ void CHistoryComboBox::currentItemActivated()
 	if (_bClearEditorOnItemActivation)
 		lineEdit()->clear();
 
-	emit itemActivated(newItem);
+	emit itemActivated(newItem, modifiers);
 }
 
 void CHistoryComboBox::saveState()

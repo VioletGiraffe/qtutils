@@ -1,73 +1,113 @@
 #include "cfindbar.h"
-#include "clightningfastviewer.h"
-#include "clineedit.h"
+#include "chistorycombobox.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QAction>
+#include <QApplication>
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QKeyEvent>
-#include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QRegularExpression>
-#include <QShortcut>
-#include <QTextDocument>
+#include <QSettings>
 RESTORE_COMPILER_WARNINGS
 
-CFindBar::CFindBar(CLightningFastViewerWidget* viewer, QWidget* parent) :
+#include <utility>
+
+CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QString settingsRootKey, QWidget* parent) :
 	QFrame(parent),
-	_viewer{ viewer }
+	_findText{ std::move(findText) },
+	_findRegex{ std::move(findRegex) },
+	_settingsRootKey{ std::move(settingsRootKey) }
 {
+	const auto createAction = [this](const QString& text, const QKeySequence& key, auto onTriggered) {
+		auto* action = new QAction{ text, this };
+		action->setShortcut(key);
+		connect(action, &QAction::triggered, this, onTriggered);
+		return action;
+	};
+	_findAction = createAction(tr("Find"), keys.find, [this] { activate(); });
+	_findNextAction = createAction(tr("Find next"), keys.findNext, [this] { findMatch(false); });
+	_findPreviousAction = createAction(tr("Find previous"), keys.findPrevious, [this] { findMatch(true); });
+
 	auto* layout = new QHBoxLayout(this);
 	layout->setContentsMargins(8, 4, 8, 4);
 
-	_patternEdit = new CLineEdit;
-	_patternEdit->setSelectAllOnFocus(false); // a click places the caret; activate() selects the pattern
-	_patternEdit->setPlaceholderText(tr("Find"));
-	_patternEdit->setClearButtonEnabled(true);
-	layout->addWidget(_patternEdit, 1);
+	_patternBox = new CHistoryComboBox{ this };
+	_patternBox->setCompleter(nullptr);
+	_patternBox->lineEdit()->setPlaceholderText(tr("Find"));
+	_patternBox->lineEdit()->setClearButtonEnabled(true);
+	layout->addWidget(_patternBox, 1);
 
-	const auto addFindButton = [&](const QString& text, QKeySequence::StandardKey key, bool backward) {
+	const auto addFindButton = [&](const QString& text, QAction* action) {
 		auto* button = new QPushButton{ text };
-		button->setToolTip(QKeySequence{ key }.toString(QKeySequence::NativeText));
+		button->setToolTip(action->shortcut().toString(QKeySequence::NativeText));
 		button->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard
-		connect(button, &QPushButton::clicked, this, [this, backward] { findMatch(backward); });
+		connect(button, &QPushButton::clicked, action, &QAction::trigger);
 		layout->addWidget(button);
 	};
-	addFindButton(tr("Previous"), QKeySequence::FindPrevious, true);
-	addFindButton(tr("Next"), QKeySequence::FindNext, false);
-
-	_caseSensitiveBox = new QCheckBox{ tr("Match &case") };
-	_wholeWordsBox = new QCheckBox{ tr("&Whole words") };
-	_regexBox = new QCheckBox{ tr("Re&gex") };
-	for (QCheckBox* box : { _caseSensitiveBox, _wholeWordsBox, _regexBox })
-	{
-		box->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard; the mnemonics toggle the boxes
-		connect(box, &QCheckBox::toggled, this, [this] { _statusLabel->clear(); });
-		layout->addWidget(box);
-	}
+	addFindButton(tr("Previous"), _findPreviousAction);
+	addFindButton(tr("Next"), _findNextAction);
 
 	_statusLabel = new QLabel;
+
+	const auto addOptionBox = [&](const QString& text, const QString& settingName) {
+		auto* box = new QCheckBox{ text };
+		box->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard; the mnemonics toggle the boxes
+		connect(box, &QCheckBox::toggled, _statusLabel, &QLabel::clear);
+		if (!_settingsRootKey.isEmpty())
+		{
+			const QString settingKey = _settingsRootKey + '/' + settingName;
+			box->setChecked(QSettings{}.value(settingKey).toBool());
+			connect(box, &QCheckBox::toggled, this, [settingKey](bool checked) { QSettings{}.setValue(settingKey, checked); });
+		}
+		layout->addWidget(box);
+		return box;
+	};
+	_caseSensitiveBox = addOptionBox(tr("Match &case"), QStringLiteral("CaseSensitive"));
+	_wholeWordsBox = addOptionBox(tr("&Whole words"), QStringLiteral("WholeWords"));
+	_regexBox = addOptionBox(tr("Re&gex"), QStringLiteral("Regex"));
+
 	layout->addWidget(_statusLabel);
 
-	connect(_patternEdit, &CLineEdit::returnPressedWithModifiers, this, [this](Qt::KeyboardModifiers modifiers) {
+	if (!_settingsRootKey.isEmpty())
+		_patternBox->enableAutoSave(_settingsRootKey + QStringLiteral("/Expressions"));
+
+	connect(_patternBox, &CHistoryComboBox::itemActivated, this, [this](const QString&, Qt::KeyboardModifiers modifiers) {
 		findMatch(modifiers.testFlag(Qt::ShiftModifier));
 	});
-	connect(_patternEdit, &QLineEdit::textChanged, _statusLabel, &QLabel::clear);
-
-	// Parented to the viewer: a shortcut on a hidden widget never fires, and the bar stays hidden until Find
-	new QShortcut{ QKeySequence::Find, viewer, this, [this] { activate(); } };
-	new QShortcut{ QKeySequence::FindNext, viewer, this, [this] { findMatch(false); } };
-	new QShortcut{ QKeySequence::FindPrevious, viewer, this, [this] { findMatch(true); } };
+	connect(_patternBox, &QComboBox::editTextChanged, _statusLabel, &QLabel::clear);
 
 	hide();
 }
 
+QList<QAction*> CFindBar::findActions() const
+{
+	return { _findAction, _findNextAction, _findPreviousAction };
+}
+
 void CFindBar::activate()
 {
+	if (QWidget* const focused = QApplication::focusWidget(); focused && !isAncestorOf(focused))
+		_focusBeforeActivation = focused;
+
 	show();
-	_patternEdit->setFocus(Qt::ShortcutFocusReason);
-	_patternEdit->selectAll();
+	_patternBox->setFocus(Qt::ShortcutFocusReason);
+	_patternBox->lineEdit()->selectAll();
+}
+
+bool CFindBar::event(QEvent* event)
+{
+	// Takes Esc from the window's shortcuts while the focus is in the bar; keyPressEvent() handles it
+	if (event->type() == QEvent::ShortcutOverride && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape)
+	{
+		event->accept();
+		return true;
+	}
+
+	return QFrame::event(event);
 }
 
 void CFindBar::keyPressEvent(QKeyEvent* event)
@@ -78,18 +118,22 @@ void CFindBar::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
+	if (_focusBeforeActivation)
+		_focusBeforeActivation->setFocus();
 	hide();
-	_viewer->setFocus();
 }
 
 void CFindBar::findMatch(bool backward)
 {
-	const QString pattern = _patternEdit->text();
+	const QString pattern = _patternBox->currentText();
 	if (pattern.isEmpty())
 	{
 		activate();
 		return;
 	}
+
+	// Before the search: rebuilding the history rewrites the pattern text, which clears the status
+	_patternBox->moveCurrentTextToTopOfHistory();
 
 	QTextDocument::FindFlags flags;
 	flags.setFlag(QTextDocument::FindBackward, backward);
@@ -105,10 +149,10 @@ void CFindBar::findMatch(bool backward)
 			_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
 			return;
 		}
-		found = _viewer->find(regex, flags, /*wrapAround=*/true);
+		found = _findRegex(regex, flags);
 	}
 	else
-		found = _viewer->find(pattern, flags, /*wrapAround=*/true);
+		found = _findText(pattern, flags);
 
 	_statusLabel->setText(found ? QString{} : tr("Not found"));
 }

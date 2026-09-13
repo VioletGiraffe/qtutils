@@ -4,28 +4,52 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QFrame>
+#include <QKeySequence>
+#include <QList>
+#include <QPointer>
+#include <QString>
+#include <QTextDocument>
 RESTORE_COMPILER_WARNINGS
 
+#include <functional>
+
+class CHistoryComboBox;
+class QAction;
 class QCheckBox;
 class QKeyEvent;
 class QLabel;
-class CLightningFastViewerWidget;
-class CLineEdit;
+class QRegularExpression;
 
-// Find bar for a CLightningFastViewerWidget: a pattern field, previous and next, case, whole-word and regex toggles, a status label.
-//   Hidden until the Find key. The find shortcuts are installed on the viewer's window, so the host only places the bar.
-//   Enter and FindNext search forward, Shift+Enter and FindPrevious backward. The search wraps around at either end.
-//   Esc in the bar hides it and returns focus to the viewer.
+// Find bar: a pattern field with history, previous and next, case, whole-word and regex toggles, a status label.
+//   Searches through the host's find functions, which must wrap around at either end.
+//   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
+//   Hidden until the Find action. Enter searches forward, Shift+Enter backward.
+//   Esc in the bar hides it and returns focus to the widget focused before activate().
 //   Derives QFrame: a stylesheet background does not paint on a plain QWidget subclass.
 class CFindBar final : public QFrame
 {
 public:
-	explicit CFindBar(CLightningFastViewerWidget* viewer, QWidget* parent = nullptr);
+	using FindText = std::function<bool (const QString& pattern, QTextDocument::FindFlags flags)>;
+	using FindRegex = std::function<bool (const QRegularExpression& pattern, QTextDocument::FindFlags flags)>;
+
+	struct Keys
+	{
+		QKeySequence find;
+		QKeySequence findNext;
+		QKeySequence findPrevious;
+	};
+
+	// settingsRootKey: the QSettings group for the pattern history and the toggles; empty for no persistence
+	CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QString settingsRootKey, QWidget* parent = nullptr);
+
+	// Find, Find next and Find previous
+	[[nodiscard]] QList<QAction*> findActions() const;
 
 	// Shows the bar and focuses the pattern field, its text selected
 	void activate();
 
 protected:
+	bool event(QEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 
 private:
@@ -33,8 +57,16 @@ private:
 	void findMatch(bool backward);
 
 private:
-	CLightningFastViewerWidget* const _viewer;
-	CLineEdit* _patternEdit = nullptr;
+	const FindText _findText;
+	const FindRegex _findRegex;
+	const QString _settingsRootKey;
+	QPointer<QWidget> _focusBeforeActivation;
+
+	QAction* _findAction = nullptr;
+	QAction* _findNextAction = nullptr;
+	QAction* _findPreviousAction = nullptr;
+
+	CHistoryComboBox* _patternBox = nullptr;
 	QCheckBox* _caseSensitiveBox = nullptr;
 	QCheckBox* _wholeWordsBox = nullptr;
 	QCheckBox* _regexBox = nullptr;
