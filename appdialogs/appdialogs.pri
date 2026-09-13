@@ -1,6 +1,7 @@
 HEADERS += \
 	$$PWD/caboutdialog.h \
 	$$PWD/csettingsdialog.h \
+	$$PWD/csettingsnotifier.h \
 	$$PWD/csettingspage.h \
 	$$PWD/reportbugdialog.h
 

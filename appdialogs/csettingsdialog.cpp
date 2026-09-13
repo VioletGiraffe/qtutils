@@ -1,5 +1,6 @@
 #include "csettingsdialog.h"
 
+#include "csettingsnotifier.h"
 #include "csettingspage.h"
 #include "assert/advanced_assert.h"
 
