@@ -18,6 +18,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
 #include <limits>
+#include <tuple>
 
 using GlyphSubstitution::isPrintableAscii;
 
@@ -1379,13 +1380,16 @@ static std::pair<qsizetype, qsizetype> acceptedRegexMatch(
 
 // The match searchFrom(from) returns; with 'wrapAround', a miss searches again from the far end
 template <typename SearchFrom>
-static std::pair<qsizetype, qsizetype> matchWithWrapAround(SearchFrom searchFrom, qsizetype from, qsizetype haystackSize, bool backward, bool wrapAround)
+static std::tuple<qsizetype, qsizetype, FindResult> matchWithWrapAround(SearchFrom searchFrom, qsizetype from, qsizetype haystackSize, bool backward, bool wrapAround)
 {
-	const std::pair<qsizetype, qsizetype> found = searchFrom(from);
-	if (found.first >= 0 || !wrapAround)
-		return found;
+	const auto [pos, length] = searchFrom(from);
+	if (pos >= 0)
+		return { pos, length, FindResult::Found };
+	if (!wrapAround)
+		return { pos, length, FindResult::NotFound };
 
-	return searchFrom(backward ? haystackSize - 1 : 0);
+	const auto [wrappedPos, wrappedLength] = searchFrom(backward ? haystackSize - 1 : 0);
+	return { wrappedPos, wrappedLength, wrappedPos >= 0 ? FindResult::FoundAfterWrapAround : FindResult::NotFound };
 }
 
 qsizetype CLightningFastViewerWidget::searchStartOffset(bool backward, qsizetype haystackSize) const
@@ -1419,10 +1423,10 @@ const QByteArray& CLightningFastViewerWidget::foldedData()
 	return _foldedData;
 }
 
-bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFlags options, bool wrapAround)
+FindResult CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFlags options, bool wrapAround)
 {
 	if (exp.isEmpty())
-		return false;
+		return FindResult::NotFound;
 
 	const bool backward = options & QTextDocument::FindBackward;
 	const bool wholeWords = options & QTextDocument::FindWholeWords;
@@ -1436,7 +1440,7 @@ bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFla
 
 	// No byte can hold a character above U+00FF, and toLatin1 would fold one to '?' and match those bytes instead
 	if (_mode == Mode::Hex && std::any_of(exp.cbegin(), exp.cend(), [](QChar ch) { return ch.unicode() > 0xFF; }))
-		return false;
+		return FindResult::NotFound;
 
 	// Hex mode searches the bytes themselves: converting the needle is free, converting the file would cost two bytes per byte on every call
 	// Folding both sides puts a case-insensitive search on QByteArray's exact search
@@ -1447,20 +1451,20 @@ bool CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFla
 			: search(foldedData(), foldedBytes(exp.toLatin1()), Qt::CaseSensitive);
 	};
 
-	const auto [matchPos, matchLen] = (_mode == Mode::Text) ? search(_text, exp, cs) : searchBytes();
-	if (matchPos < 0)
-		return false;
+	const auto [matchPos, matchLen, result] = (_mode == Mode::Text) ? search(_text, exp, cs) : searchBytes();
+	if (result == FindResult::NotFound)
+		return result;
 
 	_selection.selectRange(matchPos, matchLen, Region::Ascii);
 	ensureVisible(matchPos);
 	viewport()->update();
-	return true;
+	return result;
 }
 
-bool CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocument::FindFlags options, bool wrapAround)
+FindResult CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocument::FindFlags options, bool wrapAround)
 {
 	if (!exp.isValid() || exp.pattern().isEmpty())
-		return false;
+		return FindResult::NotFound;
 
 	const bool backward = options & QTextDocument::FindBackward;
 	const bool wholeWords = options & QTextDocument::FindWholeWords;
@@ -1479,14 +1483,14 @@ bool CLightningFastViewerWidget::find(const QRegularExpression& exp, QTextDocume
 	};
 
 	const auto searchFrom = [&](qsizetype from) { return acceptedRegexMatch(rx, haystack, from, backward, accept); };
-	const auto [matchPos, matchLen] = matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
-	if (matchPos < 0)
-		return false;
+	const auto [matchPos, matchLen, result] = matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
+	if (result == FindResult::NotFound)
+		return result;
 
 	_selection.selectRange(matchPos, matchLen, Region::Ascii);
 	ensureVisible(matchPos);
 	viewport()->update();
-	return true;
+	return result;
 }
 
 qsizetype CLightningFastViewerWidget::selectionStart() const

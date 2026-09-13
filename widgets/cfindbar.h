@@ -1,6 +1,7 @@
 #pragma once
 
 #include "compiler/compiler_warnings_control.h"
+#include "findresult.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QFrame>
@@ -29,8 +30,8 @@ class QRegularExpression;
 class CFindBar final : public QFrame
 {
 public:
-	using FindText = std::function<bool (const QString& pattern, QTextDocument::FindFlags flags)>;
-	using FindRegex = std::function<bool (const QRegularExpression& pattern, QTextDocument::FindFlags flags)>;
+	using FindText = std::function<FindResult (const QString& pattern, QTextDocument::FindFlags flags)>;
+	using FindRegex = std::function<FindResult (const QRegularExpression& pattern, QTextDocument::FindFlags flags)>;
 
 	struct Keys
 	{

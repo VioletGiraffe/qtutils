@@ -140,7 +140,7 @@ void CFindBar::findMatch(bool backward)
 	flags.setFlag(QTextDocument::FindCaseSensitively, _caseSensitiveBox->isChecked());
 	flags.setFlag(QTextDocument::FindWholeWords, _wholeWordsBox->isChecked());
 
-	bool found = false;
+	FindResult result = FindResult::NotFound;
 	if (_regexBox->isChecked())
 	{
 		const QRegularExpression regex{ pattern };
@@ -149,10 +149,21 @@ void CFindBar::findMatch(bool backward)
 			_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
 			return;
 		}
-		found = _findRegex(regex, flags);
+		result = _findRegex(regex, flags);
 	}
 	else
-		found = _findText(pattern, flags);
+		result = _findText(pattern, flags);
 
-	_statusLabel->setText(found ? QString{} : tr("Not found"));
+	switch (result)
+	{
+	case FindResult::NotFound:
+		_statusLabel->setText(tr("Not found"));
+		break;
+	case FindResult::Found:
+		_statusLabel->clear();
+		break;
+	case FindResult::FoundAfterWrapAround:
+		_statusLabel->setText(backward ? tr("Continued from the bottom") : tr("Continued from the top"));
+		break;
+	}
 }

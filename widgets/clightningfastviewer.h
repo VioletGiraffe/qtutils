@@ -1,6 +1,7 @@
 #pragma once
 
 #include "clightningfastviewer_glyphs.h"
+#include "findresult.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QAbstractScrollArea>
@@ -35,9 +36,9 @@ public:
 	void setWordWrap(bool enabled);
 	void setTabWidth(int columns);
 
-	// False leaves the selection and the scroll as they were. wrapAround: a miss continues from the far end.
-	bool find(const QString& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
-	bool find(const QRegularExpression& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
+	// NotFound leaves the selection and the scroll as they were. wrapAround: a miss continues from the far end.
+	FindResult find(const QString& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
+	FindResult find(const QRegularExpression& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
 	void moveToStart();
 	void moveToEnd();
 	// Start of the selection, or -1 when nothing is selected

@@ -4,6 +4,7 @@ HEADERS += \
     $$PWD/clabelelided.h \
     $$PWD/clineedit.h \
     $$PWD/cfindbar.h \
+    $$PWD/findresult.h \
     $$PWD/cclickablelabel.h \
     $$PWD/cplaintexteditwithlinenumbers.h \
     $$PWD/ctexteditwithlinenumbers.h \
