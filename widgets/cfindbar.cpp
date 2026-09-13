@@ -10,7 +10,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPushButton>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QToolButton>
@@ -38,6 +37,7 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 
 	auto* layout = new QHBoxLayout(this);
 	layout->setContentsMargins(8, 4, 8, 4);
+	layout->setSpacing(2);
 
 	_patternBox = new CHistoryComboBox{ this };
 	_patternBox->setCompleter(nullptr);
@@ -45,17 +45,27 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	_patternBox->lineEdit()->setClearButtonEnabled(true);
 	layout->addWidget(_patternBox, 1);
 
-	const auto addFindButton = [&](const QString& text, QAction* action) {
-		auto* button = new QPushButton{ text };
-		button->setToolTip(action->shortcut().toString(QKeySequence::NativeText));
+	const auto addToolButton = [&](const QString& glyph, const QString& toolTip) {
+		auto* button = new QToolButton;
+		button->setText(glyph);
+		button->setToolTip(toolTip);
+		button->setAutoRaise(true);
 		button->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard
-		connect(button, &QPushButton::clicked, action, &QAction::trigger);
 		layout->addWidget(button);
+		return button;
 	};
-	addFindButton(tr("Previous"), _findPreviousAction);
-	addFindButton(tr("Next"), _findNextAction);
+
+	const auto addFindButton = [&](const QString& glyph, QAction* action) {
+		const QString key = action->shortcut().toString(QKeySequence::NativeText);
+		auto* button = addToolButton(glyph, key.isEmpty() ? action->text() : tr("%1 (%2)").arg(action->text(), key));
+		connect(button, &QToolButton::clicked, action, &QAction::trigger);
+	};
+	addFindButton(QStringLiteral("˄"), _findPreviousAction);
+	addFindButton(QStringLiteral("˅"), _findNextAction);
 
 	_countLabel = new QLabel;
+	layout->addWidget(_countLabel);
+
 	_statusLabel = new QLabel;
 
 	const auto addOptionBox = [&](const QString& text, const QString& settingName) {
@@ -75,16 +85,10 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	_wholeWordsBox = addOptionBox(tr("&Whole words"), QStringLiteral("WholeWords"));
 	_regexBox = addOptionBox(tr("Re&gex"), QStringLiteral("Regex"));
 
-	layout->addWidget(_countLabel);
 	layout->addWidget(_statusLabel);
 
-	auto* closeButton = new QToolButton;
-	closeButton->setText(QStringLiteral("✕"));
-	closeButton->setToolTip(tr("Close (Esc)"));
-	closeButton->setAutoRaise(true);
-	closeButton->setFocusPolicy(Qt::NoFocus);
+	auto* const closeButton = addToolButton(QStringLiteral("✕"), tr("Close (Esc)"));
 	connect(closeButton, &QToolButton::clicked, this, &CFindBar::deactivate);
-	layout->addWidget(closeButton);
 
 	if (!_settingsRootKey.isEmpty())
 		_patternBox->enableAutoSave(_settingsRootKey + QStringLiteral("/Expressions"));
