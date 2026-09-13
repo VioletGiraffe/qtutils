@@ -36,9 +36,23 @@ void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
 	_bClearEditorOnItemActivation = clear;
 }
 
-void CHistoryComboBox::setSaveCurrentText(bool save)
+void CHistoryComboBox::moveCurrentTextToTopOfHistory()
 {
-	_bSaveCurrentText = save;
+	const QString text = currentText();
+	if (!_bHistoryMode || text.isEmpty())
+		return;
+
+	QStringList list = items();
+	list.push_front(text);
+	list = SetOperations::uniqueElements(list);
+
+	setUpdatesEnabled(false);
+	clear();
+	addItems(list);
+	setUpdatesEnabled(true);
+
+	setCurrentIndex(0);
+	saveState();
 }
 
 void CHistoryComboBox::setHistoryMode(bool historyMode)
@@ -76,15 +90,10 @@ void CHistoryComboBox::resetToLastSelected(bool clearLineEdit)
 
 QStringList CHistoryComboBox::items() const
 {
-	const QString currentItemText = currentText();
 	const auto nItems = count();
 
 	QStringList itemsList;
-	itemsList.reserve(nItems + 1);
-
-	if (!currentItemText.isEmpty() && currentIndex() >= 0 && currentItemText != itemText(currentIndex()))
-		itemsList.push_back(currentItemText);
-
+	itemsList.reserve(nItems);
 	for (int i = 0; i < nItems; ++i)
 		itemsList.push_back(itemText(i));
 
@@ -100,8 +109,6 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	}
 	else
 		QComboBox::keyPressEvent(e);
-
-	saveState();
 }
 
 void CHistoryComboBox::currentItemActivated()
@@ -113,38 +120,14 @@ void CHistoryComboBox::currentItemActivated()
 
 void CHistoryComboBox::onItemSelected()
 {
-	if (_bHistoryMode)
-	{
-		auto list = items();
-		list.push_front(currentText());
+	moveCurrentTextToTopOfHistory();
 
-		list = SetOperations::uniqueElements(list);
-
-		setUpdatesEnabled(false);
-		clear();
-		addItems(list);
-		setUpdatesEnabled(true);
-
-		setCurrentIndex(0);
-
-		if (_bClearEditorOnItemActivation)
-			lineEdit()->clear();
-	}
-
-	saveState();
-}
-
-QStringList CHistoryComboBox::itemsToSave() const
-{
-	auto result = items();
-	if (_bSaveCurrentText)
-		result.push_front(currentText());
-
-	return result;
+	if (_bClearEditorOnItemActivation)
+		lineEdit()->clear();
 }
 
 void CHistoryComboBox::saveState()
 {
 	if (!_settingName.isEmpty())
-		QSettings().setValue(_settingName, itemsToSave());
+		QSettings().setValue(_settingName, items());
 }

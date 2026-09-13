@@ -16,7 +16,8 @@ public:
 
 	void enableAutoSave(const QString& settingName);
 	void setClearEditorOnItemActivation(bool clear);
-	void setSaveCurrentText(bool save);
+	// No effect outside history mode or while the text is empty
+	void moveCurrentTextToTopOfHistory();
 
 	[[nodiscard]] QStringList items() const;
 	[[nodiscard]] bool historyMode() const;
@@ -35,16 +36,13 @@ protected:
 	void keyPressEvent(QKeyEvent * e) override;
 
 private:
-	// Moves the currently selected item to the top
 	void currentItemActivated();
 	void onItemSelected();
 
-	[[nodiscard]] QStringList itemsToSave() const;
 	void saveState();
 
 private:
 	QString _settingName;
 	bool _bHistoryMode = true;
 	bool _bClearEditorOnItemActivation = false;
-	bool _bSaveCurrentText = false;
 };
