@@ -7,12 +7,15 @@ DISABLE_COMPILER_WARNINGS
 #include <QAbstractScrollArea>
 #include <QBrush>
 #include <QByteArray>
+#include <QDeadlineTimer>
 #include <QFontMetrics>
 #include <QRegularExpression>
 #include <QTextDocument>
 RESTORE_COMPILER_WARNINGS
 
 #include <cstdint>
+#include <optional>
+#include <variant>
 #include <vector>
 
 class QPalette;
@@ -39,6 +42,10 @@ public:
 	// NotFound leaves the selection and the scroll as they were. wrapAround: a miss continues from the far end.
 	FindResult find(const QString& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
 	FindResult find(const QRegularExpression& exp, QTextDocument::FindFlags options = {}, bool wrapAround = false);
+	// Counts the matches a forward find() steps through from the start, numbering the selected one; ignores FindBackward.
+	// Stops at 'deadline'. A later call for the same pattern resumes only while the selection lies past the counted part.
+	[[nodiscard]] MatchCount countMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
+	[[nodiscard]] MatchCount countMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
 	void moveToStart();
 	void moveToEnd();
 	// Start of the selection, or -1 when nothing is selected
@@ -125,6 +132,25 @@ private:
 	[[nodiscard]] const QString& regexHaystack();
 	// _data with every byte case-folded, converted once and kept until the content changes
 	[[nodiscard]] const QByteArray& foldedData();
+
+	// Progress of counting one pattern's matches
+	struct MatchCounting
+	{
+		std::variant<QString, QRegularExpression> pattern;
+		QTextDocument::FindFlags options; // Without FindBackward
+		std::vector<qsizetype> matchStarts; // For numbering the selected match; capped, while 'total' counts on
+		qsizetype total = 0;
+		qsizetype countedUpTo = 0; // Every match starting before this offset is counted
+	};
+
+	// search(haystack, needle, cs) run over what a literal search for 'exp' covers; empty where 'exp' cannot occur there
+	template <typename Search>
+	auto searchLiteral(const QString& exp, Qt::CaseSensitivity cs, Search search);
+	// Starts the count over unless it belongs to this pattern and these options
+	MatchCounting& matchCountingFor(std::variant<QString, QRegularExpression> pattern, QTextDocument::FindFlags options);
+	// scanFrom(offset, onMatch) counts on until its deadline and returns the offset it stopped at
+	template <typename ScanFrom>
+	[[nodiscard]] MatchCount continueMatchCount(MatchCounting& counting, qsizetype haystackSize, ScanFrom scanFrom);
 
 	// Hex mode methods
 	void calculateHexLayout();
@@ -219,6 +245,7 @@ private:
 	GlyphSubstitution::Table _glyphs; // Rebuilt on every font change
 	QFontMetrics _fontMetrics;
 	Selection _selection;
+	std::optional<MatchCounting> _matchCounting; // Of the last pattern countMatches() was given, until the content changes
 	QPoint _dragPos;          // Last position of a drag in progress, in viewport coordinates
 	int _autoScrollTimer = 0; // startTimer id while a drag is past a viewport edge; 0 otherwise
 	bool _dragging = false;   // Set only by a press that landed on content, so a drag cannot resume an older selection

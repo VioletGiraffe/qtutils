@@ -1,5 +1,6 @@
 #include "cfindbar.h"
 #include "chistorycombobox.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QAction>
@@ -15,14 +16,16 @@ DISABLE_COMPILER_WARNINGS
 #include <QToolButton>
 RESTORE_COMPILER_WARNINGS
 
+#include <chrono>
 #include <utility>
 
-CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QString settingsRootKey, QWidget* parent) :
+CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settingsRootKey, QWidget* parent) :
 	QFrame(parent),
-	_findText{ std::move(findText) },
-	_findRegex{ std::move(findRegex) },
+	_hostFunctions{ std::move(hostFunctions) },
 	_settingsRootKey{ std::move(settingsRootKey) }
 {
+	assert_r(_hostFunctions.findText && _hostFunctions.findRegex);
+
 	const auto createAction = [this](const QString& text, const QKeySequence& key, auto onTriggered) {
 		auto* action = new QAction{ text, this };
 		action->setShortcut(key);
@@ -52,12 +55,13 @@ CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QSt
 	addFindButton(tr("Previous"), _findPreviousAction);
 	addFindButton(tr("Next"), _findNextAction);
 
+	_countLabel = new QLabel;
 	_statusLabel = new QLabel;
 
 	const auto addOptionBox = [&](const QString& text, const QString& settingName) {
 		auto* box = new QCheckBox{ text };
 		box->setFocusPolicy(Qt::NoFocus); // the pattern field keeps the keyboard; the mnemonics toggle the boxes
-		connect(box, &QCheckBox::toggled, _statusLabel, &QLabel::clear);
+		connect(box, &QCheckBox::toggled, this, &CFindBar::clearStatus);
 		if (!_settingsRootKey.isEmpty())
 		{
 			const QString settingKey = _settingsRootKey + '/' + settingName;
@@ -71,6 +75,7 @@ CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QSt
 	_wholeWordsBox = addOptionBox(tr("&Whole words"), QStringLiteral("WholeWords"));
 	_regexBox = addOptionBox(tr("Re&gex"), QStringLiteral("Regex"));
 
+	layout->addWidget(_countLabel);
 	layout->addWidget(_statusLabel);
 
 	auto* closeButton = new QToolButton;
@@ -87,7 +92,7 @@ CFindBar::CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QSt
 	connect(_patternBox, &CHistoryComboBox::itemActivated, this, [this](const QString&, Qt::KeyboardModifiers modifiers) {
 		findMatch(modifiers.testFlag(Qt::ShiftModifier));
 	});
-	connect(_patternBox, &QComboBox::editTextChanged, _statusLabel, &QLabel::clear);
+	connect(_patternBox, &QComboBox::editTextChanged, this, &CFindBar::clearStatus);
 
 	hide();
 }
@@ -105,6 +110,12 @@ void CFindBar::activate()
 	show();
 	_patternBox->setFocus(Qt::ShortcutFocusReason);
 	_patternBox->lineEdit()->selectAll();
+}
+
+void CFindBar::clearStatus()
+{
+	_countLabel->clear();
+	_statusLabel->clear();
 }
 
 bool CFindBar::eventFilter(QObject* watched, QEvent* event)
@@ -136,6 +147,8 @@ void CFindBar::deactivate()
 	hide();
 }
 
+static constexpr std::chrono::milliseconds matchCountingBudget{ 1000 };
+
 void CFindBar::findMatch(bool backward)
 {
 	const QString pattern = _patternBox->currentText();
@@ -156,19 +169,17 @@ void CFindBar::findMatch(bool backward)
 	flags.setFlag(QTextDocument::FindCaseSensitively, _caseSensitiveBox->isChecked());
 	flags.setFlag(QTextDocument::FindWholeWords, _wholeWordsBox->isChecked());
 
-	FindResult result = FindResult::NotFound;
-	if (_regexBox->isChecked())
+	_countLabel->clear();
+
+	const bool isRegex = _regexBox->isChecked();
+	const QRegularExpression regex{ isRegex ? pattern : QString{} };
+	if (isRegex && !regex.isValid())
 	{
-		const QRegularExpression regex{ pattern };
-		if (!regex.isValid())
-		{
-			_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
-			return;
-		}
-		result = _findRegex(regex, flags);
+		_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
+		return;
 	}
-	else
-		result = _findText(pattern, flags);
+
+	const FindResult result = isRegex ? _hostFunctions.findRegex(regex, flags) : _hostFunctions.findText(pattern, flags);
 
 	switch (result)
 	{
@@ -182,4 +193,13 @@ void CFindBar::findMatch(bool backward)
 		_statusLabel->setText(backward ? tr("Continued from the bottom") : tr("Continued from the top"));
 		break;
 	}
+
+	const bool canCount = isRegex ? static_cast<bool>(_hostFunctions.countRegex) : static_cast<bool>(_hostFunctions.countText);
+	if (result == FindResult::NotFound || !canCount)
+		return;
+
+	const QDeadlineTimer deadline{ matchCountingBudget };
+	const MatchCount count = isRegex ? _hostFunctions.countRegex(regex, flags, deadline) : _hostFunctions.countText(pattern, flags, deadline);
+	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
+	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
 }

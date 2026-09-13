@@ -3,6 +3,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+#include <QByteArrayView>
 #include <QClipboard>
 #include <QEvent>
 #include <QFontDatabase>
@@ -14,11 +15,13 @@ DISABLE_COMPILER_WARNINGS
 #include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QStringView>
 RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
 #include <limits>
 #include <tuple>
+#include <type_traits>
 
 using GlyphSubstitution::isPrintableAscii;
 
@@ -212,6 +215,7 @@ void CLightningFastViewerWidget::contentChanged()
 	_selection = Selection{ .region = (_mode == Mode::Hex) ? Region::Hex : Region::Ascii };
 	_hexSearchText.clear();
 	_foldedData.clear();
+	_matchCounting.reset();
 	_lineOffsets.clear();
 	_logicalLineNumbers.clear();
 	_maxLineColumns = 0;
@@ -1331,6 +1335,91 @@ static qsizetype indexOfIn(const QByteArray& haystack, const QByteArray& needle,
 	return backward ? haystack.lastIndexOf(needle, from) : haystack.indexOf(needle, from);
 }
 
+// First match lying entirely in [from, end)
+static qsizetype indexOfWithin(const QString& haystack, const QString& needle, qsizetype from, qsizetype end, Qt::CaseSensitivity cs)
+{
+	return QStringView{ haystack }.first(end).indexOf(needle, from, cs);
+}
+
+static qsizetype indexOfWithin(const QByteArray& haystack, const QByteArray& needle, qsizetype from, qsizetype end, Qt::CaseSensitivity cs)
+{
+	assert_r(cs == Qt::CaseSensitive);
+	return QByteArrayView{ haystack }.first(end).indexOf(needle, from);
+}
+
+// The matches find() stops at and countMatches() counts
+// An empty match has nothing to show and nothing to step over: a regex allowing one would return the same position forever
+template <typename Haystack>
+static auto matchAcceptor(const Haystack& haystack, bool wholeWords)
+{
+	return [&haystack, wholeWords](qsizetype pos, qsizetype len) { return len > 0 && (!wholeWords || isWholeWordMatch(haystack, pos, len)); };
+}
+
+// 'exp' with its case sensitivity set by FindCaseSensitively
+static QRegularExpression withCaseSensitivity(const QRegularExpression& exp, QTextDocument::FindFlags options)
+{
+	QRegularExpression rx = exp;
+	if (options & QTextDocument::FindCaseSensitively)
+		rx.setPatternOptions(rx.patternOptions() & ~QRegularExpression::CaseInsensitiveOption);
+	else
+		rx.setPatternOptions(rx.patternOptions() | QRegularExpression::CaseInsensitiveOption);
+
+	return rx;
+}
+
+// Counts on from 'from' as a forward find() steps: past each accepted match, one position past each rejected one.
+// Searches in chunks, checking the deadline between them. Returns the offset counting stopped at: haystack.size() when done.
+template <typename Haystack, typename Needle, typename Accept, typename OnMatch>
+static qsizetype countLiteralMatches(const Haystack& haystack, const Needle& needle, qsizetype from, Qt::CaseSensitivity cs, Accept accept, OnMatch onMatch, QDeadlineTimer deadline)
+{
+	constexpr qsizetype chunkSize = 1 << 20;
+
+	while (from < haystack.size())
+	{
+		const qsizetype chunkEnd = std::min(haystack.size(), from + chunkSize);
+		const qsizetype searchEnd = std::min(haystack.size(), chunkEnd + needle.size() - 1); // A match starting in the chunk may end past it
+		for (;;)
+		{
+			const qsizetype matchPos = indexOfWithin(haystack, needle, from, searchEnd, cs);
+			if (matchPos < 0 || matchPos >= chunkEnd)
+				break;
+
+			if (accept(matchPos, needle.size()))
+			{
+				onMatch(matchPos);
+				from = matchPos + needle.size();
+			}
+			else
+				from = matchPos + 1;
+		}
+
+		from = std::max(from, chunkEnd);
+		if (deadline.hasExpired())
+			break;
+	}
+
+	return from;
+}
+
+// Counts on from 'from' as a forward find() steps, checking the deadline between matches: a long stretch without one runs to its end.
+// Returns the offset counting stopped at: haystack.size() when done.
+template <typename Accept, typename OnMatch>
+static qsizetype countRegexMatches(const QRegularExpression& rx, const QString& haystack, qsizetype from, Accept accept, OnMatch onMatch, QDeadlineTimer deadline)
+{
+	for (auto it = rx.globalMatch(haystack, from); it.hasNext(); )
+	{
+		const QRegularExpressionMatch match = it.next();
+		if (accept(match.capturedStart(), match.capturedLength()))
+			onMatch(match.capturedStart());
+
+		// A global match started at the end of this one picks up where the iterator is
+		if (deadline.hasExpired())
+			return match.capturedEnd();
+	}
+
+	return haystack.size();
+}
+
 // Nearest match to 'from' in the given direction that 'accept' allows, stepping one position past each rejected match.
 // A negative 'from' means nothing is left to search: lastIndexOf would read it as "start at the end".
 // Returns {-1, 0} when no match is accepted.
@@ -1423,6 +1512,25 @@ const QByteArray& CLightningFastViewerWidget::foldedData()
 	return _foldedData;
 }
 
+template <typename Search>
+auto CLightningFastViewerWidget::searchLiteral(const QString& exp, Qt::CaseSensitivity cs, Search search)
+{
+	using Result = std::invoke_result_t<Search&, const QString&, const QString&, Qt::CaseSensitivity>;
+	if (_mode == Mode::Text)
+		return std::optional<Result>{ search(_text, exp, cs) };
+
+	// No byte can hold a character above U+00FF, and toLatin1 would fold one to '?' and match those bytes instead
+	if (std::any_of(exp.cbegin(), exp.cend(), [](QChar ch) { return ch.unicode() > 0xFF; }))
+		return std::optional<Result>{};
+
+	// Hex mode searches the bytes themselves: converting the needle is free, converting the file would cost two bytes per byte on every call
+	// Folding both sides puts a case-insensitive search on QByteArray's exact search
+	// Folding is per byte, so offsets and the ASCII word classification both survive it
+	return std::optional<Result>{ cs == Qt::CaseSensitive
+		? search(_data, exp.toLatin1(), Qt::CaseSensitive)
+		: search(foldedData(), foldedBytes(exp.toLatin1()), Qt::CaseSensitive) };
+}
+
 FindResult CLightningFastViewerWidget::find(const QString& exp, QTextDocument::FindFlags options, bool wrapAround)
 {
 	if (exp.isEmpty())
@@ -1432,26 +1540,14 @@ FindResult CLightningFastViewerWidget::find(const QString& exp, QTextDocument::F
 	const bool wholeWords = options & QTextDocument::FindWholeWords;
 	const Qt::CaseSensitivity cs = (options & QTextDocument::FindCaseSensitively) ? Qt::CaseSensitive : Qt::CaseInsensitive;
 
-	const auto search = [&](const auto& haystack, const auto& needle, Qt::CaseSensitivity sensitivity) {
-		const auto accept = [&](qsizetype pos, qsizetype len) { return !wholeWords || isWholeWordMatch(haystack, pos, len); };
-		const auto searchFrom = [&](qsizetype from) { return acceptedLiteralMatch(haystack, needle, from, backward, sensitivity, accept); };
+	const auto match = searchLiteral(exp, cs, [&](const auto& haystack, const auto& needle, Qt::CaseSensitivity sensitivity) {
+		const auto searchFrom = [&](qsizetype from) { return acceptedLiteralMatch(haystack, needle, from, backward, sensitivity, matchAcceptor(haystack, wholeWords)); };
 		return matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
-	};
-
-	// No byte can hold a character above U+00FF, and toLatin1 would fold one to '?' and match those bytes instead
-	if (_mode == Mode::Hex && std::any_of(exp.cbegin(), exp.cend(), [](QChar ch) { return ch.unicode() > 0xFF; }))
+	});
+	if (!match)
 		return FindResult::NotFound;
 
-	// Hex mode searches the bytes themselves: converting the needle is free, converting the file would cost two bytes per byte on every call
-	// Folding both sides puts a case-insensitive search on QByteArray's exact search
-	// Folding is per byte, so offsets and the ASCII word classification both survive it
-	const auto searchBytes = [&] {
-		return cs == Qt::CaseSensitive
-			? search(_data, exp.toLatin1(), Qt::CaseSensitive)
-			: search(foldedData(), foldedBytes(exp.toLatin1()), Qt::CaseSensitive);
-	};
-
-	const auto [matchPos, matchLen, result] = (_mode == Mode::Text) ? search(_text, exp, cs) : searchBytes();
+	const auto [matchPos, matchLen, result] = *match;
 	if (result == FindResult::NotFound)
 		return result;
 
@@ -1468,21 +1564,10 @@ FindResult CLightningFastViewerWidget::find(const QRegularExpression& exp, QText
 
 	const bool backward = options & QTextDocument::FindBackward;
 	const bool wholeWords = options & QTextDocument::FindWholeWords;
-
-	QRegularExpression rx = exp;
-	if (options & QTextDocument::FindCaseSensitively)
-		rx.setPatternOptions(rx.patternOptions() & ~QRegularExpression::CaseInsensitiveOption);
-	else
-		rx.setPatternOptions(rx.patternOptions() | QRegularExpression::CaseInsensitiveOption);
-
+	const QRegularExpression rx = withCaseSensitivity(exp, options);
 	const QString& haystack = regexHaystack();
 
-	// An empty match has nothing to show and nothing to step over, so a pattern that allows one would return the same position forever
-	const auto accept = [&](qsizetype pos, qsizetype len) {
-		return len > 0 && (!wholeWords || isWholeWordMatch(haystack, pos, len));
-	};
-
-	const auto searchFrom = [&](qsizetype from) { return acceptedRegexMatch(rx, haystack, from, backward, accept); };
+	const auto searchFrom = [&](qsizetype from) { return acceptedRegexMatch(rx, haystack, from, backward, matchAcceptor(haystack, wholeWords)); };
 	const auto [matchPos, matchLen, result] = matchWithWrapAround(searchFrom, searchStartOffset(backward, haystack.size()), haystack.size(), backward, wrapAround);
 	if (result == FindResult::NotFound)
 		return result;
@@ -1491,6 +1576,70 @@ FindResult CLightningFastViewerWidget::find(const QRegularExpression& exp, QText
 	ensureVisible(matchPos);
 	viewport()->update();
 	return result;
+}
+
+MatchCount CLightningFastViewerWidget::countMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline)
+{
+	if (exp.isEmpty())
+		return MatchCount{ .complete = true };
+
+	const bool wholeWords = options & QTextDocument::FindWholeWords;
+	const Qt::CaseSensitivity cs = (options & QTextDocument::FindCaseSensitively) ? Qt::CaseSensitive : Qt::CaseInsensitive;
+	MatchCounting& counting = matchCountingFor(exp, options);
+
+	const auto count = searchLiteral(exp, cs, [&](const auto& haystack, const auto& needle, Qt::CaseSensitivity sensitivity) {
+		return continueMatchCount(counting, haystack.size(), [&](qsizetype from, auto onMatch) {
+			return countLiteralMatches(haystack, needle, from, sensitivity, matchAcceptor(haystack, wholeWords), onMatch, deadline);
+		});
+	});
+
+	return count.value_or(MatchCount{ .complete = true });
+}
+
+MatchCount CLightningFastViewerWidget::countMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline)
+{
+	if (!exp.isValid() || exp.pattern().isEmpty())
+		return MatchCount{ .complete = true };
+
+	const bool wholeWords = options & QTextDocument::FindWholeWords;
+	const QRegularExpression rx = withCaseSensitivity(exp, options);
+	const QString& haystack = regexHaystack();
+
+	return continueMatchCount(matchCountingFor(rx, options), haystack.size(), [&](qsizetype from, auto onMatch) {
+		return countRegexMatches(rx, haystack, from, matchAcceptor(haystack, wholeWords), onMatch, deadline);
+	});
+}
+
+CLightningFastViewerWidget::MatchCounting& CLightningFastViewerWidget::matchCountingFor(std::variant<QString, QRegularExpression> pattern, QTextDocument::FindFlags options)
+{
+	options.setFlag(QTextDocument::FindBackward, false);
+	if (!_matchCounting || _matchCounting->pattern != pattern || _matchCounting->options != options)
+		_matchCounting = MatchCounting{ .pattern = std::move(pattern), .options = options };
+
+	return *_matchCounting;
+}
+
+static constexpr size_t maxStoredMatchStarts = 1'000'000; // 8 MB
+
+template <typename ScanFrom>
+MatchCount CLightningFastViewerWidget::continueMatchCount(MatchCounting& counting, qsizetype haystackSize, ScanFrom scanFrom)
+{
+	const qsizetype selectionStart = _selection.hasSelection() ? _selection.first() : -1;
+	if (counting.countedUpTo < haystackSize && selectionStart >= counting.countedUpTo)
+	{
+		counting.countedUpTo = scanFrom(counting.countedUpTo, [&counting](qsizetype matchStart) {
+			if (counting.matchStarts.size() < maxStoredMatchStarts)
+				counting.matchStarts.push_back(matchStart);
+			++counting.total;
+		});
+	}
+
+	MatchCount count{ .total = counting.total, .complete = counting.countedUpTo >= haystackSize };
+	const auto stored = std::lower_bound(counting.matchStarts.cbegin(), counting.matchStarts.cend(), selectionStart);
+	if (stored != counting.matchStarts.cend() && *stored == selectionStart)
+		count.number = stored - counting.matchStarts.cbegin() + 1;
+
+	return count;
 }
 
 qsizetype CLightningFastViewerWidget::selectionStart() const

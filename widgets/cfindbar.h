@@ -4,6 +4,7 @@
 #include "findresult.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QDeadlineTimer>
 #include <QFrame>
 #include <QKeySequence>
 #include <QList>
@@ -23,6 +24,7 @@ class QShowEvent;
 
 // Find bar: a pattern field with history, previous and next, case, whole-word and regex toggles, a status label, a close button.
 //   Searches through the host's find functions, which must wrap around at either end.
+//   After a successful search, the host's count functions number the match, with a second to count per search.
 //   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
 //   Hidden until any of its actions; only Find moves the focus into it. Enter searches forward, Shift+Enter backward.
 //   While visible, the bar takes Esc from its window's shortcuts and hides on it; a widget that handles Esc itself still gets it first.
@@ -33,6 +35,17 @@ class CFindBar final : public QFrame
 public:
 	using FindText = std::function<FindResult (const QString& pattern, QTextDocument::FindFlags flags)>;
 	using FindRegex = std::function<FindResult (const QRegularExpression& pattern, QTextDocument::FindFlags flags)>;
+	using CountText = std::function<MatchCount (const QString& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
+	using CountRegex = std::function<MatchCount (const QRegularExpression& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
+
+	struct HostFunctions
+	{
+		FindText findText;
+		FindRegex findRegex;
+		// Optional: without one, searches of that kind show no match count
+		CountText countText;
+		CountRegex countRegex;
+	};
 
 	struct Keys
 	{
@@ -42,13 +55,16 @@ public:
 	};
 
 	// settingsRootKey: the QSettings group for the pattern history and the toggles; empty for no persistence
-	CFindBar(FindText findText, FindRegex findRegex, const Keys& keys, QString settingsRootKey, QWidget* parent = nullptr);
+	CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settingsRootKey, QWidget* parent = nullptr);
 
 	// Find, Find next and Find previous
 	[[nodiscard]] QList<QAction*> findActions() const;
 
 	// Shows the bar and focuses the pattern field, its text selected
 	void activate();
+
+	// Clears the match count and the search message; the host calls this when the searched content changes
+	void clearStatus();
 
 protected:
 	bool eventFilter(QObject* watched, QEvent* event) override;
@@ -61,8 +77,7 @@ private:
 	void findMatch(bool backward);
 
 private:
-	const FindText _findText;
-	const FindRegex _findRegex;
+	const HostFunctions _hostFunctions;
 	const QString _settingsRootKey;
 	QPointer<QWidget> _focusBeforeActivation;
 
@@ -74,5 +89,6 @@ private:
 	QCheckBox* _caseSensitiveBox = nullptr;
 	QCheckBox* _wholeWordsBox = nullptr;
 	QCheckBox* _regexBox = nullptr;
+	QLabel* _countLabel = nullptr;
 	QLabel* _statusLabel = nullptr;
 };
