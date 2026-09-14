@@ -85,8 +85,6 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `taskbarprogress/taskbarprogress/ctaskbarprogress.h` | Native taskbar progress state/value abstraction. Windows implements normal, paused, error, indeterminate, and hidden states for one top-level window; macOS, Linux, and FreeBSD are currently no-ops. |
 | `taskbarprogress/cprogressbartaskbar.h` | `QProgressBar` that mirrors its range, value, visibility, and state to a linked native taskbar button. |
 
-The Qxt-derived tooltip sources under `taskbarprogress/taskbarprogress/{linux,freebsd}` are vendored implementation material, not part of the supported `qtutils` API.
-
 ## Building
 
 Build `qtutils.pro` with qmake after making `cpputils` and `cpp-template-utils` available at the sibling paths expected by the project. The library links Qt Core, Gui, and Widgets; taskbar progress adds a native implementation only on Windows. The theming module, and any app including `theme/cthemeiconhandler.h`, needs Qt's private Core headers (`QT += core-private`); an app using `CTintedSvgIconEngine` must add `QT += svg` itself.

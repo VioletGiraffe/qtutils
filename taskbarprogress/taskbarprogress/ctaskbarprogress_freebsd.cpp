@@ -1,5 +1,4 @@
 #include "ctaskbarprogress.h"
-#include "linux/qxttooltip.h"
 
 CTaskBarProgress::CTaskBarProgress(QWidget * widget) : _parent(widget)
 {
