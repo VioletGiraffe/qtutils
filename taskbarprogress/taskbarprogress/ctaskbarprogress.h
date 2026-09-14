@@ -76,9 +76,6 @@ public:
 	void linkToWidgetsTaskbarButton(QWidget * widget);
 	void setProgress(int progress, int minValue = 0, int maxValue = 100);
 	void setState(ProgressState state);
-
-private:
-	QWidget      * _parent = nullptr;
 };
 
 #endif // _WIN32 / __APPLE__
