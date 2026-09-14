@@ -21,8 +21,8 @@ CIconEngineQImage::CIconEngineQImage(QImage source, ScaleFunction scale) noexcep
 
 	if (!_scale)
 	{
-		_scale = [](const QImage& source, const QSize& targetSize) -> QImage {
-			return source.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+		_scale = [](const QImage& img, const QSize& targetSize) -> QImage {
+			return img.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 		};
 	}
 }
