@@ -20,13 +20,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QtWidgets/QTreeWidget>
 RESTORE_COMPILER_WARNINGS
 
-struct WidgetHierarchy {
-	QWidget* widget = nullptr;
-	QLayout* layout = nullptr;
-
-	std::vector<WidgetHierarchy> children;
-};
-
 struct CUiInspector::Ui final : QObject {
 	using QObject::QObject;
 
@@ -34,6 +27,15 @@ struct CUiInspector::Ui final : QObject {
 	QTextBrowser* _detailsText = nullptr;
 	QAction* _actShowHiddenItems = nullptr;
 };
+
+struct WidgetHierarchy {
+	QWidget* widget = nullptr;
+	QLayout* layout = nullptr;
+
+	std::vector<WidgetHierarchy> children;
+};
+
+namespace {
 
 static inline QString getExtraWidgetString(const QWidget* widget)
 {
@@ -51,7 +53,7 @@ static inline QString getExtraWidgetString(const QWidget* widget)
 		return {};
 }
 
-static QString getItemInfo(const QWidget* widget)
+QString getItemInfo(const QWidget* widget)
 {
 	if (!widget)
 		return "<null QWidget>";
@@ -70,7 +72,7 @@ static QString getItemInfo(const QWidget* widget)
 	return description;
 }
 
-static QString getItemInfo(const QLayout* layout)
+QString getItemInfo(const QLayout* layout)
 {
 	if (!layout)
 		return "<null QLayout>";
@@ -85,7 +87,7 @@ static QString getItemInfo(const QLayout* layout)
 	return description;
 }
 
-static QString getWidgetDetails(const QWidget* widget)
+QString getWidgetDetails(const QWidget* widget)
 {
 	QString details;
 	if (widget)
@@ -107,7 +109,7 @@ static QString getWidgetDetails(const QWidget* widget)
 	return details;
 }
 
-static QString getLayoutDetails(const QLayout* layout)
+QString getLayoutDetails(const QLayout* layout)
 {
 	QString details;
 	if (layout)
@@ -124,6 +126,51 @@ static QString getLayoutDetails(const QLayout* layout)
 		infoWriter << "item count:" << layout->count() << '\n';
 	}
 	return details;
+}
+
+QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, const bool showHidden, QTreeWidgetItem* parent = nullptr)
+{
+	const bool isHiddenWidget = hierarchy.widget && !hierarchy.widget->isVisible();
+	if (showHidden && isHiddenWidget) // Hidden widgets contain no visible children - do not iterate further
+		return nullptr;
+
+	auto* item = new QTreeWidgetItem(parent);
+
+	QString description;
+
+	// Scope to ensure destruction of the QDebug object
+	{
+		if (hierarchy.widget)
+		{
+			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.widget);
+			description = getItemInfo(hierarchy.widget);
+		}
+		else if (hierarchy.layout)
+		{
+			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.layout);
+			description = getItemInfo(hierarchy.layout);
+		}
+		else
+			assert(!"Both widget and layout are nullptr");
+	}
+
+	item->setText(0, description);
+	if (hierarchy.layout)
+		item->setForeground(0, qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QColor(100, 255, 0) : QColor(70, 178, 0));
+
+	if (isHiddenWidget)
+	{
+		QFont font = item->font(0);
+		font.setItalic(true);
+		item->setFont(0, font);
+	}
+
+	for (const auto& child : hierarchy.children)
+		createTreeItem(child, showHidden, item);
+
+	return item;
+}
+
 }
 
 CUiInspector::CUiInspector(QWidget* parent) noexcept :
@@ -183,7 +230,7 @@ void CUiInspector::setupUi()
 
 	centralSplitter->setStretchFactor(0, 1);
 	centralSplitter->setStretchFactor(1, 0);
-	
+
 	setCentralWidget(centralSplitter);
 
 	connect(_ui->_tree, &QTreeWidget::currentItemChanged, this, &CUiInspector::onItemSelected);
@@ -204,49 +251,6 @@ void CUiInspector::inspect()
 		inspectWidgetHierarchy(_rootToInspect, hierarchy);
 
 	visualize(hierarchy);
-}
-
-QTreeWidgetItem* createTreeItem(const WidgetHierarchy& hierarchy, const bool showHidden, QTreeWidgetItem* parent = nullptr)
-{
-	const bool isHiddenWidget = hierarchy.widget && !hierarchy.widget->isVisible();
-	if (showHidden && isHiddenWidget) // Hidden widgets contain no visible children - do not iterate further
-		return nullptr;
-
-	auto* item = new QTreeWidgetItem(parent);
-
-	QString description;
-
-	// Scope to ensure destruction of the QDebug object
-	{
-		if (hierarchy.widget)
-		{
-			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.widget);
-			description = getItemInfo(hierarchy.widget);
-		}
-		else if (hierarchy.layout)
-		{
-			item->setData(0, Qt::UserRole, (qulonglong)hierarchy.layout);
-			description = getItemInfo(hierarchy.layout);
-		}
-		else
-			assert(!"Both widget and layout are nullptr");
-	}
-
-	item->setText(0, description);
-	if (hierarchy.layout)
-		item->setForeground(0, qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QColor(100, 255, 0) : QColor(70, 178, 0));
-
-	if (isHiddenWidget)
-	{
-		QFont font = item->font(0);
-		font.setItalic(true);
-		item->setFont(0, font);
-	}
-
-	for (const auto& child : hierarchy.children)
-		createTreeItem(child, showHidden, item);
-
-	return item;
 }
 
 void CUiInspector::visualize(const std::vector<WidgetHierarchy>& hierarchy)

@@ -249,7 +249,7 @@ void CImageViewerWidget::setScale(qreal scale) noexcept
 {
 	_scale = scale;
 	// Exact comparison: a scale that fits always comes from this same expression, either directly or through the minScale() clamp.
-	_fitToWindow = _scale == fitScale();
+	_fitToWindow = qFuzzyCompare(_scale, fitScale());
 }
 
 void CImageViewerWidget::resetToFit() noexcept
@@ -487,7 +487,7 @@ void CImageViewerWidget::wheelEvent(QWheelEvent* e)
 	const QPointF cursorDevice = e->position() * devicePixelRatioF();
 	const qreal newScale = std::clamp(_scale * std::pow(1.0015, (qreal)delta), minScale(), kMaxScale);
 
-	if (newScale != _scale)
+	if (!qFuzzyCompare(newScale, _scale))
 	{
 		// Keep the source pixel under the cursor pinned in place as the scale changes.
 		_offset = cursorDevice - (cursorDevice - _offset) * (newScale / _scale);

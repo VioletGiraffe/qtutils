@@ -168,7 +168,7 @@ private:
 	{
 		std::variant<QString, QRegularExpression> pattern;
 		QTextDocument::FindFlags options; // Without FindBackward
-		std::vector<MatchRange> matches; // Sorted and non-overlapping, for numbering and highlighting; capped, while 'total' counts on
+		std::vector<MatchRange> matches = {}; // Sorted and non-overlapping, for numbering and highlighting; capped, while 'total' counts on
 		qsizetype total = 0;
 		qsizetype countedUpTo = 0; // Every match starting before this offset is counted
 	};

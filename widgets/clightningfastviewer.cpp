@@ -783,7 +783,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 	const qsizetype lineStart = _lineOffsets[lineIndex];
 	const qsizetype lineEnd = _lineOffsets[lineIndex + 1];
 	const qsizetype textLength = _text.size();
-	const QChar* const chars = _text.constData(); // QString::operator[] is the detaching overload here
+	const QChar* const textChars = _text.constData(); // QString::operator[] is the detaching overload here
 
 	const int baseline = y + _fontMetrics.ascent();
 	const int originX = contentOriginX();
@@ -811,7 +811,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 		if (runHighlight != Highlight::None)
 			fill(runColumn, column, runHighlight);
 
-		drawChars(chars + runStart, column - runColumn, runColumn, runHighlight);
+		drawChars(textChars + runStart, column - runColumn, runColumn, runHighlight);
 		runStart = -1;
 	};
 
@@ -822,8 +822,8 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 		if (originX + int(column) * _charWidth >= viewportWidth) // Columns only grow, so nothing past here is visible
 			break;
 
-		const QChar ch = chars[offset];
-		const int columns = columnsForChar(ch, offset + 1 < textLength ? chars[offset + 1] : QChar(), column);
+		const QChar ch = textChars[offset];
+		const int columns = columnsForChar(ch, offset + 1 < textLength ? textChars[offset + 1] : QChar(), column);
 		if (columns == 0)
 			continue;
 
@@ -859,7 +859,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 				drawChars(&substitute, 1, column, highlight);
 			}
 			else
-				drawChars(chars + offset, ch.isHighSurrogate() && offset + 1 < textLength ? 2 : 1, column, highlight);
+				drawChars(textChars + offset, ch.isHighSurrogate() && offset + 1 < textLength ? 2 : 1, column, highlight);
 		}
 
 		column += columns;
@@ -868,7 +868,7 @@ void CLightningFastViewerWidget::drawTextLine(QPainter& painter, const TextColor
 	flushRun();
 
 	// A line terminator has no columns of its own, so a highlight spanning lines would otherwise break at every line end
-	if (const Highlight highlight = chars[lineEnd - 1] == u'\n' ? highlightAt(lineEnd - 1) : Highlight::None; highlight != Highlight::None)
+	if (const Highlight highlight = textChars[lineEnd - 1] == u'\n' ? highlightAt(lineEnd - 1) : Highlight::None; highlight != Highlight::None)
 		fill(column, column + 1, highlight);
 }
 
