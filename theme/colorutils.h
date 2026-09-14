@@ -16,9 +16,10 @@ RESTORE_COMPILER_WARNINGS
 namespace ColorUtils
 {
 	namespace detail {
-		inline double linearized(double channel)
+		inline double linearized(float channel)
 		{
-			return channel <= 0.03928 ? channel / 12.92 : std::pow((channel + 0.055) / 1.055, 2.4);
+			const double value = static_cast<double>(channel);
+			return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
 		}
 	}
 
