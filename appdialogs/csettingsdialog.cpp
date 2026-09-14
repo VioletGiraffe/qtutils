@@ -130,7 +130,11 @@ void CSettingsDialog::accept()
 	for (int i = 0; i < _pages->count(); ++i)
 	{
 		CSettingsPage * page = dynamic_cast<CSettingsPage*>(_pages->widget(i));
-		assert_r(page);
+		if (!page)
+		{
+			assert_unconditional_r("page was null!");
+			continue;
+		}
 		page->acceptSettings();
 	}
 
@@ -144,7 +148,11 @@ void CSettingsDialog::reject()
 	for (int i = 0; i < _pages->count(); ++i)
 	{
 		CSettingsPage * page = dynamic_cast<CSettingsPage*>(_pages->widget(i));
-		assert_r(page);
+		if (!page)
+		{
+			assert_unconditional_r("page was null!");
+			continue;
+		}
 		page->rejectSettings();
 	}
 
