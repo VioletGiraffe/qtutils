@@ -14,8 +14,8 @@ class QWidget;
 class CPersistenceEnabler final : public QObject
 {
 public:
-	using Delayed = UniqueNamedBoolType;
-	using SetDefaultSize = UniqueNamedBoolType;
+	DECLARE_NAMED_BOOL_TYPE(Delayed);
+	DECLARE_NAMED_BOOL_TYPE(SetDefaultSize);
 
 	// Installs itself on `widget` and is parented to it.
 	// widgetSettingsPath must be application-wide unique: it is the QSettings path this widget's state and
