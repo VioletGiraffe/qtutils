@@ -32,9 +32,10 @@ public:
 	// While enabled, upscales bypass the scaler for a nearest-neighbor blit; downscales are unaffected.
 	void setNearestNeighborUpscaling(bool enabled);
 
-	bool displayImage(const QImage& image);
+	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
+	bool displayFrame(const QImage& image, bool resetViewParameters = true);
 	// Reports nothing to the user: the caller owns the error UI.
-	bool displayImage(const QString& imagePath);
+	bool displayImage(const QString& imagePath, bool resetViewParameters = true);
 	[[nodiscard]] const QImage& sourceImage() const noexcept { return _sourceImage; }
 	[[nodiscard]] QString imageInfoString() const;
 
@@ -76,6 +77,9 @@ private:
 	void clampOffset() noexcept;                                                   // per-axis: center if smaller, keep inside if larger
 	void setScale(qreal scale) noexcept;                                           // the only writer of _scale and _fitToWindow
 	void resetToFit() noexcept;
+	// A view that fit the whole image refits; a zoomed one keeps its scale and the source point at the viewport center.
+	// No-op until the first image is displayed.
+	void refitOrKeepViewCenter(const QSizeF& previousViewportDeviceSize) noexcept;
 	void invalidateDisplayImageCache();                                            // repaints, so paintEvent must never call it
 
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage

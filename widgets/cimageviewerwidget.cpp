@@ -79,22 +79,35 @@ void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
 	invalidateDisplayImageCache();
 }
 
-bool CImageViewerWidget::displayImage(const QImage& image)
+bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParameters)
 {
+	const QSize previousSize = _sourceImage.size();
 	_sourceImage = image;
-	// No file behind a bare image; the overload below fills these in after calling here.
+	// No file behind a bare image; displayImage() below fills these in after calling here.
 	_currentImageFormat.clear();
 	_currentImageFileSize = 0;
-	_isPanning = false;
-	_isNavigatorSteering = false;
-	_navigatorThumbnail = QImage{};
-	_viewInitialized = false; // Refit to the new image on the next paint.
-	updateGeometry(); // Because the image affects sizeHint()
+	_navigatorThumbnail = QImage{}; // Caches the source pixels, not the view state
+
+	if (resetViewParameters)
+	{
+		if (_isPanning)
+			unsetCursor();
+
+		_isPanning = false;
+		_isNavigatorSteering = false;
+		_viewInitialized = false; // Refit to the new image on the next paint.
+	}
+	else
+		refitOrKeepViewCenter(viewportDeviceSize());
+
+	if (_sourceImage.size() != previousSize)
+		updateGeometry(); // The image size drives sizeHint().
+
 	invalidateDisplayImageCache();
 	return !_sourceImage.isNull();
 }
 
-bool CImageViewerWidget::displayImage(const QString& imagePath)
+bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
 	QImageReader reader(imagePath);
 	reader.setAutoDetectImageFormat(true);
@@ -112,7 +125,7 @@ bool CImageViewerWidget::displayImage(const QString& imagePath)
 	}
 
 	const qint64 fileSize = reader.device()->size();
-	const bool displayed = displayImage(img);
+	const bool displayed = displayFrame(img, resetViewParameters);
 	_currentImageFormat = fileFormat;
 	_currentImageFileSize = fileSize;
 	return displayed;
@@ -257,6 +270,24 @@ void CImageViewerWidget::resetToFit() noexcept
 	setScale(fitScale());
 	_offset = centeredOffset();
 	_viewInitialized = true;
+}
+
+void CImageViewerWidget::refitOrKeepViewCenter(const QSizeF& previousViewportDeviceSize) noexcept
+{
+	if (_sourceImage.isNull() || !_viewInitialized || size().isEmpty())
+		return;
+
+	if (_fitToWindow)
+	{
+		resetToFit();
+		return;
+	}
+
+	const QPointF centerSource = (centerOf(previousViewportDeviceSize) - _offset) / _scale;
+
+	setScale(std::clamp(_scale, minScale(), kMaxScale));
+	_offset = centerOf(viewportDeviceSize()) - centerSource * _scale;
+	clampOffset();
 }
 
 void CImageViewerWidget::invalidateDisplayImageCache()
@@ -457,22 +488,10 @@ void CImageViewerWidget::resizeEvent(QResizeEvent* e)
 {
 	QWidget::resizeEvent(e);
 
-	if (_sourceImage.isNull() || !_viewInitialized || !e->oldSize().isValid() || size().isEmpty())
+	if (!e->oldSize().isValid())
 		return;
 
-	// A view that showed the whole image keeps fitting it; a zoomed-in view keeps its scale and the source point at the viewport center.
-	if (_fitToWindow)
-	{
-		resetToFit();
-		return;
-	}
-
-	const QSizeF oldViewport = QSizeF{ e->oldSize() } * devicePixelRatioF();
-	const QPointF centerSource = (centerOf(oldViewport) - _offset) / _scale;
-
-	setScale(std::clamp(_scale, minScale(), kMaxScale));
-	_offset = centerOf(viewportDeviceSize()) - centerSource * _scale;
-	clampOffset();
+	refitOrKeepViewCenter(QSizeF{ e->oldSize() } * devicePixelRatioF());
 }
 
 void CImageViewerWidget::wheelEvent(QWheelEvent* e)
