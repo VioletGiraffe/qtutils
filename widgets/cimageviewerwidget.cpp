@@ -51,10 +51,9 @@ namespace
 		return QPointF{ size.width() / 2.0, size.height() / 2.0 };
 	}
 
-	inline void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
+	[[nodiscard]] inline QImage scaledWithQt(const QImage& source, const QRect& srcRect, const QSize& targetSize, Qt::TransformationMode mode)
 	{
-		const QSize targetSize = dest.size();
-		dest = (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
+		return (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
 	}
 
 	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect)
@@ -73,7 +72,7 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 
 void CImageViewerWidget::smoothScaleQt(QImage& dest, const QImage& source, const QRect& srcRect)
 {
-	scaleWithQt(dest, source, srcRect, Qt::SmoothTransformation);
+	dest = scaledWithQt(source, srcRect, dest.size(), Qt::SmoothTransformation);
 }
 
 void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
@@ -450,19 +449,22 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		std::max(1, qRound(sourceRect.height() * _scale))
 	};
 
-	if (_displayImage.size() != bufferPx || _displayImage.format() != _sourceImage.format())
-		_displayImage = QImage(bufferPx.width(), bufferPx.height(), _sourceImage.format());
-
 	const size_t newCacheKey = qHashMulti(4 /* true random seed, chosen by a fair dice throw */, sourceRect, bufferPx);
 	if (newCacheKey != _cacheKey)
 	{
 		_cacheKey = newCacheKey;
 		if (_nearestNeighborUpscaling && _scale > 1.0)
-			scaleWithQt(_displayImage, _sourceImage, sourceRect, Qt::FastTransformation);
+			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::FastTransformation);
 		else if (_animation) // Qt premultiplies alpha before filtering; the injected scaler does not, so transparent frames fringe
-			smoothScaleQt(_displayImage, _sourceImage, sourceRect);
+			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::SmoothTransformation);
 		else
+		{
+			// The only path that fills the buffer instead of replacing it, so the only one that needs it allocated.
+			if (_displayImage.size() != bufferPx || _displayImage.format() != _sourceImage.format())
+				_displayImage = QImage(bufferPx.width(), bufferPx.height(), _sourceImage.format());
+
 			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
+		}
 	}
 
 	// Set after scaling: a scaler is free to replace the buffer.
