@@ -67,6 +67,8 @@ public:
 protected:
 	void paintEvent(QPaintEvent* e) override;
 	void resizeEvent(QResizeEvent* e) override;
+	void showEvent(QShowEvent* e) override;
+	void hideEvent(QHideEvent* e) override;
 	void wheelEvent(QWheelEvent* e) override;
 	void mousePressEvent(QMouseEvent* e) override;
 	void mouseMoveEvent(QMouseEvent* e) override;
@@ -81,6 +83,7 @@ private:
 	bool setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation = Presentation::Deferred);
 	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
 	void scheduleNextFrame();                                                      // requires an engaged _animation
+	void startOrStopFrameTimer();                                                  // no-op unless _animation is engaged
 
 	// The view is an affine map from source pixels to viewport device pixels: devicePos = _offset + sourcePos * _scale.
 	[[nodiscard]] QSizeF viewportDeviceSize() const noexcept;
@@ -108,7 +111,8 @@ private:
 	void centerViewOnNavigatorPoint(QPointF widgetPos);
 
 private:
-	// Engaged only while an animated file is displayed; a stopped timer means paused.
+	// Engaged only while an animated file is displayed.
+	// The frame timer runs only while the widget is shown and userPaused is false.
 	struct Animation
 	{
 		explicit Animation(QString imagePath);
@@ -116,6 +120,7 @@ private:
 		QString path;
 		QImageReader reader;
 		QBasicTimer frameTimer;
+		bool userPaused = false;
 
 		QElapsedTimer clock;            // Timebase for nextFrameDueMs, started when the first frame is scheduled
 		qint64 nextFrameDueMs = 0;      // When pendingFrame is due on screen
@@ -132,6 +137,8 @@ private:
 	QString _infoStripHint;
 	bool _overlayVisible = true;
 	bool _nearestNeighborUpscaling = false;
+	// Tracked rather than read from isVisible(): a minimized window's children are sent a hide event but stay isVisible().
+	bool _shown = false;
 	QImage _sourceImage;
 	QImage _displayImage;
 	QImage _navigatorThumbnail;    // the whole source, scaled down; built on first use, dropped with the image

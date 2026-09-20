@@ -8,12 +8,14 @@ DISABLE_COMPILER_WARNINGS
 #include <QDebug>
 #include <QFontMetrics>
 #include <QHash>
+#include <QHideEvent>
 #include <QImageReader>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QRegion>
 #include <QResizeEvent>
 #include <QScreen>
+#include <QShowEvent>
 #include <QTimerEvent>
 #include <QWheelEvent>
 #include <QtMath>
@@ -144,8 +146,7 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 	{
 		_animation->clock.start();
 		_animation->displayedDelayMs = _animation->reader.nextImageDelay();
-		_animation->nextFrameDueMs = _animation->displayedDelayMs;
-		scheduleNextFrame();
+		startOrStopFrameTimer(); // A file can be loaded before the widget is shown: playback then waits for that.
 	}
 	else
 		_animation.reset();
@@ -353,7 +354,20 @@ void CImageViewerWidget::togglePause()
 	if (!_animation)
 		return;
 
-	if (_animation->frameTimer.isActive())
+	_animation->userPaused = !_animation->userPaused;
+	startOrStopFrameTimer();
+}
+
+void CImageViewerWidget::startOrStopFrameTimer()
+{
+	if (!_animation)
+		return;
+
+	const bool shouldRun = _shown && !_animation->userPaused;
+	if (shouldRun == _animation->frameTimer.isActive())
+		return;
+
+	if (!shouldRun)
 	{
 		_animation->frameTimer.stop();
 		return;
@@ -582,6 +596,23 @@ void CImageViewerWidget::resizeEvent(QResizeEvent* e)
 		return;
 
 	refitOrKeepViewCenter(QSizeF{ e->oldSize() } * devicePixelRatioF());
+}
+
+void CImageViewerWidget::showEvent(QShowEvent* e)
+{
+	QWidget::showEvent(e);
+
+	_shown = true;
+	startOrStopFrameTimer();
+}
+
+void CImageViewerWidget::hideEvent(QHideEvent* e)
+{
+	QWidget::hideEvent(e);
+
+	// Sent to every child when the window is minimized, too.
+	_shown = false;
+	startOrStopFrameTimer();
 }
 
 void CImageViewerWidget::wheelEvent(QWheelEvent* e)
