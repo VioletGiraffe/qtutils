@@ -54,6 +54,9 @@ public:
 	void fitToWindow() noexcept;
 	void zoomToActualPixels() noexcept;
 
+	// True while an animated file is displayed, paused or not.
+	// A single-frame GIF reports true until the first frame advance finds nothing to advance to.
+	[[nodiscard]] bool isAnimated() const noexcept { return _animation.has_value(); }
 	// No-op unless an animated image is displayed.
 	void togglePause();
 
