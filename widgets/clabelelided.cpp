@@ -49,7 +49,8 @@ std::vector<TextLine> wrapIntoLines(const QString& text, const QFont& font, int 
 	{
 		QTextLayout layout(text.mid(paragraph.start, paragraph.length), font);
 		QTextOption textOption = layout.textOption();
-		textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere); // What QLabel does
+		// Not QLabel's plain WordWrap: an overlong token spreads across the available lines instead of being elided away on one.
+		textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
 		layout.setTextOption(textOption);
 
 		layout.beginLayout();
