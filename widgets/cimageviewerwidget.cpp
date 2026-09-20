@@ -14,6 +14,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QRegion>
 #include <QResizeEvent>
 #include <QScreen>
+#include <QTimerEvent>
 #include <QWheelEvent>
 #include <QtMath>
 RESTORE_COMPILER_WARNINGS
@@ -79,13 +80,18 @@ void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
 	invalidateDisplayImageCache();
 }
 
-bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParameters)
+CImageViewerWidget::Animation::Animation(QString imagePath) :
+	path{ std::move(imagePath) },
+	reader{ path }
+{
+	reader.setAutoDetectImageFormat(true);
+	reader.setAutoTransform(true);
+}
+
+bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParameters)
 {
 	const QSize previousSize = _sourceImage.size();
 	_sourceImage = image;
-	// No file behind a bare image; displayImage() below fills these in after calling here.
-	_currentImageFormat.clear();
-	_currentImageFileSize = 0;
 	_navigatorThumbnail = QImage{}; // Caches the source pixels, not the view state
 
 	if (resetViewParameters)
@@ -107,16 +113,27 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 	return !_sourceImage.isNull();
 }
 
+bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParameters)
+{
+	_animation.reset();
+	_currentImageFormat.clear(); // No file behind a bare image
+	_currentImageFileSize = 0;
+
+	return setSourceImage(image, resetViewParameters);
+}
+
 bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
-	QImageReader reader(imagePath);
-	reader.setAutoDetectImageFormat(true);
-	reader.setAutoTransform(true);
+	// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
+	_animation.emplace(imagePath);
 
-	const QString fileFormat = QString::fromLatin1(reader.format());
-	QImage img = reader.read();
+	const QString fileFormat = QString::fromLatin1(_animation->reader.format());
+	QImage img = _animation->reader.read();
 	if (img.isNull())
+	{
+		_animation.reset();
 		return false;
+	}
 
 	if (const auto format = img.format(); format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale16 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBX64)
 	{
@@ -124,8 +141,13 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 		qInfo() << "CImageViewerWidget::displayImage: converted image format from" << format << "to" << img.format();
 	}
 
-	const qint64 fileSize = reader.device()->size();
-	const bool displayed = displayFrame(img, resetViewParameters);
+	const qint64 fileSize = _animation->reader.device()->size();
+	if (_animation->reader.supportsAnimation())
+		scheduleNextFrame();
+	else
+		_animation.reset();
+
+	const bool displayed = setSourceImage(img, resetViewParameters);
 	_currentImageFormat = fileFormat;
 	_currentImageFileSize = fileSize;
 	return displayed;
@@ -314,6 +336,26 @@ void CImageViewerWidget::zoomToActualPixels() noexcept
 	_offset = centeredOffset();
 	_viewInitialized = true;
 	update();
+}
+
+void CImageViewerWidget::togglePause()
+{
+	if (!_animation)
+		return;
+
+	if (_animation->frameTimer.isActive())
+	{
+		_animation->frameTimer.stop();
+		return;
+	}
+
+	// Resuming restarts the current frame's delay in full: the remainder is not tracked.
+	scheduleNextFrame();
+}
+
+void CImageViewerWidget::scheduleNextFrame()
+{
+	_animation->frameTimer.start(_animation->reader.nextImageDelay(), Qt::PreciseTimer, this);
 }
 
 void CImageViewerWidget::paintEvent(QPaintEvent*)
@@ -580,4 +622,36 @@ void CImageViewerWidget::mouseReleaseEvent(QMouseEvent* e)
 	}
 
 	QWidget::mouseReleaseEvent(e);
+}
+
+void CImageViewerWidget::timerEvent(QTimerEvent* e)
+{
+	if (!_animation || e->timerId() != _animation->frameTimer.timerId())
+	{
+		QWidget::timerEvent(e);
+		return;
+	}
+
+	QImage frame = _animation->reader.read();
+	if (frame.isNull())
+	{
+		// Every GIF reports itself as animated, single-frame ones included.
+		if (_animation->reader.currentImageNumber() <= 0)
+		{
+			_animation.reset();
+			return;
+		}
+
+		// The handler cannot seek, so a fresh device and decoder are the only way back to frame 0.
+		_animation->reader.setFileName(_animation->path);
+		frame = _animation->reader.read();
+		if (frame.isNull())
+		{
+			_animation.reset(); // The file became unreadable; the last frame stays on screen.
+			return;
+		}
+	}
+
+	scheduleNextFrame();
+	setSourceImage(frame, false);
 }

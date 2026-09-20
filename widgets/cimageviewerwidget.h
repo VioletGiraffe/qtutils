@@ -3,8 +3,10 @@
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QBasicTimer>
 #include <QIcon>
 #include <QImage>
+#include <QImageReader>
 #include <QRect>
 #include <QSize>
 #include <QWidget>
@@ -35,6 +37,7 @@ public:
 	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
 	bool displayFrame(const QImage& image, bool resetViewParameters = true);
 	// Reports nothing to the user: the caller owns the error UI.
+	// Fails without replacing the displayed image, but any animation already playing stops.
 	bool displayImage(const QString& imagePath, bool resetViewParameters = true);
 	[[nodiscard]] const QImage& sourceImage() const noexcept { return _sourceImage; }
 	[[nodiscard]] QString imageInfoString() const;
@@ -50,6 +53,9 @@ public:
 	void fitToWindow() noexcept;
 	void zoomToActualPixels() noexcept;
 
+	// No-op unless an animated image is displayed.
+	void togglePause();
+
 	// The strip along the bottom, showing imageInfoString() and the current magnification, plus the navigator
 	// shown while the view can pan. Visible by default.
 	void setOverlayVisible(bool visible);
@@ -64,8 +70,13 @@ protected:
 	void mousePressEvent(QMouseEvent* e) override;
 	void mouseMoveEvent(QMouseEvent* e) override;
 	void mouseReleaseEvent(QMouseEvent* e) override;
+	void timerEvent(QTimerEvent* e) override;
 
 private:
+	// Replaces the displayed pixels, leaving the animation and the file metadata untouched.
+	bool setSourceImage(const QImage& image, bool resetViewParameters);
+	void scheduleNextFrame();                                                      // requires an engaged _animation
+
 	// The view is an affine map from source pixels to viewport device pixels: devicePos = _offset + sourcePos * _scale.
 	[[nodiscard]] QSizeF viewportDeviceSize() const noexcept;
 	[[nodiscard]] QSizeF scaledImageSize() const noexcept;                         // on-screen size of the whole image, device px
@@ -92,6 +103,17 @@ private:
 	void centerViewOnNavigatorPoint(QPointF widgetPos);
 
 private:
+	// Engaged only while an animated file is displayed; a stopped timer means paused.
+	struct Animation
+	{
+		explicit Animation(QString imagePath);
+
+		QString path;
+		QImageReader reader;
+		QBasicTimer frameTimer;
+	};
+
+private:
 	ImageScaleFunction _imageScaler;
 	QString _infoStripHint;
 	bool _overlayVisible = true;
@@ -103,6 +125,7 @@ private:
 
 	QString _currentImageFormat;
 	qint64 _currentImageFileSize = 0;
+	std::optional<Animation> _animation;
 
 	qreal _scale = 1.0;    // device px per source px; 1.0 == 1:1 (native resolution)
 	QPointF _offset;       // device-px position of source (0,0) within the viewport
