@@ -133,8 +133,39 @@ bool CLabelElided::event(QEvent* e)
 	return QLabel::event(e);
 }
 
-void CLabelElided::paintEvent(QPaintEvent*)
+bool CLabelElided::isTextFullyVisible() const
 {
+	const QRect textArea = textRect();
+	const QFontMetrics fm(font());
+	const int lineHeight = fm.lineSpacing();
+	const QString fullText = text();
+	if (textArea.width() <= 0 || lineHeight <= 0)
+		return fullText.isEmpty();
+
+	const std::vector<TextLine> paragraphs = splitIntoParagraphs(fullText);
+	if ((int)paragraphs.size() > std::max(1, textArea.height() / lineHeight))
+		return false;
+
+	for (const TextLine& paragraph : paragraphs)
+	{
+		if (fm.horizontalAdvance(fullText.mid(paragraph.start, paragraph.length)) > textArea.width())
+			return false;
+	}
+
+	return true;
+}
+
+void CLabelElided::paintEvent(QPaintEvent* e)
+{
+	// QLabel produces the same pixels when nothing has to be elided, and unlike this class it also draws the selection.
+	// Only without wordWrap(): its line breaks come from a different wrap mode than wrapIntoLines() uses.
+	if (!wordWrap() && isTextFullyVisible())
+	{
+		_textIsTruncated = false;
+		QLabel::paintEvent(e);
+		return;
+	}
+
 	QPainter painter(this);
 	drawFrame(&painter);
 	painter.setFont(font());

@@ -17,7 +17,9 @@ class QPainter;
 // available width, and the lines that don't fit in the height collapse into a single ellipsis line placed according to
 // elideMode() - the head and the tail of the dropped text survive around it. Under ElideNone the overflow is clipped
 // instead, as QLabel does.
-// Rich text and pixmaps are ignored. Fix these gaps when a live potential consumer wants them.
+// Without wordWrap(), text that fits is painted by QLabel itself, so a selection, rich text and a pixmap all work there.
+// Everywhere else this class paints: a selection is then neither drawn nor hit-tested against what is on screen, and
+// rich text and pixmaps are ignored. Fix these gaps when a live potential consumer wants them.
 class CLabelElided final : public QLabel
 {
 public:
@@ -41,6 +43,8 @@ protected:
 
 private:
 	void paintText(QPainter& painter, const QRect& textArea);
+	// Every line fits the text rect, in both width and count. Only consulted without wordWrap().
+	[[nodiscard]] bool isTextFullyVisible() const;
 
 	// The area the text is painted in: contentsRect() less margin() and indent(), following QLabel's own arithmetic.
 	[[nodiscard]] QRect textRect() const;
