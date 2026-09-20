@@ -125,7 +125,6 @@ private:
 	std::optional<size_t> _cacheKey;    // absent while _displayImage is stale
 
 	QString _currentImageFormat;
-	qint64 _currentImageFileSize = 0;
 	std::optional<Animation> _animation;
 
 	qreal _scale = 1.0;    // device px per source px; 1.0 == 1:1 (native resolution)

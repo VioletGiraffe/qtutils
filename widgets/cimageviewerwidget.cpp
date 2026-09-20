@@ -117,7 +117,6 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 {
 	_animation.reset();
 	_currentImageFormat.clear(); // No file behind a bare image
-	_currentImageFileSize = 0;
 
 	return setSourceImage(image, resetViewParameters);
 }
@@ -141,7 +140,6 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 		qInfo() << "CImageViewerWidget::displayImage: converted image format from" << format << "to" << img.format();
 	}
 
-	const qint64 fileSize = _animation->reader.device()->size();
 	if (_animation->reader.supportsAnimation())
 		scheduleNextFrame();
 	else
@@ -149,7 +147,6 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 
 	const bool displayed = setSourceImage(img, resetViewParameters);
 	_currentImageFormat = fileFormat;
-	_currentImageFileSize = fileSize;
 	return displayed;
 }
 
@@ -166,18 +163,13 @@ QString CImageViewerWidget::imageInfoString() const
 		arg(numChannels).
 		arg(_sourceImage.bitPlaneCount());
 
-	if (_currentImageFileSize <= 0) // Displayed from a QImage: there is no file to name a format or a compression ratio for
+	if (_currentImageFormat.isEmpty()) // Displayed from a QImage: there is no file to name a format for
 		return imageInfo;
 
-	// The file holds every frame, so its size is spread over the pixels of all of them.
-	const int frameCount = _animation && _animation->frameCount > 0 ? _animation->frameCount : 1;
-	const double encodedPixels = (double)_sourceImage.width() * _sourceImage.height() * frameCount;
+	QString fileInfo = _currentImageFormat.toUpper() + ' ' + imageInfo;
 
-	QString fileInfo = _currentImageFormat.toUpper() + ' ' + imageInfo + tr(", compressed to %1 bits per pixel").
-		arg(QString::number(8.0 * (double)_currentImageFileSize / encodedPixels, 'f', 2));
-
-	if (frameCount > 1)
-		fileInfo += tr(", frame %1 of %2").arg(_animation->reader.currentImageNumber() + 1).arg(frameCount);
+	if (_animation && _animation->frameCount > 1)
+		fileInfo += tr(", frame %1 of %2").arg(_animation->reader.currentImageNumber() + 1).arg(_animation->frameCount);
 
 	return fileInfo;
 }
