@@ -459,6 +459,8 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		_cacheKey = newCacheKey;
 		if (_nearestNeighborUpscaling && _scale > 1.0)
 			scaleWithQt(_displayImage, _sourceImage, sourceRect, Qt::FastTransformation);
+		else if (_animation) // Qt premultiplies alpha before filtering; the injected scaler does not, so transparent frames fringe
+			smoothScaleQt(_displayImage, _sourceImage, sourceRect);
 		else
 			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
 	}
