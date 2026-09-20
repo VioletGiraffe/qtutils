@@ -169,8 +169,17 @@ QString CImageViewerWidget::imageInfoString() const
 	if (_currentImageFileSize <= 0) // Displayed from a QImage: there is no file to name a format or a compression ratio for
 		return imageInfo;
 
-	return _currentImageFormat.toUpper() + ' ' + imageInfo + tr(", compressed to %1 bits per pixel").
-		arg(QString::number(8.0 * (double)_currentImageFileSize / double(_sourceImage.width() * _sourceImage.height()), 'f', 2));
+	// The file holds every frame, so its size is spread over the pixels of all of them.
+	const int frameCount = _animation && _animation->frameCount > 0 ? _animation->frameCount : 1;
+	const double encodedPixels = (double)_sourceImage.width() * _sourceImage.height() * frameCount;
+
+	QString fileInfo = _currentImageFormat.toUpper() + ' ' + imageInfo + tr(", compressed to %1 bits per pixel").
+		arg(QString::number(8.0 * (double)_currentImageFileSize / encodedPixels, 'f', 2));
+
+	if (frameCount > 1)
+		fileInfo += tr(", frame %1 of %2").arg(_animation->reader.currentImageNumber() + 1).arg(frameCount);
+
+	return fileInfo;
 }
 
 QSize CImageViewerWidget::sizeHint() const
@@ -651,6 +660,10 @@ void CImageViewerWidget::timerEvent(QTimerEvent* e)
 			return;
 		}
 	}
+
+	// Deferred to here rather than to the load: imageCount() scans the whole file, and frame 0 must not wait for it.
+	if (_animation->frameCount == 0)
+		_animation->frameCount = std::max(1, _animation->reader.imageCount());
 
 	scheduleNextFrame();
 	setSourceImage(frame, false);

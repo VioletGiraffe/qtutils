@@ -111,6 +111,7 @@ private:
 		QString path;
 		QImageReader reader;
 		QBasicTimer frameTimer;
+		int frameCount = 0;    // 0 until the first frame advance queries it
 	};
 
 private:
