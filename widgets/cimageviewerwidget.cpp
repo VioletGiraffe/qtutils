@@ -77,7 +77,7 @@ void CImageViewerWidget::smoothScaleQt(QImage& dest, const QImage& source, const
 void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
 {
 	_nearestNeighborUpscaling = enabled;
-	invalidateDisplayImageCache();
+	invalidateDisplayImageCache(Presentation::Deferred);
 }
 
 CImageViewerWidget::Animation::Animation(QString imagePath) :
@@ -88,7 +88,7 @@ CImageViewerWidget::Animation::Animation(QString imagePath) :
 	reader.setAutoTransform(true);
 }
 
-bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParameters)
+bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation)
 {
 	const QSize previousSize = _sourceImage.size();
 	_sourceImage = image;
@@ -109,7 +109,7 @@ bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParam
 	if (_sourceImage.size() != previousSize)
 		updateGeometry(); // The image size drives sizeHint().
 
-	invalidateDisplayImageCache();
+	invalidateDisplayImageCache(presentation);
 	return !_sourceImage.isNull();
 }
 
@@ -141,7 +141,12 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 	}
 
 	if (_animation->reader.supportsAnimation())
+	{
+		_animation->clock.start();
+		_animation->displayedDelayMs = _animation->reader.nextImageDelay();
+		_animation->nextFrameDueMs = _animation->displayedDelayMs;
 		scheduleNextFrame();
+	}
 	else
 		_animation.reset();
 
@@ -169,7 +174,7 @@ QString CImageViewerWidget::imageInfoString() const
 	QString fileInfo = _currentImageFormat.toUpper() + ' ' + imageInfo;
 
 	if (_animation && _animation->frameCount > 1)
-		fileInfo += tr(", frame %1 of %2").arg(_animation->reader.currentImageNumber() + 1).arg(_animation->frameCount);
+		fileInfo += tr(", frame %1 of %2").arg(_animation->displayedFrameNumber + 1).arg(_animation->frameCount);
 
 	return fileInfo;
 }
@@ -313,10 +318,14 @@ void CImageViewerWidget::refitOrKeepViewCenter(const QSizeF& previousViewportDev
 	clampOffset();
 }
 
-void CImageViewerWidget::invalidateDisplayImageCache()
+void CImageViewerWidget::invalidateDisplayImageCache(Presentation presentation)
 {
 	_cacheKey.reset();
-	update();
+
+	if (presentation == Presentation::Immediate)
+		repaint();
+	else
+		update();
 }
 
 void CImageViewerWidget::fitToWindow() noexcept
@@ -351,12 +360,50 @@ void CImageViewerWidget::togglePause()
 	}
 
 	// Resuming restarts the current frame's delay in full: the remainder is not tracked.
+	_animation->nextFrameDueMs = _animation->clock.elapsed() + _animation->displayedDelayMs;
 	scheduleNextFrame();
+}
+
+bool CImageViewerWidget::decodeNextFrame()
+{
+	QImage frame = _animation->reader.read();
+	if (frame.isNull())
+	{
+		// Every GIF reports itself as animated, single-frame ones included.
+		if (_animation->reader.currentImageNumber() <= 0)
+		{
+			_animation.reset();
+			return false;
+		}
+
+		// The handler cannot seek, so a fresh device and decoder are the only way back to frame 0.
+		_animation->reader.setFileName(_animation->path);
+		frame = _animation->reader.read();
+		if (frame.isNull())
+		{
+			_animation.reset(); // The file became unreadable; the last frame stays on screen.
+			return false;
+		}
+	}
+
+	// Deferred to here rather than to the load: imageCount() scans the whole file, and frame 0 must not wait for it.
+	if (_animation->frameCount == 0)
+		_animation->frameCount = std::max(1, _animation->reader.imageCount());
+
+	_animation->pendingFrame = std::move(frame);
+	_animation->pendingDelayMs = _animation->reader.nextImageDelay();
+	return true;
 }
 
 void CImageViewerWidget::scheduleNextFrame()
 {
-	_animation->frameTimer.start(_animation->reader.nextImageDelay(), Qt::PreciseTimer, this);
+	const qint64 nowMs = _animation->clock.elapsed();
+
+	// A stall is not chased down: catching up would burst through every frame the schedule already covered.
+	if (_animation->nextFrameDueMs < nowMs - _animation->displayedDelayMs)
+		_animation->nextFrameDueMs = nowMs;
+
+	_animation->frameTimer.start((int)std::max<qint64>(0, _animation->nextFrameDueMs - nowMs), Qt::PreciseTimer, this);
 }
 
 void CImageViewerWidget::paintEvent(QPaintEvent*)
@@ -633,30 +680,18 @@ void CImageViewerWidget::timerEvent(QTimerEvent* e)
 		return;
 	}
 
-	QImage frame = _animation->reader.read();
-	if (frame.isNull())
-	{
-		// Every GIF reports itself as animated, single-frame ones included.
-		if (_animation->reader.currentImageNumber() <= 0)
-		{
-			_animation.reset();
-			return;
-		}
+	// Only the first tick decodes here: later ones present a frame decoded during the previous interval.
+	if (_animation->pendingFrame.isNull() && !decodeNextFrame())
+		return;
 
-		// The handler cannot seek, so a fresh device and decoder are the only way back to frame 0.
-		_animation->reader.setFileName(_animation->path);
-		frame = _animation->reader.read();
-		if (frame.isNull())
-		{
-			_animation.reset(); // The file became unreadable; the last frame stays on screen.
-			return;
-		}
-	}
+	// The info strip is painted inside the presentation below, so its frame number must be set first.
+	_animation->displayedFrameNumber = _animation->reader.currentImageNumber();
+	_animation->displayedDelayMs = _animation->pendingDelayMs;
+	_animation->nextFrameDueMs += _animation->displayedDelayMs;
 
-	// Deferred to here rather than to the load: imageCount() scans the whole file, and frame 0 must not wait for it.
-	if (_animation->frameCount == 0)
-		_animation->frameCount = std::max(1, _animation->reader.imageCount());
+	setSourceImage(_animation->pendingFrame, false, Presentation::Immediate);
 
-	scheduleNextFrame();
-	setSourceImage(frame, false);
+	// Decoded after the presentation: this work belongs in the idle interval, not ahead of the next deadline.
+	if (decodeNextFrame())
+		scheduleNextFrame();
 }

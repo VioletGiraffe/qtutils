@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QBasicTimer>
+#include <QElapsedTimer>
 #include <QIcon>
 #include <QImage>
 #include <QImageReader>
@@ -73,8 +74,12 @@ protected:
 	void timerEvent(QTimerEvent* e) override;
 
 private:
+	// Immediate: paints inside the call, for a frame that has to land on its deadline.
+	enum class Presentation { Deferred, Immediate };
+
 	// Replaces the displayed pixels, leaving the animation and the file metadata untouched.
-	bool setSourceImage(const QImage& image, bool resetViewParameters);
+	bool setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation = Presentation::Deferred);
+	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
 	void scheduleNextFrame();                                                      // requires an engaged _animation
 
 	// The view is an affine map from source pixels to viewport device pixels: devicePos = _offset + sourcePos * _scale.
@@ -91,7 +96,7 @@ private:
 	// A view that fit the whole image refits; a zoomed one keeps its scale and the source point at the viewport center.
 	// No-op until the first image is displayed.
 	void refitOrKeepViewCenter(const QSizeF& previousViewportDeviceSize) noexcept;
-	void invalidateDisplayImageCache();                                            // repaints, so paintEvent must never call it
+	void invalidateDisplayImageCache(Presentation presentation);                   // repaints, so paintEvent must never call it
 
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
 	void paintInfoStrip(QPainter& painter) const;
@@ -111,7 +116,15 @@ private:
 		QString path;
 		QImageReader reader;
 		QBasicTimer frameTimer;
-		int frameCount = 0;    // 0 until the first frame advance queries it
+
+		QElapsedTimer clock;            // Timebase for nextFrameDueMs, started when the first frame is scheduled
+		qint64 nextFrameDueMs = 0;      // When pendingFrame is due on screen
+
+		QImage pendingFrame;            // Decoded during the previous interval; null only until the first tick primes it
+		int pendingDelayMs = 0;         // How long pendingFrame stays on screen once presented
+		int displayedDelayMs = 0;       // The same, for the frame on screen now
+		int displayedFrameNumber = 0;   // currentImageNumber() reports the pending frame, not this one
+		int frameCount = 0;             // 0 until the first frame advance queries it
 	};
 
 private:
