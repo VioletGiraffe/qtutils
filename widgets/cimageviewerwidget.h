@@ -59,6 +59,10 @@ public:
 	[[nodiscard]] bool isAnimated() const noexcept { return _animation.has_value(); }
 	// No-op unless an animated image is displayed.
 	void togglePause();
+	// Pauses, then shows the adjacent frame, wrapping at either end. No-op unless an animated image is displayed.
+	// Stepping back rewinds the file and decodes forward to the target: neither the GIF nor the WEBP handler can seek.
+	void stepToNextFrame();
+	void stepToPreviousFrame();
 
 	// The strip along the bottom, showing imageInfoString() and the current magnification, plus the navigator
 	// shown while the view can pan. Visible by default.
@@ -84,7 +88,11 @@ private:
 
 	// Replaces the displayed pixels, leaving the animation and the file metadata untouched.
 	bool setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation = Presentation::Deferred);
+	void setPaused(bool paused);                                                   // requires an engaged _animation
 	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
+	bool decodePrecedingFrame();                                                   // the same, for the frame before the displayed one
+	void ensureFrameCountKnown();                                                  // requires an engaged _animation
+	void presentPendingFrame();                                                    // requires an engaged _animation
 	void scheduleNextFrame();                                                      // requires an engaged _animation
 	void startOrStopFrameTimer();                                                  // no-op unless _animation is engaged
 

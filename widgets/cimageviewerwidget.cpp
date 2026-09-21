@@ -353,7 +353,41 @@ void CImageViewerWidget::togglePause()
 	if (!_animation)
 		return;
 
-	_animation->userPaused = !_animation->userPaused;
+	setPaused(!_animation->userPaused);
+}
+
+void CImageViewerWidget::stepToNextFrame()
+{
+	if (!_animation)
+		return;
+
+	setPaused(true);
+
+	// Only a step taken before the first tick has to decode: otherwise the lookahead already holds the next frame.
+	if (_animation->pendingFrame.isNull() && !decodeNextFrame())
+		return;
+
+	presentPendingFrame();
+	decodeNextFrame();
+}
+
+void CImageViewerWidget::stepToPreviousFrame()
+{
+	if (!_animation)
+		return;
+
+	setPaused(true);
+
+	if (!decodePrecedingFrame())
+		return;
+
+	presentPendingFrame();
+	decodeNextFrame();
+}
+
+void CImageViewerWidget::setPaused(bool paused)
+{
+	_animation->userPaused = paused;
 	startOrStopFrameTimer();
 }
 
@@ -399,13 +433,61 @@ bool CImageViewerWidget::decodeNextFrame()
 		}
 	}
 
-	// Deferred to here rather than to the load: imageCount() scans the whole file, and frame 0 must not wait for it.
-	if (_animation->frameCount == 0)
-		_animation->frameCount = std::max(1, _animation->reader.imageCount());
+	ensureFrameCountKnown();
 
 	_animation->pendingFrame = std::move(frame);
 	_animation->pendingDelayMs = _animation->reader.nextImageDelay();
 	return true;
+}
+
+bool CImageViewerWidget::decodePrecedingFrame()
+{
+	int targetFrame = _animation->displayedFrameNumber - 1;
+	if (targetFrame < 0)
+	{
+		ensureFrameCountKnown();
+		targetFrame = _animation->frameCount - 1;
+	}
+
+	// The handler cannot seek, so frame 0 is the only entry point and every frame up to the target has to be decoded.
+	_animation->reader.setFileName(_animation->path);
+
+	// Stops at the last decodable frame: a scan counts frame headers, so a malformed trailing frame inflates imageCount().
+	QImage frame;
+	for (int i = 0; i <= targetFrame; ++i)
+	{
+		QImage next = _animation->reader.read();
+		if (next.isNull())
+			break;
+
+		frame = std::move(next);
+	}
+
+	if (frame.isNull())
+	{
+		_animation.reset(); // The file became unreadable; the last frame stays on screen.
+		return false;
+	}
+
+	_animation->pendingFrame = std::move(frame);
+	_animation->pendingDelayMs = _animation->reader.nextImageDelay();
+	return true;
+}
+
+void CImageViewerWidget::ensureFrameCountKnown()
+{
+	// Deferred rather than resolved at load: imageCount() scans the whole file, and frame 0 must not wait for it.
+	if (_animation->frameCount == 0)
+		_animation->frameCount = std::max(1, _animation->reader.imageCount());
+}
+
+void CImageViewerWidget::presentPendingFrame()
+{
+	// The info strip is painted inside the presentation below, so its frame number must be set first.
+	_animation->displayedFrameNumber = _animation->reader.currentImageNumber();
+	_animation->displayedDelayMs = _animation->pendingDelayMs;
+
+	setSourceImage(_animation->pendingFrame, false, Presentation::Immediate);
 }
 
 void CImageViewerWidget::scheduleNextFrame()
@@ -719,12 +801,8 @@ void CImageViewerWidget::timerEvent(QTimerEvent* e)
 	if (_animation->pendingFrame.isNull() && !decodeNextFrame())
 		return;
 
-	// The info strip is painted inside the presentation below, so its frame number must be set first.
-	_animation->displayedFrameNumber = _animation->reader.currentImageNumber();
-	_animation->displayedDelayMs = _animation->pendingDelayMs;
-	_animation->nextFrameDueMs += _animation->displayedDelayMs;
-
-	setSourceImage(_animation->pendingFrame, false, Presentation::Immediate);
+	_animation->nextFrameDueMs += _animation->pendingDelayMs;
+	presentPendingFrame();
 
 	// Decoded after the presentation: this work belongs in the idle interval, not ahead of the next deadline.
 	if (decodeNextFrame())
