@@ -7,7 +7,8 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 namespace NaturalSort {
-	[[nodiscard]] inline bool lessThan(const QString& l, const QString& r, bool caseSensitive = true) noexcept {
+	// Negative, zero or positive as l sorts before, together with or after r
+	[[nodiscard]] inline int compare(const QString& l, const QString& r, bool caseSensitive = true) noexcept {
 		thread_local static QCollator collatorCaseSensitive = []() {
 			QCollator c;
 			c.setCaseSensitivity(Qt::CaseSensitive);
@@ -23,7 +24,11 @@ namespace NaturalSort {
 		}();
 
 		// Fix for the new breaking changes in QCollator in Qt 5.14 - null strings are no longer a valid input
-		return (caseSensitive ? collatorCaseSensitive : collatorCaseInsensitive).compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r)) < 0;
+		return (caseSensitive ? collatorCaseSensitive : collatorCaseInsensitive).compare(qToStringViewIgnoringNull(l), qToStringViewIgnoringNull(r));
+	}
+
+	[[nodiscard]] inline bool lessThan(const QString& l, const QString& r, bool caseSensitive = true) noexcept {
+		return compare(l, r, caseSensitive) < 0;
 	}
 
 	[[nodiscard]] inline bool lessCaseSensitive(const QString& l, const QString& r) noexcept {
