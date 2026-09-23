@@ -71,6 +71,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 
 | Header | Facility |
 |---|---|
+| `qtcore_helpers/catch_qt.hpp` | Catch2 with printers for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
 | `qtcore_helpers/qdatetime_helpers.hpp` | Converts between `QDateTime` and Unix `time_t` seconds. |
 | `qtcore_helpers/qdebug_helpers.hpp` | `QDebug` output for `std::string` and hexadecimal `std::array` data. |
 | `qtcore_helpers/qstring_helpers.hpp` | `QSL` and `QL1` aliases for `QStringLiteral` and `QLatin1String`. |
