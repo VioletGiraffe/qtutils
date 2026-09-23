@@ -62,7 +62,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | Header | Facility |
 |---|---|
 | `utils/ciconengineqimage.h` | `QIconEngine` that renders each requested physical size directly from a source `QImage`, preserves aspect ratio with transparent padding, caches by size/mode, and accepts a custom scaler. |
-| `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QString` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
+| `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QStringView` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
 | `utils/resources.h` | Reads a Qt resource into `QByteArray` or `QString`. |
 | `widgets/widgetutils.h` | Recursive layout visibility, main-window/hierarchy lookup, non-invasive native owner handles, screen selection, centered geometry, and widget centering helpers. |
 | `string/stringutils.h` | Computes the zero-based line number at a `QString` position. |
