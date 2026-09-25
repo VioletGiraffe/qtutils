@@ -51,6 +51,17 @@ namespace
 		return QPointF{ size.width() / 2.0, size.height() / 2.0 };
 	}
 
+	// Scaled images come back premultiplied, so a buffer allocated in this format is reused as is
+	[[nodiscard]] constexpr QImage::Format premultipliedFormat(QImage::Format format) noexcept
+	{
+		switch (format)
+		{
+		case QImage::Format_ARGB32: return QImage::Format_ARGB32_Premultiplied;
+		case QImage::Format_RGBA8888: return QImage::Format_RGBA8888_Premultiplied;
+		default: return format;
+		}
+	}
+
 	[[nodiscard]] inline QImage scaledWithQt(const QImage& source, const QRect& srcRect, const QSize& targetSize, Qt::TransformationMode mode)
 	{
 		return (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
@@ -199,7 +210,7 @@ QIcon CImageViewerWidget::imageIcon() const
 
 	// Copied intentionally: probably not necessary, but the lambda is stored in the icon engine and might outlive this widget
 	const auto resizeImage = [scaler = _imageScaler](const QImage& src, const QSize& targetSize) -> QImage {
-		QImage dst(targetSize, src.format());
+		QImage dst(targetSize, premultipliedFormat(src.format()));
 		scaleImage(scaler, dst, src, QRect{});
 		return dst;
 	};
@@ -537,13 +548,14 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		_cacheKey = newCacheKey;
 		if (_nearestNeighborUpscaling && _scale > 1.0)
 			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::FastTransformation);
-		else if (_animation) // Qt premultiplies alpha before filtering; the injected scaler does not, so transparent frames fringe
+		else if (_animation) // Qt's scaler: the injected one is not yet measured against it at animation frame rates
 			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::SmoothTransformation);
 		else
 		{
 			// The only path that fills the buffer instead of replacing it, so the only one that needs it allocated.
-			if (_displayImage.size() != bufferPx || _displayImage.format() != _sourceImage.format())
-				_displayImage = QImage(bufferPx.width(), bufferPx.height(), _sourceImage.format());
+			const QImage::Format displayFormat = premultipliedFormat(_sourceImage.format());
+			if (_displayImage.size() != bufferPx || _displayImage.format() != displayFormat)
+				_displayImage = QImage(bufferPx.width(), bufferPx.height(), displayFormat);
 
 			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
 		}

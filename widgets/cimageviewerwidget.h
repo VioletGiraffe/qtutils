@@ -21,8 +21,9 @@ class QPainter;
 class CImageViewerWidget final : public QWidget
 {
 public:
-	// Scales srcRect of source into dest, which arrives at the exact target size and the source's format. An empty
-	// srcRect means the whole source. An implementation may replace dest, so its format is not guaranteed on return.
+	// Scales srcRect of source into dest, which arrives at the exact target size and the source's format, premultiplied
+	// if that has straight alpha. An empty srcRect means the whole source. An implementation may replace dest, so its
+	// format is not guaranteed on return.
 	using ImageScaleFunction = std::function<void (QImage& dest, const QImage& source, const QRect& srcRect)>;
 
 	using QWidget::QWidget;
