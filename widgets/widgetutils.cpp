@@ -18,7 +18,7 @@ namespace {
 class ReturnFromOtherAppFilter final : public QObject
 {
 public:
-	ReturnFromOtherAppFilter(QWidget* window, std::function<bool()> onReturn) :
+	ReturnFromOtherAppFilter(QWidget* window, std::function<void()> onReturn) :
 		QObject{ window },
 		_window{ window },
 		_onReturn{ std::move(onReturn) }
@@ -34,14 +34,14 @@ public:
 protected:
 	bool eventFilter(QObject* watched, QEvent* event) override
 	{
-		if (watched == _window && event->type() == QEvent::WindowActivate && _returnPending)
-			_returnPending = !_onReturn();
+		if (watched == _window && event->type() == QEvent::WindowActivate && std::exchange(_returnPending, false))
+			_onReturn();
 		return false;
 	}
 
 private:
 	QWidget* const _window;
-	const std::function<bool()> _onReturn;
+	const std::function<void()> _onReturn;
 	bool _returnPending = false;
 };
 
@@ -89,7 +89,7 @@ void WidgetUtils::bringWindowToFront(QWidget* window)
 	window->activateWindow();
 }
 
-void WidgetUtils::callOnReturnFromOtherApp(QWidget* window, std::function<bool()> onReturn)
+void WidgetUtils::callOnReturnFromOtherApp(QWidget* window, std::function<void()> onReturn)
 {
 	assert_r(window->isWindow());
 	new ReturnFromOtherAppFilter{ window, std::move(onReturn) }; // parented to the window, which owns it from here

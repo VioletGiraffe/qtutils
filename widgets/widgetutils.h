@@ -54,8 +54,7 @@ namespace WidgetUtils
 
 	// Calls `onReturn` on the window's first activation after the user left the application for another one.
 	// Activations inside the application - another of its windows, a dialog closing - never call it.
-	// Returning false keeps the call pending until the window's next activation.
-	void callOnReturnFromOtherApp(QWidget* window, std::function<bool()> onReturn);
+	void callOnReturnFromOtherApp(QWidget* window, std::function<void()> onReturn);
 
 	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
 	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
