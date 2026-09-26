@@ -18,14 +18,22 @@ namespace NaturalSort {
 			c.setNumericMode(true);
 			return c;
 		}
+
+		[[nodiscard]] inline const QCollator& collator(bool caseSensitive) noexcept {
+			thread_local static const QCollator collatorCaseSensitive = numericCollator(Qt::CaseSensitive);
+			thread_local static const QCollator collatorCaseInsensitive = numericCollator(Qt::CaseInsensitive);
+			return caseSensitive ? collatorCaseSensitive : collatorCaseInsensitive;
+		}
 	}
 
 	// Negative, zero or positive as l sorts before, together with or after r
 	[[nodiscard]] inline int compare(QStringView l, QStringView r, bool caseSensitive = true) noexcept {
-		thread_local static QCollator collatorCaseSensitive = detail::numericCollator(Qt::CaseSensitive);
-		thread_local static QCollator collatorCaseInsensitive = detail::numericCollator(Qt::CaseInsensitive);
+		return detail::collator(caseSensitive).compare(l, r);
+	}
 
-		return (caseSensitive ? collatorCaseSensitive : collatorCaseInsensitive).compare(l, r);
+	// Keys order as compare() orders their strings; comparing two keys is much cheaper than comparing the strings
+	[[nodiscard]] inline QCollatorSortKey sortKey(const QString& s, bool caseSensitive = true) {
+		return detail::collator(caseSensitive).sortKey(s);
 	}
 
 	[[nodiscard]] inline bool lessThan(QStringView l, QStringView r, bool caseSensitive = true) noexcept {
