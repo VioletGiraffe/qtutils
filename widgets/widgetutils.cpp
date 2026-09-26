@@ -4,10 +4,48 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+#include <QEvent>
 #include <QLayout>
 #include <QMainWindow>
 #include <QScreen>
 RESTORE_COMPILER_WARNINGS
+
+#include <utility>
+
+namespace {
+
+// Parented to the window it filters
+class ReturnFromOtherAppFilter final : public QObject
+{
+public:
+	ReturnFromOtherAppFilter(QWidget* window, std::function<bool()> onReturn) :
+		QObject{ window },
+		_window{ window },
+		_onReturn{ std::move(onReturn) }
+	{
+		window->installEventFilter(this);
+		// Inactive, Hidden and Suspended alike: another application had the user
+		connect(qApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state) {
+			if (state != Qt::ApplicationActive)
+				_returnPending = true;
+		});
+	}
+
+protected:
+	bool eventFilter(QObject* watched, QEvent* event) override
+	{
+		if (watched == _window && event->type() == QEvent::WindowActivate && _returnPending)
+			_returnPending = !_onReturn();
+		return false;
+	}
+
+private:
+	QWidget* const _window;
+	const std::function<bool()> _onReturn;
+	bool _returnPending = false;
+};
+
+} // namespace
 
 void WidgetUtils::setLayoutVisible(QLayout* layout, bool visible)
 {
@@ -49,6 +87,12 @@ void WidgetUtils::bringWindowToFront(QWidget* window)
 		window->setWindowState(window->windowState() & ~Qt::WindowMinimized);
 	window->raise();
 	window->activateWindow();
+}
+
+void WidgetUtils::callOnReturnFromOtherApp(QWidget* window, std::function<bool()> onReturn)
+{
+	assert_r(window->isWindow());
+	new ReturnFromOtherAppFilter{ window, std::move(onReturn) }; // parented to the window, which owns it from here
 }
 
 void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)
