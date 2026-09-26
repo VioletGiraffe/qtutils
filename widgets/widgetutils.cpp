@@ -101,22 +101,14 @@ void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)
 	return reinterpret_cast<void*>(widget->window()->winId());
 }
 
-bool WidgetUtils::widgetBelongsToHierarchy(QWidget* const widget, QObject* const hierarchy)
+bool WidgetUtils::widgetBelongsToHierarchy(const QWidget* widget, const QObject* hierarchy)
 {
-	if (widget == hierarchy)
+	for (const QObject* object = widget; object; object = object->parent())
+	{
+		if (object == hierarchy)
 			return true;
-
-		const auto& children = hierarchy->children();
-		if (children.contains(widget))
-			return true;
-
-		for (const auto& child : children)
-		{
-			if (widgetBelongsToHierarchy(widget, child))
-				return true;
-		}
-
-		return false;
+	}
+	return false;
 }
 
 QRect WidgetUtils::currentScreenGeometryForWidget(const QWidget *widget)
