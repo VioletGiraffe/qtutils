@@ -7,6 +7,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
+#include <functional>
 #include <vector>
 
 class QLayout;
@@ -51,10 +52,16 @@ namespace WidgetUtils
 	// A window minimized from maximized comes back maximized.
 	void bringWindowToFront(QWidget* window);
 
+	// Calls `onReturn` on the window's first activation after the user left the application for another one.
+	// Activations inside the application - another of its windows, a dialog closing - never call it.
+	void callOnReturnFromOtherApp(QWidget* window, std::function<void()> onReturn);
+
 	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
 	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
 	void* nativeOwnerWinId(const QWidget* widget);
-	bool widgetBelongsToHierarchy(QWidget * widget, QObject * hierarchy);
+	// Whether `widget` is `hierarchy` or a QObject descendant of it. Unlike QWidget::isAncestorOf, crosses
+	// window boundaries: a dialog parented to a window belongs to it.
+	[[nodiscard]] bool widgetBelongsToHierarchy(const QWidget* widget, const QObject* hierarchy);
 
 	// Geometry of the screen the widget is on, minus taskbars and other reserved areas
 	QRect currentScreenGeometryForWidget(const QWidget* widget);
