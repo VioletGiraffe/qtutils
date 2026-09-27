@@ -3,7 +3,7 @@
 // Catch2 with printers for the Qt Core types assertions compare. Containers of them, such as QStringList, print as ranges.
 // A test binary that uses Qt includes this instead of catch.hpp in every source: a StringMaker specialization must be
 // visible wherever its type is printed.
-// A source defining main() includes test_main.hpp (cpp-template-utils) first, so that catch.hpp is compiled with the runner.
+// Catch2's implementation is compiled elsewhere: in catch2_runner, or in the one source that includes test_main.hpp first (cpp-template-utils).
 
 // Submodule includes
 #include "compiler/compiler_warnings_control.h"
