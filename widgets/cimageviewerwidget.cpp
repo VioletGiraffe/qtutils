@@ -396,6 +396,15 @@ void CImageViewerWidget::stepToPreviousFrame()
 	decodeNextFrame();
 }
 
+void CImageViewerWidget::closeFile()
+{
+	if (!_animation)
+		return;
+
+	_animation.reset();
+	update(); // The info strip loses its frame number
+}
+
 void CImageViewerWidget::setPaused(bool paused)
 {
 	_animation->userPaused = paused;
