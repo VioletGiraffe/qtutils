@@ -23,10 +23,9 @@ CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* wi
 	assert_and_return_r(_widget, );
 	_widget->installEventFilter(this);
 
-	// A quit closes no window, so the state is saved from here as well as on the close event
+	// A quit closes no window, so a widget still visible at that point has not been saved by its hide event
 	connect(qApp, &QCoreApplication::aboutToQuit, this, [this] {
-		// Before the restore the widget holds a geometry that is not the stored one, and must not replace it
-		if (_stateRestored)
+		if (_widget->isVisible())
 			saveState();
 	});
 
@@ -38,7 +37,8 @@ bool CPersistenceEnabler::eventFilter(QObject* watched, QEvent* e)
 {
 	if (_delayed && !_stateRestored && e->type() == QEvent::Show) [[unlikely]]
 		restoreState();
-	else if (e->type() == QEvent::Close) [[unlikely]]
+	// Hide, not Close: QDialog::done() filters out its own close event, and an ignored close must not save
+	else if (e->type() == QEvent::Hide) [[unlikely]]
 		saveState();
 
 	return QObject::eventFilter(watched, e);

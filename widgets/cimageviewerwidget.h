@@ -64,6 +64,8 @@ public:
 	// Stepping back rewinds the file and decodes forward to the target: neither the GIF nor the WEBP handler can seek.
 	void stepToNextFrame();
 	void stepToPreviousFrame();
+	// Closes the displayed file, which an animated image holds open. Its animation ends on the frame shown.
+	void closeFile();
 
 	// The strip along the bottom, showing imageInfoString() and the current magnification, plus the navigator
 	// shown while the view can pan. Visible by default.
