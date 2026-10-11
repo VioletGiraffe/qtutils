@@ -53,8 +53,8 @@ namespace NaturalSort {
 		return detail::collator(caseSensitive).sortKey(s);
 	}
 
-	// Orders as compare() orders the keys' strings; requires keys from sortKey().
-	// QCollatorSortKey::compare() alone does not: compare() sorts an empty string first, Qt's macOS keys sort it last.
+	// Requires keys from sortKey(). Sorts an empty string first, as compare() does: Qt's macOS keys alone sort it last.
+	// Other strings order as by compare(), except on macOS: Apple's key and string collation disagree on some pairs.
 	[[nodiscard]] inline int compare(const QCollatorSortKey& l, const QCollatorSortKey& r) {
 		static const void* const emptyStringKeyData = detail::SortKeyAccess::dataAddress(detail::emptyStringKey());
 		const bool lEmpty = detail::SortKeyAccess::dataAddress(l) == emptyStringKeyData;
