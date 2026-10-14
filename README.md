@@ -36,7 +36,10 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/clineedit.h` | `QLineEdit` with configurable queued select-all-on-focus behavior. |
 | `widgets/clabelelided.h` | Label that paints elided text, in the middle unless told otherwise, and automatically shows the full text as a tooltip only when elided. |
 | `widgets/cplaintexteditwithlinenumbers.h` | `QPlainTextEdit` with a synchronized line-number gutter. |
+| `widgets/chighlightoverlay.h` | Frame and tint in the palette's accent colour over the whole of a parent widget, marking it as the target of something pending such as a hovering drag; transparent to the mouse. |
+| `widgets/cimageviewerwidget.h` | Image view with Ctrl+wheel zoom, drag panning, fit-to-window and actual-pixels modes, an injectable scaler with optional nearest-neighbor upscaling, animated image playback with pause and frame stepping, clipboard copy, and an info strip with a navigator while the view can pan. |
 | `widgets/clightningfastviewer.h` | Read-only text and hex viewer that indexes visual lines instead of laying out a document, so arbitrarily large files open at once; stands in CP437 glyphs for non-printable characters, colours hex bytes by class, and offers word wrap, a wrap-aware line number column, selection, keyboard navigation, clipboard, and literal or regex search with optional wrap-around, reporting a match found after wrapping, plus deadline-bounded match counting that resumes across calls, and highlighting of the current and counted matches. |
+| `widgets/clightningfastviewer_glyphs.h` | `CLightningFastViewerWidget`'s stand-in glyph tables: CP437 shapes for control characters and DEL, a shape family per high nibble for bytes 0x80-0xFF, kept only where the current font draws them one grid column wide. |
 | `widgets/cfindbar.h` | Find bar searching through host-supplied functions: pattern history, previous and next, case, whole-word, regex and highlight-all toggles, a match counter and match highlighting fed by optional host functions, a status for misses and wrap-arounds, optional `QSettings` persistence; its find actions carry host-chosen keys. |
 | `widgets/findresult.h` | Search outcome (not found, found, or found after wrapping around) and match count, shared by `CLightningFastViewerWidget` and `CFindBar`'s host functions. |
 | `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `QSettings`, with delayed first-show restoration by default. |
@@ -65,6 +68,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `utils/displayformatting.h` | Text for display: file sizes in IEC units, time intervals, and the variant of a UI string for the platform built for. |
 | `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QStringView` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
 | `utils/resources.h` | Reads a Qt resource into `QByteArray` or `QString`. |
+| `utils/scoped_cursor.h` | `ScopedWaitCursor`: the application-wide wait cursor for the lifetime of a scope. |
 | `widgets/widgetutils.h` | Recursive layout visibility, main-window/hierarchy lookup, non-invasive native owner handles, screen selection, centered geometry, and widget centering helpers; a callback on a window's first activation after the user returns from another application. |
 | `string/stringutils.h` | Computes the zero-based line number at a `QString` position. |
 
@@ -75,6 +79,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `qtcore_helpers/catch_qt.hpp` | Catch2 with printers for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
 | `qtcore_helpers/qdatetime_helpers.hpp` | Converts between `QDateTime` and Unix `time_t` seconds. |
 | `qtcore_helpers/qdebug_helpers.hpp` | `QDebug` output for `std::string` and hexadecimal `std::array` data. |
+| `qtcore_helpers/qstring_hash.hpp` | `QStringHash`: transparent, avalanching wheathash of the UTF-16 data; with `std::equal_to<>`, a `QString`-keyed hash map finds keys by `QStringView`. |
 | `qtcore_helpers/qstring_helpers.hpp` | `QSL` and `QL1` aliases for `QStringLiteral` and `QLatin1String`. |
 | `qtcore_helpers/qt_helpers.hpp` | `CR` assignment sink that asserts a Qt `connect()` result. |
 | `std_helpers/qt_container_helpers.hpp` | Copying/moving conversion from Qt containers to `std::vector`, typed conversion, and conversion from simple standard containers to Qt containers. |
