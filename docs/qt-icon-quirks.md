@@ -9,7 +9,7 @@ Known `QIcon` and `QPixmap` traps with their remedies.
 - `QIcon::pixmap()` sets the device pixel ratio on its result. The DPR lives in the shared pixel data, so on a pixmap
   also held by `QPixmapCache` this detaches and copies the whole image, and the result's `QPixmap::cacheKey()` is
   unique per call.
-- For content identity, hash the pixels (`qHash` over `QImage::constBits()`) together with the dimensions.
+- For content identity, hash the pixels (`QImage::constBits()`) together with the format and dimensions.
 
 ## Scaling
 
