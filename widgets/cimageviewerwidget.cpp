@@ -27,6 +27,7 @@ RESTORE_COMPILER_WARNINGS
 
 static constexpr qreal kMaxScale = 40.0; // device px per source px; the maximum magnification.
 static constexpr qreal kMinScaledImageSize = 6.0; // logical px; the longer side of the image at the most zoomed-out scale.
+static constexpr qreal kNearestNeighborMinScale = 3.0; // logical px per source px; from here up the source pixels show plainly, so the view scales nearest neighbor.
 
 static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
 static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
@@ -84,12 +85,6 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 void CImageViewerWidget::scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
 {
 	dest = scaledWithQt(source, srcRect, dest.size(), mode);
-}
-
-void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
-{
-	_nearestNeighborUpscaling = enabled;
-	invalidateDisplayImageCache(Presentation::Deferred);
 }
 
 CImageViewerWidget::Animation::Animation(QString imagePath) :
@@ -551,11 +546,13 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		std::max(1, qRound(sourceRect.height() * _scale))
 	};
 
-	const size_t newCacheKey = qHashMulti(4 /* true random seed, chosen by a fair dice throw */, sourceRect, bufferPx);
+	const qreal dpr = devicePixelRatioF();
+	const Qt::TransformationMode mode = _scale / dpr >= kNearestNeighborMinScale ? Qt::FastTransformation : Qt::SmoothTransformation;
+	// The mode is keyed: it depends on the device pixel ratio, which neither the crop nor the buffer size reflects.
+	const size_t newCacheKey = qHashMulti(4 /* true random seed, chosen by a fair dice throw */, sourceRect, bufferPx, mode);
 	if (newCacheKey != _cacheKey)
 	{
 		_cacheKey = newCacheKey;
-		const Qt::TransformationMode mode = _nearestNeighborUpscaling && _scale > 1.0 ? Qt::FastTransformation : Qt::SmoothTransformation;
 		// Qt's smooth scaler for animations: the injected one's smooth kernels are not yet measured against it at animation frame rates
 		if (_animation && mode == Qt::SmoothTransformation)
 			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, mode);
@@ -571,7 +568,6 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	}
 
 	// Set after scaling: a scaler is free to replace the buffer.
-	const qreal dpr = devicePixelRatioF();
 	_displayImage.setDevicePixelRatio(dpr);
 
 	// Snap the blit to a whole device pixel so a 1:1 view stays pixel-exact; a fractional origin would make the painter resample the buffer.

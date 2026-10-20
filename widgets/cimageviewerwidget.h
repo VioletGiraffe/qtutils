@@ -23,7 +23,7 @@ class CImageViewerWidget final : public QWidget
 public:
 	// Scales srcRect of source into dest, which arrives at the exact target size and the source's format, premultiplied
 	// if that has straight alpha. An empty srcRect means the whole source. An implementation may replace dest, so its
-	// format is not guaranteed on return. Qt::FastTransformation requests nearest neighbor.
+	// format is not guaranteed on return. Qt::FastTransformation requests nearest neighbor, used once source pixels are large on screen.
 	using ImageScaleFunction = std::function<void (QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)>;
 
 	using QWidget::QWidget;
@@ -33,8 +33,6 @@ public:
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
 	// QImage::scaled. Public so an injected scaler can delegate the formats it cannot handle.
 	static void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode);
-	// While enabled, upscales are nearest neighbor; downscales are unaffected.
-	void setNearestNeighborUpscaling(bool enabled);
 
 	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
 	bool displayFrame(const QImage& image, bool resetViewParameters = true);
@@ -150,7 +148,6 @@ private:
 	ImageScaleFunction _imageScaler;
 	QString _infoStripHint;
 	bool _overlayVisible = true;
-	bool _nearestNeighborUpscaling = false;
 	// Tracked rather than read from isVisible(): a minimized window's children are sent a hide event but stay isVisible().
 	bool _shown = false;
 	QImage _sourceImage;
