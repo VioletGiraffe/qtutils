@@ -67,12 +67,12 @@ namespace
 		return (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
 	}
 
-	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect)
+	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
 	{
 		if (scaler)
-			scaler(dest, source, srcRect);
+			scaler(dest, source, srcRect, mode);
 		else
-			CImageViewerWidget::smoothScaleQt(dest, source, srcRect);
+			CImageViewerWidget::scaleWithQt(dest, source, srcRect, mode);
 	}
 }
 
@@ -81,9 +81,9 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 	_imageScaler = std::move(scaler);
 }
 
-void CImageViewerWidget::smoothScaleQt(QImage& dest, const QImage& source, const QRect& srcRect)
+void CImageViewerWidget::scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
 {
-	dest = scaledWithQt(source, srcRect, dest.size(), Qt::SmoothTransformation);
+	dest = scaledWithQt(source, srcRect, dest.size(), mode);
 }
 
 void CImageViewerWidget::setNearestNeighborUpscaling(bool enabled)
@@ -211,7 +211,7 @@ QIcon CImageViewerWidget::imageIcon() const
 	// Copied intentionally: probably not necessary, but the lambda is stored in the icon engine and might outlive this widget
 	const auto resizeImage = [scaler = _imageScaler](const QImage& src, const QSize& targetSize) -> QImage {
 		QImage dst(targetSize, premultipliedFormat(src.format()));
-		scaleImage(scaler, dst, src, QRect{});
+		scaleImage(scaler, dst, src, QRect{}, Qt::SmoothTransformation);
 		return dst;
 	};
 
@@ -555,10 +555,10 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	if (newCacheKey != _cacheKey)
 	{
 		_cacheKey = newCacheKey;
-		if (_nearestNeighborUpscaling && _scale > 1.0)
-			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::FastTransformation);
-		else if (_animation) // Qt's scaler: the injected one is not yet measured against it at animation frame rates
-			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, Qt::SmoothTransformation);
+		const Qt::TransformationMode mode = _nearestNeighborUpscaling && _scale > 1.0 ? Qt::FastTransformation : Qt::SmoothTransformation;
+		// Qt's smooth scaler for animations: the injected one's smooth kernels are not yet measured against it at animation frame rates
+		if (_animation && mode == Qt::SmoothTransformation)
+			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, mode);
 		else
 		{
 			// The only path that fills the buffer instead of replacing it, so the only one that needs it allocated.
@@ -566,7 +566,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 			if (_displayImage.size() != bufferPx || _displayImage.format() != displayFormat)
 				_displayImage = QImage(bufferPx.width(), bufferPx.height(), displayFormat);
 
-			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect);
+			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect, mode);
 		}
 	}
 

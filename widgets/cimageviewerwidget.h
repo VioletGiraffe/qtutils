@@ -23,17 +23,17 @@ class CImageViewerWidget final : public QWidget
 public:
 	// Scales srcRect of source into dest, which arrives at the exact target size and the source's format, premultiplied
 	// if that has straight alpha. An empty srcRect means the whole source. An implementation may replace dest, so its
-	// format is not guaranteed on return.
-	using ImageScaleFunction = std::function<void (QImage& dest, const QImage& source, const QRect& srcRect)>;
+	// format is not guaranteed on return. Qt::FastTransformation requests nearest neighbor.
+	using ImageScaleFunction = std::function<void (QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)>;
 
 	using QWidget::QWidget;
 
 public:
-	// Without one, every scale goes through smoothScaleQt().
+	// Without one, every scale goes through scaleWithQt().
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
-	// QImage::scaled with a smooth transform. Public so an injected scaler can delegate the formats it cannot handle.
-	static void smoothScaleQt(QImage& dest, const QImage& source, const QRect& srcRect);
-	// While enabled, upscales bypass the scaler for a nearest-neighbor blit; downscales are unaffected.
+	// QImage::scaled. Public so an injected scaler can delegate the formats it cannot handle.
+	static void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode);
+	// While enabled, upscales are nearest neighbor; downscales are unaffected.
 	void setNearestNeighborUpscaling(bool enabled);
 
 	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
