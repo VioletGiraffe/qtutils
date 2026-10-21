@@ -31,7 +31,6 @@ static constexpr qreal kNearestNeighborMinScale = 3.0; // logical px per source 
 
 static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
 static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
-static constexpr int kNavigatorThumbnailSize = kNavigatorMaxSize * 2; // device px; covers kNavigatorMaxSize at a device pixel ratio of 2
 static constexpr int kNavigatorCropMinSize = 3;     // logical px; a thinner crop box would have nothing left to outline
 
 namespace
@@ -68,8 +67,13 @@ namespace
 		return (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
 	}
 
-	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
+	// Reallocates dest only when its size or format differs from the target
+	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode)
 	{
+		const QImage::Format destFormat = premultipliedFormat(source.format());
+		if (dest.size() != targetPx || dest.format() != destFormat)
+			dest = QImage(targetPx, destFormat);
+
 		if (scaler)
 			scaler(dest, source, srcRect, mode);
 		else
@@ -99,7 +103,7 @@ bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParam
 {
 	const QSize previousSize = _sourceImage.size();
 	_sourceImage = image;
-	_navigatorThumbnail = QImage{}; // Caches the source pixels, not the view state
+	_navigatorThumbnail = QImage{}; // paintNavigator only compares sizes, which a new image may share
 
 	if (resetViewParameters)
 	{
@@ -205,8 +209,8 @@ QIcon CImageViewerWidget::imageIcon() const
 
 	// Copied intentionally: probably not necessary, but the lambda is stored in the icon engine and might outlive this widget
 	const auto resizeImage = [scaler = _imageScaler](const QImage& src, const QSize& targetSize) -> QImage {
-		QImage dst(targetSize, premultipliedFormat(src.format()));
-		scaleImage(scaler, dst, src, QRect{}, Qt::SmoothTransformation);
+		QImage dst;
+		scaleImage(scaler, dst, src, QRect{}, targetSize, Qt::SmoothTransformation);
 		return dst;
 	};
 
@@ -332,6 +336,15 @@ void CImageViewerWidget::invalidateDisplayImageCache(Presentation presentation)
 		repaint();
 	else
 		update();
+}
+
+void CImageViewerWidget::scaleSource(QImage& dest, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode) const
+{
+	// Qt's smooth scaler for animations: the injected one's smooth kernels are not yet measured against it at animation frame rates
+	if (_animation && mode == Qt::SmoothTransformation)
+		dest = scaledWithQt(_sourceImage, srcRect, targetPx, mode);
+	else
+		scaleImage(_imageScaler, dest, _sourceImage, srcRect, targetPx, mode);
 }
 
 void CImageViewerWidget::fitToWindow() noexcept
@@ -553,18 +566,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	if (newCacheKey != _cacheKey)
 	{
 		_cacheKey = newCacheKey;
-		// Qt's smooth scaler for animations: the injected one's smooth kernels are not yet measured against it at animation frame rates
-		if (_animation && mode == Qt::SmoothTransformation)
-			_displayImage = scaledWithQt(_sourceImage, sourceRect, bufferPx, mode);
-		else
-		{
-			// The only path that fills the buffer instead of replacing it, so the only one that needs it allocated.
-			const QImage::Format displayFormat = premultipliedFormat(_sourceImage.format());
-			if (_displayImage.size() != bufferPx || _displayImage.format() != displayFormat)
-				_displayImage = QImage(bufferPx.width(), bufferPx.height(), displayFormat);
-
-			scaleImage(_imageScaler, _displayImage, _sourceImage, sourceRect, mode);
-		}
+		scaleSource(_displayImage, sourceRect, bufferPx, mode);
 	}
 
 	// Set after scaling: a scaler is free to replace the buffer.
@@ -651,14 +653,18 @@ void CImageViewerWidget::paintNavigator(QPainter& painter)
 	if (navigator.isEmpty())
 		return;
 
-	// Not the injected scaler: that one serves the view, and a thumbnail this small does not need it.
-	if (_navigatorThumbnail.isNull())
-		_navigatorThumbnail = _sourceImage.scaled(kNavigatorThumbnailSize, kNavigatorThumbnailSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+	const qreal dpr = devicePixelRatioF();
+	const QSize thumbnailPx = (QSizeF{ navigator.size() } * dpr).toSize();
+	if (_navigatorThumbnail.size() != thumbnailPx)
+		scaleSource(_navigatorThumbnail, QRect{}, thumbnailPx, Qt::SmoothTransformation);
+
+	_navigatorThumbnail.setDevicePixelRatio(dpr);
 
 	painter.save();
 
-	painter.setRenderHint(QPainter::SmoothPixmapTransform);
-	painter.drawImage(navigator, _navigatorThumbnail);
+	// Snapped to a whole device pixel, as in paintEvent
+	const QPoint targetDevice = (QPointF{ navigator.topLeft() } * dpr).toPoint();
+	painter.drawImage(QPointF{ targetDevice } / dpr, _navigatorThumbnail);
 
 	// Dim outside the crop rather than only outlining it: an outline alone is lost against busy image content.
 	const QRect cropBox = navigatorCropBox(navigator);
