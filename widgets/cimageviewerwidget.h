@@ -112,6 +112,7 @@ private:
 	// No-op until the first image is displayed.
 	void refitOrKeepViewCenter(const QSizeF& previousViewportDeviceSize) noexcept;
 	void invalidateDisplayImageCache(Presentation presentation);                   // repaints, so paintEvent must never call it
+	void scaleSource(QImage& dest, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode) const; // an empty srcRect is the whole source
 
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
 	void paintInfoStrip(QPainter& painter) const;
@@ -152,7 +153,7 @@ private:
 	bool _shown = false;
 	QImage _sourceImage;
 	QImage _displayImage;
-	QImage _navigatorThumbnail;    // the whole source, scaled down; built on first use, dropped with the image
+	QImage _navigatorThumbnail;    // the whole source at the navigator's device size; built on first use, rebuilt on a size change or a new image
 	std::optional<size_t> _cacheKey;    // absent while _displayImage is stale
 
 	QString _currentImageFormat;
