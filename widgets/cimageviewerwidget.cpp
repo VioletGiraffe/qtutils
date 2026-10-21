@@ -1,5 +1,6 @@
 #include "cimageviewerwidget.h"
 #include "utils/ciconengineqimage.h"
+#include "utils/painterutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
@@ -572,10 +573,8 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	// Set after scaling: a scaler is free to replace the buffer.
 	_displayImage.setDevicePixelRatio(dpr);
 
-	// Snaps the blit to a whole device pixel of the widget.
-	// Tidiness only: as of Qt 6.11.2 the raster engine rounds a fractional image origin itself and this snapping does not affect the rendering, as long as SmoothPixmapTransform is off.
-	const QPoint targetDevice = (_offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale).toPoint();
-	p.drawImage(QPointF{ targetDevice } / dpr, _displayImage);
+	const QPointF targetDevice = _offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale;
+	p.drawImage(snappedToDevicePixel(p, targetDevice / dpr), _displayImage);
 
 	paintNavigator(p);
 
@@ -663,9 +662,7 @@ void CImageViewerWidget::paintNavigator(QPainter& painter)
 
 	painter.save();
 
-	// Snapped to a whole device pixel, as in paintEvent
-	const QPoint targetDevice = (QPointF{ navigator.topLeft() } * dpr).toPoint();
-	painter.drawImage(QPointF{ targetDevice } / dpr, _navigatorThumbnail);
+	painter.drawImage(snappedToDevicePixel(painter, navigator.topLeft()), _navigatorThumbnail);
 
 	// Dim outside the crop rather than only outlining it: an outline alone is lost against busy image content.
 	const QRect cropBox = navigatorCropBox(navigator);

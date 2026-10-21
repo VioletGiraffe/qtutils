@@ -67,6 +67,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `utils/ciconengineqimage.h` | `QIconEngine` that renders each requested physical size directly from a source `QImage`, preserves aspect ratio with transparent padding, caches by size/mode, and accepts a custom scaler. |
 | `utils/displayformatting.h` | Text for display: file sizes in IEC units, time intervals, and the variant of a UI string for the platform built for. |
 | `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QStringView` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
+| `utils/painterutils.h` | `snappedToDevicePixel`: the nearest logical point on a whole device pixel of a painter's surface. |
 | `utils/resources.h` | Reads a Qt resource into `QByteArray` or `QString`. |
 | `utils/scoped_cursor.h` | `ScopedWaitCursor`: the application-wide wait cursor for the lifetime of a scope. |
 | `widgets/widgetutils.h` | Recursive layout visibility, main-window/hierarchy lookup, non-invasive native owner handles, screen selection, centered geometry, and widget centering helpers; a callback on a window's first activation after the user returns from another application. |
