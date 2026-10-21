@@ -40,8 +40,8 @@ CAboutDialog::CAboutDialog(const QString& versionString, QWidget *parent, const 
 	scaleFont(programName, PROGRAM_NAME_FONT_SCALE);
 
 	const QString versionText = versionString.isEmpty()
-		? tr("Built on %1 at %2\nUsing Qt version %3").arg(__DATE__, __TIME__, QT_VERSION_STR)
-		: tr("Version %1 (%2 %3)\nUsing Qt version %4").arg(versionString, __DATE__, __TIME__, QT_VERSION_STR);
+		? tr("Built on %1 at %2\nUsing Qt %3 (LGPLv3)").arg(__DATE__, __TIME__, QT_VERSION_STR)
+		: tr("Version %1 (%2 %3)\nUsing Qt %4 (LGPLv3)").arg(versionString, __DATE__, __TIME__, QT_VERSION_STR);
 
 	QLabel* version = new QLabel(versionText, this);
 	version->setAlignment(Qt::AlignCenter);
