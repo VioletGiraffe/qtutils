@@ -1,7 +1,7 @@
 #pragma once
 
 #include "compiler/compiler_warnings_control.h"
-#include "hash/wheathash.hpp" // cpp-template-utils
+#include "hash/rapidhash.hpp" // cpp-template-utils
 
 DISABLE_COMPILER_WARNINGS
 #include <QString>
@@ -16,6 +16,6 @@ struct QStringHash {
 	using is_avalanching = std::true_type;
 	using is_transparent = void;
 	[[nodiscard]] inline size_t operator()(QStringView s) const noexcept {
-		return ::wheathash64(s.constData(), s.size() * sizeof(QChar));
+		return ::rapidhash64(s.constData(), s.size() * sizeof(QChar));
 	}
 };

@@ -82,7 +82,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `qtcore_helpers/catch_qt.hpp` | Catch2 with printers for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
 | `qtcore_helpers/qdatetime_helpers.hpp` | Converts between `QDateTime` and Unix `time_t` seconds. |
 | `qtcore_helpers/qdebug_helpers.hpp` | `QDebug` output for `std::string` and hexadecimal `std::array` data. |
-| `qtcore_helpers/qstring_hash.hpp` | `QStringHash`: transparent, avalanching wheathash of the UTF-16 data; with `std::equal_to<>`, a `QString`-keyed hash map finds keys by `QStringView`. |
+| `qtcore_helpers/qstring_hash.hpp` | `QStringHash`: transparent, avalanching rapidhash of the UTF-16 data; with `std::equal_to<>`, a `QString`-keyed hash map finds keys by `QStringView`. |
 | `qtcore_helpers/qstring_helpers.hpp` | `QSL` and `QL1` aliases for `QStringLiteral` and `QLatin1String`. |
 | `qtcore_helpers/qt_helpers.hpp` | `CR` assignment sink that asserts a Qt `connect()` result. |
 | `std_helpers/qt_container_helpers.hpp` | Copying/moving conversion from Qt containers to `std::vector`, typed conversion, and conversion from simple standard containers to Qt containers. |
