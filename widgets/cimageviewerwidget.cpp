@@ -572,7 +572,8 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	// Set after scaling: a scaler is free to replace the buffer.
 	_displayImage.setDevicePixelRatio(dpr);
 
-	// Snap the blit to a whole device pixel so a 1:1 view stays pixel-exact; a fractional origin would make the painter resample the buffer.
+	// Snaps the blit to a whole device pixel of the widget.
+	// Tidiness only: as of Qt 6.11.2 the raster engine rounds a fractional image origin itself and this snapping does not affect the rendering, as long as SmoothPixmapTransform is off.
 	const QPoint targetDevice = (_offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale).toPoint();
 	p.drawImage(QPointF{ targetDevice } / dpr, _displayImage);
 
