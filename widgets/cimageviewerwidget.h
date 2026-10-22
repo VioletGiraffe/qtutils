@@ -71,6 +71,8 @@ public:
 	[[nodiscard]] bool isOverlayVisible() const noexcept { return _overlayVisible; }
 	// Appended to the strip. The widget binds no shortcut, so naming the key that hides it is the caller's to do.
 	void setInfoStripHint(QString hint);
+	// Centered in the strip; the image info yields space to it.
+	void setInfoStripCaption(QString caption);
 
 protected:
 	void paintEvent(QPaintEvent* e) override;
@@ -148,6 +150,7 @@ private:
 private:
 	ImageScaleFunction _imageScaler;
 	QString _infoStripHint;
+	QString _infoStripCaption;
 	bool _overlayVisible = true;
 	// Tracked rather than read from isVisible(): a minimized window's children are sent a hide event but stay isVisible().
 	bool _shown = false;

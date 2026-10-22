@@ -172,12 +172,12 @@ QString CImageViewerWidget::imageInfoString() const
 		return QString();
 
 	const int numChannels = _sourceImage.isGrayscale() ? 1 : (3 + (_sourceImage.hasAlphaChannel() ? 1 : 0));
-	const QString imageInfo = tr("%1x%2 (%3 MP), %4 channels, %5 bits per pixel").
+	const QString imageInfo = tr("%1x%2 (%3 MP) %4×%5 bpp").
 		arg(_sourceImage.width()).
 		arg(_sourceImage.height()).
 		arg(_sourceImage.width() * _sourceImage.height() * 1e-6, 0, 'f', 1).
 		arg(numChannels).
-		arg(_sourceImage.bitPlaneCount());
+		arg(_sourceImage.bitPlaneCount() / numChannels);
 
 	if (_currentImageFormat.isEmpty()) // Displayed from a QImage: there is no file to name a format for
 		return imageInfo;
@@ -227,6 +227,12 @@ void CImageViewerWidget::setOverlayVisible(bool visible)
 void CImageViewerWidget::setInfoStripHint(QString hint)
 {
 	_infoStripHint = std::move(hint);
+	update();
+}
+
+void CImageViewerWidget::setInfoStripCaption(QString caption)
+{
+	_infoStripCaption = std::move(caption);
 	update();
 }
 
@@ -606,7 +612,19 @@ void CImageViewerWidget::paintInfoStrip(QPainter& painter) const
 
 	painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignRight, magnification);
 
-	const int infoWidth = textRect.width() - fm.horizontalAdvance(magnification) - padding;
+	int infoRight = textRect.x() + textRect.width() - fm.horizontalAdvance(magnification) - padding;
+
+	// Centered on the strip: it stays put as the magnification text changes width.
+	const int center = strip.center().x();
+	const int captionHalfWidth = std::min((fm.horizontalAdvance(_infoStripCaption) + 1) / 2, infoRight - center);
+	if (captionHalfWidth > 0)
+	{
+		const QRect captionRect{ center - captionHalfWidth, textRect.y(), 2 * captionHalfWidth, textRect.height() };
+		painter.drawText(captionRect, Qt::AlignCenter, fm.elidedText(_infoStripCaption, Qt::ElideRight, captionRect.width()));
+		infoRight = captionRect.x() - padding;
+	}
+
+	const int infoWidth = infoRight - textRect.x();
 	if (infoWidth > 0)
 		painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fm.elidedText(imageInfoString(), Qt::ElideRight, infoWidth));
 }
