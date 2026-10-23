@@ -132,6 +132,14 @@ In Qt 6.11, `QWindows11Style` fills `QLineEdit`, editable `QComboBox` and `QAbst
 
 `widgetColorReport()` ([`theme/widgetcolorreport.h`](../theme/widgetcolorreport.h)) shows which roles a widget's palette sets explicitly, the style chain, the Qt runtime version, and the painted pixels.
 
+## Item view selection fill
+
+In Qt 6.11, `QWindows11Style` paints a selected or hovered item (`CE_ItemViewItem`) with one fixed, faint WinUI3 fill, so selection is hard to see and indistinguishable from hover. It uses `QPalette::Highlight` instead only when the view's `alternatingRowColors()` is on. Selected text keeps `QPalette::Text` either way.
+
+- `setAlternatingRowColors(true)` restores a visible selection only through that coupling, and only in this style.
+- A QSS `::item:selected` rule with a background or color hands selected items to `QStyleSheetStyle`, which paints them from the rule. Unselected items stay with the base style and keep its hover.
+- A `QTableView` sets `State_MouseOver` on the hovered index only, so an `::item:hover` rule fills one cell of a row-selection table. `QTreeView` sets it on the whole row.
+
 ## Palette and selection
 
 - `palette(role)` follows a palette change automatically. QSS values generated from theme colors require rebuilding
