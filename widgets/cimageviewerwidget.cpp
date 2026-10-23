@@ -63,11 +63,6 @@ namespace
 		}
 	}
 
-	[[nodiscard]] inline QImage scaledWithQt(const QImage& source, const QRect& srcRect, const QSize& targetSize, Qt::TransformationMode mode)
-	{
-		return (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(targetSize, Qt::IgnoreAspectRatio, mode);
-	}
-
 	// Reallocates dest only when its size or format differs from the target
 	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode)
 	{
@@ -89,7 +84,7 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 
 void CImageViewerWidget::scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
 {
-	dest = scaledWithQt(source, srcRect, dest.size(), mode);
+	dest = (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(dest.size(), Qt::IgnoreAspectRatio, mode);
 }
 
 CImageViewerWidget::Animation::Animation(QString imagePath) :
@@ -347,11 +342,7 @@ void CImageViewerWidget::invalidateDisplayImageCache(Presentation presentation)
 
 void CImageViewerWidget::scaleSource(QImage& dest, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode) const
 {
-	// Qt's smooth scaler for animations: the injected one's smooth kernels are not yet measured against it at animation frame rates
-	if (_animation && mode == Qt::SmoothTransformation)
-		dest = scaledWithQt(_sourceImage, srcRect, targetPx, mode);
-	else
-		scaleImage(_imageScaler, dest, _sourceImage, srcRect, targetPx, mode);
+	scaleImage(_imageScaler, dest, _sourceImage, srcRect, targetPx, mode);
 }
 
 void CImageViewerWidget::fitToWindow() noexcept
