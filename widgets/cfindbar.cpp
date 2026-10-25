@@ -100,7 +100,7 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	connect(closeButton, &QToolButton::clicked, this, &CFindBar::deactivate);
 
 	if (!_settingsRootKey.isEmpty())
-		_patternBox->enableAutoSave(_settingsRootKey + QStringLiteral("/Expressions"));
+		_patternBox->setSettingsKeyForHistoryPersistence(_settingsRootKey + QStringLiteral("/Expressions"));
 
 	connect(_patternBox, &CHistoryComboBox::itemActivated, this, [this](const QString&, Qt::KeyboardModifiers modifiers) {
 		findMatch(modifiers.testFlag(Qt::ShiftModifier));
@@ -178,7 +178,7 @@ void CFindBar::findMatch(bool backward)
 	show();
 
 	// Before the search: rebuilding the history rewrites the pattern text, which clears the status
-	_patternBox->moveCurrentTextToTopOfHistory();
+	_patternBox->addToHistory(pattern);
 
 	_countLabel->clear();
 

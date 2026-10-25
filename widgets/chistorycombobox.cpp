@@ -12,6 +12,8 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 {
 	// without this call lineEdit is not created so it would be impossible to access it
 	setEditable(true);
+	// Qt inserts nothing on Enter: the owner records entries
+	setInsertPolicy(QComboBox::NoInsert);
 }
 
 CHistoryComboBox::~CHistoryComboBox()
@@ -19,12 +21,12 @@ CHistoryComboBox::~CHistoryComboBox()
 	saveState();
 }
 
-void CHistoryComboBox::enableAutoSave(const QString& settingName)
+void CHistoryComboBox::setSettingsKeyForHistoryPersistence(const QString& settingsKey)
 {
-	_settingName = settingName;
+	_settingsKey = settingsKey;
 
-	if (!settingName.isEmpty())
-		addItems(QSettings().value(settingName).toStringList());
+	if (!settingsKey.isEmpty())
+		addItems(QSettings().value(settingsKey).toStringList());
 }
 
 void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
@@ -32,10 +34,9 @@ void CHistoryComboBox::setClearEditorOnItemActivation(bool clear)
 	_bClearEditorOnItemActivation = clear;
 }
 
-void CHistoryComboBox::moveCurrentTextToTopOfHistory()
+void CHistoryComboBox::addToHistory(const QString& text)
 {
-	const QString text = currentText();
-	if (!_bHistoryMode || text.isEmpty())
+	if (text.isEmpty())
 		return;
 
 	QStringList list = items();
@@ -49,16 +50,6 @@ void CHistoryComboBox::moveCurrentTextToTopOfHistory()
 
 	setCurrentIndex(0);
 	saveState();
-}
-
-void CHistoryComboBox::setHistoryMode(bool historyMode)
-{
-	_bHistoryMode = historyMode;
-}
-
-bool CHistoryComboBox::historyMode() const
-{
-	return _bHistoryMode;
 }
 
 void CHistoryComboBox::selectPreviousItem()
@@ -110,8 +101,6 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 void CHistoryComboBox::currentItemActivated(Qt::KeyboardModifiers modifiers)
 {
 	const QString newItem = currentText();
-	moveCurrentTextToTopOfHistory();
-
 	if (_bClearEditorOnItemActivation)
 		lineEdit()->clear();
 
@@ -120,6 +109,6 @@ void CHistoryComboBox::currentItemActivated(Qt::KeyboardModifiers modifiers)
 
 void CHistoryComboBox::saveState()
 {
-	if (!_settingName.isEmpty())
-		QSettings().setValue(_settingName, items());
+	if (!_settingsKey.isEmpty())
+		QSettings().setValue(_settingsKey, items());
 }
