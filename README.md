@@ -66,6 +66,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 |---|---|
 | `utils/ciconengineqimage.h` | `QIconEngine` that renders each requested physical size directly from a source `QImage`, preserves aspect ratio with transparent padding, caches by size/mode, and accepts a custom scaler. |
 | `utils/displayformatting.h` | Text for display: file sizes in IEC units, time intervals, and the variant of a UI string for the platform built for. |
+| `utils/filemanager.h` | Reveals an entry selected in the platform file manager, through a link or at the link itself, with the platform's menu wording; opens a folder's contents. Callers on Linux and FreeBSD need `QT += dbus`. |
 | `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QStringView` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
 | `utils/painterutils.h` | `snappedToDevicePixel`: the nearest logical point on a whole device pixel of a painter's surface. |
 | `utils/resources.h` | Reads a Qt resource into `QByteArray` or `QString`. |
