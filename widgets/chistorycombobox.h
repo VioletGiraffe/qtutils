@@ -7,6 +7,8 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 // Editable combo box whose items are a most-recent-first history. The owner records entries with addToHistory; maxCount() caps the list.
+// Enter emits itemActivated only; textActivated comes from a dropdown or completer pick, or focus loss on text matching an entry.
+// Arrow keys and the wheel browse the entries without activation.
 class CHistoryComboBox final : public QComboBox
 {
 	Q_OBJECT
@@ -33,10 +35,15 @@ signals:
 	void itemActivated(QString itemText, Qt::KeyboardModifiers modifiers);
 
 protected:
+	bool eventFilter(QObject * watched, QEvent * e) override;
+	void childEvent(QChildEvent * e) override;
 	void keyPressEvent(QKeyEvent * e) override;
+	void wheelEvent(QWheelEvent * e) override;
 
 private:
 	void currentItemActivated(Qt::KeyboardModifiers modifiers);
+	// step: +1 is an older entry
+	void browseHistory(int step);
 
 	void saveState();
 
