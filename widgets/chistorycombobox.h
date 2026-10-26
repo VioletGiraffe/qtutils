@@ -35,8 +35,6 @@ signals:
 	void itemActivated(QString itemText, Qt::KeyboardModifiers modifiers);
 
 protected:
-	bool eventFilter(QObject * watched, QEvent * e) override;
-	void childEvent(QChildEvent * e) override;
 	void keyPressEvent(QKeyEvent * e) override;
 	void wheelEvent(QWheelEvent * e) override;
 

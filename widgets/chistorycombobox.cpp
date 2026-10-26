@@ -2,8 +2,6 @@
 #include "container/set_operations.hpp"
 
 DISABLE_COMPILER_WARNINGS
-#include <QChildEvent>
-#include <QCompleter>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QSettings>
@@ -11,18 +9,6 @@ DISABLE_COMPILER_WARNINGS
 #include <QStyleOptionComboBox>
 #include <QWheelEvent>
 RESTORE_COMPILER_WARNINGS
-
-namespace {
-
-// QLineEdit's Enter accepts a pending inline completion instead of finishing the edit
-bool inlineCompletionPending(const QLineEdit& lineEdit)
-{
-	const QCompleter* completer = lineEdit.completer();
-	return completer && completer->completionMode() == QCompleter::InlineCompletion && lineEdit.hasSelectedText()
-		&& lineEdit.selectionEnd() == lineEdit.text().size();
-}
-
-} // namespace
 
 CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	QComboBox(parent)
@@ -104,36 +90,15 @@ QStringList CHistoryComboBox::items() const
 	return itemsList;
 }
 
-bool CHistoryComboBox::eventFilter(QObject* watched, QEvent* e)
-{
-	// Enter skips QLineEdit, whose editingFinished makes QComboBox emit activated for text matching an entry
-	if (watched == lineEdit() && e->type() == QEvent::KeyPress)
-	{
-		const auto* keyEvent = static_cast<const QKeyEvent*>(e);
-		if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) && !inlineCompletionPending(*lineEdit()))
-		{
-			currentItemActivated(keyEvent->modifiers());
-			return true;
-		}
-	}
-
-	return QComboBox::eventFilter(watched, e);
-}
-
-void CHistoryComboBox::childEvent(QChildEvent* e)
-{
-	// Covers the line edit setEditable creates and any later one from setLineEdit
-	if (e->type() == QEvent::ChildPolished && qobject_cast<QLineEdit*>(e->child()))
-		e->child()->installEventFilter(this);
-
-	QComboBox::childEvent(e);
-}
-
-// The base handlers of the browsing keys and the wheel emit activated; browsing here does not
+// Keys arrive here, not at the line edit: QComboBox is its focus proxy
+// Enter never reaches QLineEdit, which would only accept a pending inline completion; the activated text includes the completion shown
+// The base handler emits activated for the browsing keys; browsing here does not
 void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 {
 	const bool browsingModifiers = !(e->modifiers() & (Qt::AltModifier | Qt::ControlModifier)); // Alt+Down opens the popup, Ctrl goes to the completer
-	if (browsingModifiers && (e->key() == Qt::Key_Up || e->key() == Qt::Key_PageUp))
+	if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter)
+		currentItemActivated(e->modifiers());
+	else if (browsingModifiers && (e->key() == Qt::Key_Up || e->key() == Qt::Key_PageUp))
 		browseHistory(-1);
 	else if (browsingModifiers && (e->key() == Qt::Key_Down || e->key() == Qt::Key_PageDown))
 		browseHistory(1);
@@ -146,6 +111,7 @@ void CHistoryComboBox::keyPressEvent(QKeyEvent* e)
 	e->accept();
 }
 
+// The base handler emits activated; browsing here does not
 void CHistoryComboBox::wheelEvent(QWheelEvent* e)
 {
 	QStyleOptionComboBox option;
