@@ -82,6 +82,11 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 	_imageScaler = std::move(scaler);
 }
 
+void CImageViewerWidget::setImageDecoder(ImageDecodeFunction decoder) noexcept
+{
+	_imageDecoder = std::move(decoder);
+}
+
 void CImageViewerWidget::scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
 {
 	dest = (srcRect.isEmpty() ? source : source.copy(srcRect)).scaled(dest.size(), Qt::IgnoreAspectRatio, mode);
@@ -130,11 +135,22 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 
 bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
-	// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
-	_animation.emplace(imagePath);
+	QString fileFormat;
+	QImage img;
+	if (std::optional<DecodedFile> decoded = _imageDecoder ? _imageDecoder(imagePath) : std::nullopt)
+	{
+		_animation.reset();
+		fileFormat = std::move(decoded->format);
+		img = std::move(decoded->image);
+	}
+	else
+	{
+		// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
+		_animation.emplace(imagePath);
+		fileFormat = QString::fromLatin1(_animation->reader.format());
+		img = _animation->reader.read();
+	}
 
-	const QString fileFormat = QString::fromLatin1(_animation->reader.format());
-	QImage img = _animation->reader.read();
 	if (img.isNull())
 	{
 		_animation.reset();
@@ -147,7 +163,7 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 		qInfo() << "CImageViewerWidget::displayImage: converted image format from" << format << "to" << img.format();
 	}
 
-	if (_animation->reader.supportsAnimation())
+	if (_animation && _animation->reader.supportsAnimation())
 	{
 		_animation->clock.start();
 		_animation->displayedDelayMs = _animation->reader.nextImageDelay();

@@ -10,6 +10,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QImageReader>
 #include <QRect>
 #include <QSize>
+#include <QString>
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
@@ -26,11 +27,23 @@ public:
 	// format is not guaranteed on return. Qt::FastTransformation requests nearest neighbor, used once source pixels are large on screen.
 	using ImageScaleFunction = std::function<void (QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)>;
 
+	// An image already turned upright; format names the file type in the info strip.
+	struct DecodedFile
+	{
+		QImage image;
+		QString format;
+	};
+	// Tried before the widget's own QImageReader: std::nullopt leaves the file, animation included, to the reader.
+	// A null image fails displayImage().
+	using ImageDecodeFunction = std::function<std::optional<DecodedFile> (const QString& imagePath)>;
+
 	using QWidget::QWidget;
 
 public:
 	// Without one, every scale goes through scaleWithQt().
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
+	// Without one, every file goes through the widget's QImageReader.
+	void setImageDecoder(ImageDecodeFunction decoder) noexcept;
 	// QImage::scaled. Public so an injected scaler can delegate the formats it cannot handle.
 	static void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode);
 
@@ -149,6 +162,7 @@ private:
 
 private:
 	ImageScaleFunction _imageScaler;
+	ImageDecodeFunction _imageDecoder;
 	QString _infoStripHint;
 	QString _infoStripCaption;
 	bool _overlayVisible = true;
