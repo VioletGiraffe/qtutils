@@ -23,6 +23,10 @@ public:
 	// Must not be called before the QApplication exists.
 	[[nodiscard]] static CThemeController& instance();
 
+	// Persists to QSettings{ organization, application } instead of the application's own store.
+	// Must be called before the first instance().
+	static void setSettingsLocation(const QString& organization, const QString& application);
+
 	// Qt::ColorScheme::Unknown means "follow the system".
 	[[nodiscard]] Qt::ColorScheme schemePreference() const { return _schemePreference; }
 	void setSchemePreference(Qt::ColorScheme preference);

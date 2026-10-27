@@ -14,6 +14,19 @@ constexpr auto SchemeKey = "Theme/ColorScheme";
 constexpr auto LightThemeKey = "Theme/LightTheme";
 constexpr auto DarkThemeKey = "Theme/DarkTheme";
 
+// Both empty: the application's own store.
+QString settingsOrganization;
+QString settingsApplication;
+bool controllerConstructed = false;
+
+QSettings settingsStore()
+{
+	if (settingsOrganization.isEmpty() && settingsApplication.isEmpty())
+		return QSettings{};
+
+	return QSettings{ settingsOrganization, settingsApplication };
+}
+
 // Stored as text rather than the enum's number: reordering Qt::ColorScheme would otherwise silently
 // repoint an existing user's setting at a different scheme.
 QString schemeToString(Qt::ColorScheme scheme)
@@ -45,9 +58,18 @@ CThemeController& CThemeController::instance()
 	return controller;
 }
 
+void CThemeController::setSettingsLocation(const QString& organization, const QString& application)
+{
+	assert_r(!controllerConstructed); // the choices are loaded once, at construction
+	settingsOrganization = organization;
+	settingsApplication = application;
+}
+
 CThemeController::CThemeController()
 {
-	const QSettings settings;
+	controllerConstructed = true;
+
+	const QSettings settings = settingsStore();
 	_schemePreference = schemeFromString(settings.value(SchemeKey).toString());
 	_lightThemeName = settings.value(LightThemeKey).toString();
 	_darkThemeName = settings.value(DarkThemeKey).toString();
@@ -65,7 +87,7 @@ void CThemeController::setSchemePreference(Qt::ColorScheme preference)
 		return;
 
 	_schemePreference = preference;
-	QSettings{}.setValue(SchemeKey, schemeToString(preference));
+	settingsStore().setValue(SchemeKey, schemeToString(preference));
 
 	// Qt emits colorSchemeChanged if this alters the effective scheme, and that is what reaches
 	// themeChanged(). When it does not - pinning Light while the system is already light - nothing
@@ -90,7 +112,7 @@ void CThemeController::setThemeName(bool dark, const QString& name)
 		return;
 
 	stored = name;
-	QSettings{}.setValue(dark ? DarkThemeKey : LightThemeKey, name);
+	settingsStore().setValue(dark ? DarkThemeKey : LightThemeKey, name);
 
 	if (dark == darkActive())
 		emit themeChanged(); // the other polarity's theme is not on screen, so nothing to redraw

@@ -51,7 +51,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | Header | Facility |
 |---|---|
 | `theme/cbasepalette.h` | Colour set shared by themed apps: nine authored core colours, seven derived ones that `resolvedPalette()` fills in when left unset, and the mapping onto `QPalette` roles. |
-| `theme/cthemecontroller.h` | Persisted colour scheme preference (system, light or dark) and one theme name per polarity, stored as opaque strings the app resolves against its own theme list; applies the polarity through `QStyleHints` and signals `themeChanged`. |
+| `theme/cthemecontroller.h` | Persisted colour scheme preference (system, light or dark) and one theme name per polarity, stored as opaque strings the app resolves against its own theme list, in the application's own `QSettings` unless `setSettingsLocation` names another store; applies the polarity through `QStyleHints` and signals `themeChanged`. |
 | `theme/colorutils.h` | Colour maths: sRGB mixing, WCAG luminance and contrast, readable text on a fill, a hue distinct from the palette's accents, a saturated colour reaching a target contrast against a background, and search-match fills built from these. |
 | `theme/ctintedsvgiconengine.h` | Icons and pixmaps from monochrome SVGs, rendered per size and DPR in a colour read from a provider at each render, so icons follow a live theme change. |
 | `theme/cthemeiconhandler.h` | `themeicon:` virtual file scheme serving tinted copies of SVG resources, so stylesheet `url()`s can use theme-coloured glyphs; `themeIconUrl()` builds the URLs. Built on private Qt API. |
