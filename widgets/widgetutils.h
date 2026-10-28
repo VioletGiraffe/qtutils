@@ -56,6 +56,10 @@ namespace WidgetUtils
 	// Activations inside the application - another of its windows, a dialog closing - never call it.
 	void callOnReturnFromOtherApp(QWidget* window, std::function<void()> onReturn);
 
+	// On macOS, has the system convert every window from sRGB to the display: Qt's default is the display's own color space.
+	// Must run before the first window is created.
+	void tagWindowsAsSrgb();
+
 	// The native handle of widget's top-level window, for native APIs needing an owner window. Deliberately not
 	// widget->winId(): on a child that call turns it (and by default its siblings) into native windows.
 	void* nativeOwnerWinId(const QWidget* widget);

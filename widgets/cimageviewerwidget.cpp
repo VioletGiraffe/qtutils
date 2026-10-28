@@ -6,6 +6,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QClipboard>
 #include <QColor>
+#include <QColorSpace>
 #include <QDebug>
 #include <QFontMetrics>
 #include <QHash>
@@ -64,7 +65,8 @@ namespace
 	}
 
 	// Reallocates dest only when its size or format differs from the target
-	inline void scaleImage(const CImageViewerWidget::ImageScaleFunction& scaler, QImage& dest, const QImage& source, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode)
+	inline void scaleForDisplay(const CImageViewerWidget::ImageScaleFunction& scaler, const CImageViewerWidget::DisplayColorConverter& colorConverter,
+		const QByteArray& iccProfile, QImage& dest, const QImage& source, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode)
 	{
 		const QImage::Format destFormat = premultipliedFormat(source.format());
 		if (dest.size() != targetPx || dest.format() != destFormat)
@@ -74,6 +76,9 @@ namespace
 			scaler(dest, source, srcRect, mode);
 		else
 			CImageViewerWidget::scaleWithQt(dest, source, srcRect, mode);
+
+		if (colorConverter && !iccProfile.isEmpty())
+			colorConverter(dest, iccProfile);
 	}
 }
 
@@ -85,6 +90,13 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 void CImageViewerWidget::setImageDecoder(ImageDecodeFunction decoder) noexcept
 {
 	_imageDecoder = std::move(decoder);
+}
+
+void CImageViewerWidget::setDisplayColorConverter(DisplayColorConverter converter)
+{
+	_displayColorConverter = std::move(converter);
+	_navigatorThumbnail = QImage{}; // paintNavigator only compares sizes
+	invalidateDisplayImageCache(Presentation::Deferred);
 }
 
 void CImageViewerWidget::scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode)
@@ -129,6 +141,7 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 {
 	_animation.reset();
 	_currentImageFormat.clear(); // No file behind a bare image
+	_sourceIccProfile = image.colorSpace().iccProfile();
 
 	return setSourceImage(image, resetViewParameters);
 }
@@ -137,11 +150,13 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 {
 	QString fileFormat;
 	QImage img;
+	QByteArray iccProfile;
 	if (std::optional<DecodedFile> decoded = _imageDecoder ? _imageDecoder(imagePath) : std::nullopt)
 	{
 		_animation.reset();
 		fileFormat = std::move(decoded->format);
 		img = std::move(decoded->image);
+		iccProfile = std::move(decoded->iccProfile);
 	}
 	else
 	{
@@ -149,6 +164,7 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 		_animation.emplace(imagePath);
 		fileFormat = QString::fromLatin1(_animation->reader.format());
 		img = _animation->reader.read();
+		iccProfile = img.colorSpace().iccProfile(); // every frame of a file shares it
 	}
 
 	if (img.isNull())
@@ -172,6 +188,7 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 	else
 		_animation.reset();
 
+	_sourceIccProfile = std::move(iccProfile);
 	const bool displayed = setSourceImage(img, resetViewParameters);
 	_currentImageFormat = fileFormat;
 	return displayed;
@@ -220,9 +237,9 @@ QIcon CImageViewerWidget::imageIcon() const
 		return QIcon{};
 
 	// Copied intentionally: probably not necessary, but the lambda is stored in the icon engine and might outlive this widget
-	const auto resizeImage = [scaler = _imageScaler](const QImage& src, const QSize& targetSize) -> QImage {
+	const auto resizeImage = [scaler = _imageScaler, colorConverter = _displayColorConverter, iccProfile = _sourceIccProfile](const QImage& src, const QSize& targetSize) -> QImage {
 		QImage dst;
-		scaleImage(scaler, dst, src, QRect{}, targetSize, Qt::SmoothTransformation);
+		scaleForDisplay(scaler, colorConverter, iccProfile, dst, src, QRect{}, targetSize, Qt::SmoothTransformation);
 		return dst;
 	};
 
@@ -358,7 +375,7 @@ void CImageViewerWidget::invalidateDisplayImageCache(Presentation presentation)
 
 void CImageViewerWidget::scaleSource(QImage& dest, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode) const
 {
-	scaleImage(_imageScaler, dest, _sourceImage, srcRect, targetPx, mode);
+	scaleForDisplay(_imageScaler, _displayColorConverter, _sourceIccProfile, dest, _sourceImage, srcRect, targetPx, mode);
 }
 
 void CImageViewerWidget::fitToWindow() noexcept

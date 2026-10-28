@@ -4,10 +4,12 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+#include <QColorSpace>
 #include <QEvent>
 #include <QLayout>
 #include <QMainWindow>
 #include <QScreen>
+#include <QSurfaceFormat>
 RESTORE_COMPILER_WARNINGS
 
 #include <utility>
@@ -93,6 +95,15 @@ void WidgetUtils::callOnReturnFromOtherApp(QWidget* window, std::function<void()
 {
 	assert_r(window->isWindow());
 	new ReturnFromOtherAppFilter{ window, std::move(onReturn) }; // parented to the window, which owns it from here
+}
+
+void WidgetUtils::tagWindowsAsSrgb()
+{
+#ifdef Q_OS_MACOS
+	QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+	format.setColorSpace(QColorSpace::SRgb);
+	QSurfaceFormat::setDefaultFormat(format);
+#endif
 }
 
 void* WidgetUtils::nativeOwnerWinId(const QWidget* widget)

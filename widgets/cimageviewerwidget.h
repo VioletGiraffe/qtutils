@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QBasicTimer>
+#include <QByteArray>
 #include <QElapsedTimer>
 #include <QIcon>
 #include <QImage>
@@ -32,10 +33,14 @@ public:
 	{
 		QImage image;
 		QString format;
+		QByteArray iccProfile; // the color profile of image; empty when unknown
 	};
 	// Tried before the widget's own QImageReader: std::nullopt leaves the file, animation included, to the reader.
 	// A null image fails displayImage().
 	using ImageDecodeFunction = std::function<std::optional<DecodedFile> (const QString& imagePath)>;
+
+	// Converts image, scaled from the source, from the source's ICC profile for display. Only called with a profile; may replace image.
+	using DisplayColorConverter = std::function<void (QImage& image, const QByteArray& iccProfile)>;
 
 	using QWidget::QWidget;
 
@@ -44,6 +49,9 @@ public:
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
 	// Without one, every file goes through the widget's QImageReader.
 	void setImageDecoder(ImageDecodeFunction decoder) noexcept;
+	// Without one, images are shown unconverted. sourceImage() keeps the original colors either way.
+	// The profile comes from the decoder, or from the QImage's color space: for files the widget reads and for displayFrame().
+	void setDisplayColorConverter(DisplayColorConverter converter);
 	// QImage::scaled. Public so an injected scaler can delegate the formats it cannot handle.
 	static void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode);
 
@@ -163,12 +171,14 @@ private:
 private:
 	ImageScaleFunction _imageScaler;
 	ImageDecodeFunction _imageDecoder;
+	DisplayColorConverter _displayColorConverter;
 	QString _infoStripHint;
 	QString _infoStripCaption;
 	bool _overlayVisible = true;
 	// Tracked rather than read from isVisible(): a minimized window's children are sent a hide event but stay isVisible().
 	bool _shown = false;
 	QImage _sourceImage;
+	QByteArray _sourceIccProfile;
 	QImage _displayImage;
 	QImage _navigatorThumbnail;    // the whole source at the navigator's device size; built on first use, rebuilt on a size change or a new image
 	std::optional<size_t> _cacheKey;    // absent while _displayImage is stale
