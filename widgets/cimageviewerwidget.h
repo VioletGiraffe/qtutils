@@ -9,12 +9,14 @@ DISABLE_COMPILER_WARNINGS
 #include <QIcon>
 #include <QImage>
 #include <QImageReader>
+#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QString>
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 
@@ -35,9 +37,31 @@ public:
 		QString format;
 		QByteArray iccProfile; // the color profile of image; empty when unknown
 	};
-	// Tried before the widget's own QImageReader: std::nullopt leaves the file, animation included, to the reader.
-	// A null image fails displayImage().
-	using ImageDecodeFunction = std::function<std::optional<DecodedFile> (const QString& imagePath)>;
+
+	// One image on its way into the view, possibly through a preview first. GUI thread only; copyable.
+	// Ignored once superseded by a newer expectImage(), displayImage() or displayFrame().
+	class PendingImage
+	{
+	public:
+		// Laid out at finalSize, so zoom, pan and the info strip already use the final image's geometry.
+		// finalSize is ignored when empty or when its aspect ratio differs from the preview's by more than 2%.
+		// A later preview replaces an earlier one. Ignored after showFinal() or showFailure(). Requires a non-null image.
+		void showPreview(DecodedFile preview, QSize finalSize = {}) const;
+		// After a preview: the view stays when the image matches the preview's layout size, is rescaled when only the
+		// aspect ratio matches, and is refitted otherwise. Without a preview: a new image, fitted. Requires a non-null image.
+		void showFinal(DecodedFile image) const;
+		// Clears the view unless a preview was shown, which then stays.
+		void showFailure() const;
+
+	private:
+		friend class CImageViewerWidget;
+		PendingImage(CImageViewerWidget* widget, uint64_t generation) noexcept;
+
+		[[nodiscard]] CImageViewerWidget* acceptingWidget() const; // null once superseded or ended
+
+		QPointer<CImageViewerWidget> _widget;
+		uint64_t _generation = 0;
+	};
 
 	// Converts image, scaled from the source, from the source's ICC profile for display. Only called with a profile; may replace image.
 	using DisplayColorConverter = std::function<void (QImage& image, const QByteArray& iccProfile)>;
@@ -47,20 +71,22 @@ public:
 public:
 	// Without one, every scale goes through scaleWithQt().
 	void setImageScaler(ImageScaleFunction scaler) noexcept;
-	// Without one, every file goes through the widget's QImageReader.
-	void setImageDecoder(ImageDecodeFunction decoder) noexcept;
 	// Without one, images are shown unconverted. sourceImage() keeps the original colors either way.
-	// The profile comes from the decoder, or from the QImage's color space: for files the widget reads and for displayFrame().
+	// The profile comes from a DecodedFile, or from the QImage's color space: for files the widget reads and for displayFrame().
 	void setDisplayColorConverter(DisplayColorConverter converter);
 	// QImage::scaled. Public so an injected scaler can delegate the formats it cannot handle.
 	static void scaleWithQt(QImage& dest, const QImage& source, const QRect& srcRect, Qt::TransformationMode mode);
 
 	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
 	bool displayFrame(const QImage& image, bool resetViewParameters = true);
-	// Reports nothing to the user: the caller owns the error UI.
+	// Reads the file through QImageReader, which plays animated files. Reports nothing to the user: the caller owns the error UI.
 	// Fails without replacing the displayed image, but any animation already playing stops.
 	bool displayImage(const QString& imagePath, bool resetViewParameters = true);
-	[[nodiscard]] const QImage& sourceImage() const noexcept { return _sourceImage; }
+	// Supersedes the current pending image. The displayed image stays until the new one shows something.
+	// An animation ends on the frame shown and its file is closed, as closeFile() does.
+	[[nodiscard]] PendingImage expectImage();
+	// Empty while only a preview is shown.
+	[[nodiscard]] const QImage& sourceImage() const noexcept;
 	[[nodiscard]] QString imageInfoString() const;
 
 	[[nodiscard]] QSize sizeHint() const override;
@@ -109,9 +135,20 @@ protected:
 private:
 	// Immediate: paints inside the call, for a frame that has to land on its deadline.
 	enum class Presentation { Deferred, Immediate };
+	// How the view follows a replaced image:
+	//   Reset - refits and recenters on the next paint
+	//   KeepZoom - keeps the scale and the image point at the viewport center, re-clamped
+	//   KeepLayout - keeps the on-screen geometry: the new image is the same picture, laid out at another size
+	enum class ViewUpdate { Reset, KeepZoom, KeepLayout };
+	// The current PendingImage's progress
+	enum class PendingState { AwaitingImage, ShowingPreview, Ended };
 
-	// Replaces the displayed pixels, leaving the animation and the file metadata untouched.
-	bool setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation = Presentation::Deferred);
+	// Replaces the displayed pixels, laid out at imageSize, leaving the animation and the file metadata untouched.
+	bool setSourceImage(const QImage& image, QSize imageSize, ViewUpdate viewUpdate, Presentation presentation = Presentation::Deferred);
+	// Replaces the displayed image and its file metadata; the animation is left untouched.
+	void setDecodedFile(DecodedFile file, QSize imageSize, ViewUpdate viewUpdate, bool isPreview);
+	// For the pending image's next rendition: KeepLayout after a preview of matching aspect ratio, Reset otherwise
+	[[nodiscard]] ViewUpdate viewUpdateForPendingRendition(QSize imageSize) const noexcept;
 	void setPaused(bool paused);                                                   // requires an engaged _animation
 	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
 	bool decodePrecedingFrame();                                                   // the same, for the frame before the displayed one
@@ -120,10 +157,15 @@ private:
 	void scheduleNextFrame();                                                      // requires an engaged _animation
 	void startOrStopFrameTimer();                                                  // no-op unless _animation is engaged
 
-	// The view is an affine map from source pixels to viewport device pixels: devicePos = _offset + sourcePos * _scale.
+	// The view is an affine map from image coordinates to viewport device pixels: devicePos = _offset + imagePos * _scale.
+	// Image coordinates span _imageSize; source pixels map onto them per axis, which only a preview makes differ from 1:1.
 	[[nodiscard]] QSizeF viewportDeviceSize() const noexcept;
 	[[nodiscard]] QSizeF scaledImageSize() const noexcept;                         // on-screen size of the whole image, device px
+	[[nodiscard]] QSizeF sourceScale() const noexcept;                             // device px per source px, per axis
+	[[nodiscard]] QRect visibleImageRect() const noexcept;                         // image coordinates the viewport shows, outset to whole units
 	[[nodiscard]] QRect visibleSourceRect() const noexcept;                        // source pixels the viewport shows, outset to whole pixels
+	// The viewport back-projected through devicePos = _offset + pos * unitScale, outset to whole units and clipped to bounds
+	[[nodiscard]] QRect visibleRect(const QSizeF& unitScale, const QSize& bounds) const noexcept;
 	[[nodiscard]] qreal fitScale() const noexcept;                                 // scale that fits the whole image
 	[[nodiscard]] qreal minScale() const noexcept;                                 // most zoomed-out scale allowed
 	[[nodiscard]] QPointF centeredOffset() const noexcept;                         // offset that centers the image at _scale
@@ -131,7 +173,7 @@ private:
 	void clampOffset() noexcept;                                                   // per-axis: center if smaller, keep inside if larger
 	void setScale(qreal scale) noexcept;                                           // the only writer of _scale and _fitToWindow
 	void resetToFit() noexcept;
-	// A view that fit the whole image refits; a zoomed one keeps its scale and the source point at the viewport center.
+	// A view that fit the whole image refits; a zoomed one keeps its scale and the image point at the viewport center.
 	// No-op until the first image is displayed.
 	void refitOrKeepViewCenter(const QSizeF& previousViewportDeviceSize) noexcept;
 	void invalidateDisplayImageCache(Presentation presentation);                   // repaints, so paintEvent must never call it
@@ -142,7 +184,7 @@ private:
 
 	// The navigator: the whole image as a thumbnail in the top right corner, with the visible crop boxed on it.
 	[[nodiscard]] QRect navigatorRect() const;                                     // widget coords; empty unless the overlay is on and the view can pan
-	[[nodiscard]] QRect navigatorCropBox(const QRect& navigator) const noexcept;   // visibleSourceRect() mapped into the navigator
+	[[nodiscard]] QRect navigatorCropBox(const QRect& navigator) const noexcept;   // visibleImageRect() mapped into the navigator
 	void paintNavigator(QPainter& painter);
 	void centerViewOnNavigatorPoint(QPointF widgetPos);
 
@@ -170,7 +212,6 @@ private:
 
 private:
 	ImageScaleFunction _imageScaler;
-	ImageDecodeFunction _imageDecoder;
 	DisplayColorConverter _displayColorConverter;
 	QString _infoStripHint;
 	QString _infoStripCaption;
@@ -178,6 +219,8 @@ private:
 	// Tracked rather than read from isVisible(): a minimized window's children are sent a hide event but stay isVisible().
 	bool _shown = false;
 	QImage _sourceImage;
+	QSize _imageSize;              // image coordinates' extent: the source's own size, or the final size a preview is laid out at
+	bool _sourceIsPreview = false;
 	QByteArray _sourceIccProfile;
 	QImage _displayImage;
 	QImage _navigatorThumbnail;    // the whole source at the navigator's device size; built on first use, rebuilt on a size change or a new image
@@ -186,8 +229,12 @@ private:
 	QString _currentImageFormat;
 	std::optional<Animation> _animation;
 
-	qreal _scale = 1.0;    // device px per source px; 1.0 == 1:1 (native resolution)
-	QPointF _offset;       // device-px position of source (0,0) within the viewport
+	// Bumped by every image replacement that supersedes the current PendingImage
+	uint64_t _pendingGeneration = 0;
+	PendingState _pendingState = PendingState::Ended;
+
+	qreal _scale = 1.0;    // device px per image px; 1.0 == 1:1 (native resolution)
+	QPointF _offset;       // device-px position of the image's (0,0) within the viewport
 	bool _viewInitialized = false;
 	bool _fitToWindow = true; // _scale still fits the whole image, so a resize refits rather than preserving the zoom
 

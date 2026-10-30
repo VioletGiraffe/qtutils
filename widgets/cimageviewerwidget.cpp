@@ -1,6 +1,7 @@
 #include "cimageviewerwidget.h"
 #include "utils/ciconengineqimage.h"
 #include "utils/painterutils.h"
+#include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
@@ -27,9 +28,11 @@ RESTORE_COMPILER_WARNINGS
 #include <math.h>
 #include <utility>
 
-static constexpr qreal kMaxScale = 40.0; // device px per source px; the maximum magnification.
+static constexpr qreal kMaxScale = 40.0; // device px per image px; the maximum magnification.
 static constexpr qreal kMinScaledImageSize = 6.0; // logical px; the longer side of the image at the most zoomed-out scale.
 static constexpr qreal kNearestNeighborMinScale = 3.0; // logical px per source px; from here up the source pixels show plainly, so the view scales nearest neighbor.
+// A small preview's rounding stays below it; a camera's preview cropped to another aspect ratio is far above it.
+static constexpr qreal kPreviewAspectTolerance = 0.02;
 
 static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
 static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
@@ -64,6 +67,26 @@ namespace
 		}
 	}
 
+	[[nodiscard]] bool aspectRatiosMatch(const QSize& a, const QSize& b) noexcept
+	{
+		if (a.isEmpty() || b.isEmpty())
+			return false;
+
+		const qreal aspectA = (qreal)a.width() / a.height(), aspectB = (qreal)b.width() / b.height();
+		return qAbs(aspectA - aspectB) <= kPreviewAspectTolerance * aspectB;
+	}
+
+	// Indexed and 16-bit-per-channel images are shown as 32-bit ones
+	void convertToDisplayableFormat(QImage& image)
+	{
+		const auto format = image.format();
+		if (format != QImage::Format_Indexed8 && format != QImage::Format_Grayscale16 && format != QImage::Format_RGBA64 && format != QImage::Format_RGBX64)
+			return;
+
+		image.convertTo(image.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+		qInfo() << "CImageViewerWidget: converted image format from" << format << "to" << image.format();
+	}
+
 	// Reallocates dest only when its size or format differs from the target
 	inline void scaleForDisplay(const CImageViewerWidget::ImageScaleFunction& scaler, const CImageViewerWidget::DisplayColorConverter& colorConverter,
 		const QByteArray& iccProfile, QImage& dest, const QImage& source, const QRect& srcRect, const QSize& targetPx, Qt::TransformationMode mode)
@@ -87,11 +110,6 @@ void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
 	_imageScaler = std::move(scaler);
 }
 
-void CImageViewerWidget::setImageDecoder(ImageDecodeFunction decoder) noexcept
-{
-	_imageDecoder = std::move(decoder);
-}
-
 void CImageViewerWidget::setDisplayColorConverter(DisplayColorConverter converter)
 {
 	_displayColorConverter = std::move(converter);
@@ -112,74 +130,85 @@ CImageViewerWidget::Animation::Animation(QString imagePath) :
 	reader.setAutoTransform(true);
 }
 
-bool CImageViewerWidget::setSourceImage(const QImage& image, bool resetViewParameters, Presentation presentation)
+bool CImageViewerWidget::setSourceImage(const QImage& image, QSize imageSize, ViewUpdate viewUpdate, Presentation presentation)
 {
-	const QSize previousSize = _sourceImage.size();
+	const QSize previousImageSize = _imageSize;
 	_sourceImage = image;
+	_imageSize = imageSize;
 	_navigatorThumbnail = QImage{}; // paintNavigator only compares sizes, which a new image may share
 
-	if (resetViewParameters)
+	switch (viewUpdate)
 	{
+	case ViewUpdate::Reset:
 		if (_isPanning)
 			unsetCursor();
 
 		_isPanning = false;
 		_isNavigatorSteering = false;
 		_viewInitialized = false; // Refit to the new image on the next paint.
-	}
-	else
+		break;
+	case ViewUpdate::KeepZoom:
 		refitOrKeepViewCenter(viewportDeviceSize());
+		break;
+	case ViewUpdate::KeepLayout:
+		if (_sourceImage.isNull() || !_viewInitialized || size().isEmpty() || _imageSize == previousImageSize)
+			break;
 
-	if (_sourceImage.size() != previousSize)
+		if (_fitToWindow)
+			resetToFit();
+		else
+		{
+			// The image's origin stays put and the scale follows the layout size, so every image point keeps its screen position
+			setScale(std::clamp(_scale * previousImageSize.width() / _imageSize.width(), minScale(), kMaxScale));
+			clampOffset();
+		}
+		break;
+	}
+
+	if (_imageSize != previousImageSize)
 		updateGeometry(); // The image size drives sizeHint().
 
 	invalidateDisplayImageCache(presentation);
 	return !_sourceImage.isNull();
 }
 
+void CImageViewerWidget::setDecodedFile(DecodedFile file, QSize imageSize, ViewUpdate viewUpdate, bool isPreview)
+{
+	convertToDisplayableFormat(file.image);
+	_sourceIccProfile = std::move(file.iccProfile);
+	_currentImageFormat = std::move(file.format);
+	_sourceIsPreview = isPreview;
+	setSourceImage(file.image, imageSize, viewUpdate);
+}
+
 bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParameters)
 {
+	++_pendingGeneration;
 	_animation.reset();
 	_currentImageFormat.clear(); // No file behind a bare image
 	_sourceIccProfile = image.colorSpace().iccProfile();
+	_sourceIsPreview = false;
 
-	return setSourceImage(image, resetViewParameters);
+	return setSourceImage(image, image.size(), resetViewParameters ? ViewUpdate::Reset : ViewUpdate::KeepZoom);
 }
 
 bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
-	QString fileFormat;
-	QImage img;
-	QByteArray iccProfile;
-	if (std::optional<DecodedFile> decoded = _imageDecoder ? _imageDecoder(imagePath) : std::nullopt)
-	{
-		_animation.reset();
-		fileFormat = std::move(decoded->format);
-		img = std::move(decoded->image);
-		iccProfile = std::move(decoded->iccProfile);
-	}
-	else
-	{
-		// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
-		_animation.emplace(imagePath);
-		fileFormat = QString::fromLatin1(_animation->reader.format());
-		img = _animation->reader.read();
-		iccProfile = img.colorSpace().iccProfile(); // every frame of a file shares it
-	}
+	++_pendingGeneration;
 
-	if (img.isNull())
+	// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
+	_animation.emplace(imagePath);
+	DecodedFile file;
+	file.format = QString::fromLatin1(_animation->reader.format());
+	file.image = _animation->reader.read();
+	if (file.image.isNull())
 	{
 		_animation.reset();
 		return false;
 	}
+	file.iccProfile = file.image.colorSpace().iccProfile(); // every frame of a file shares it
 
-	if (const auto format = img.format(); format == QImage::Format_Indexed8 || format == QImage::Format_Grayscale16 || format == QImage::Format_RGBA64 || format == QImage::Format_RGBX64)
-	{
-		img.convertTo(img.hasAlphaChannel() ? QImage::Format_ARGB32 : QImage::Format_RGB32);
-		qInfo() << "CImageViewerWidget::displayImage: converted image format from" << format << "to" << img.format();
-	}
-
-	if (_animation && _animation->reader.supportsAnimation())
+	if (_animation->reader.supportsAnimation())
 	{
 		_animation->clock.start();
 		_animation->displayedDelayMs = _animation->reader.nextImageDelay();
@@ -188,10 +217,77 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 	else
 		_animation.reset();
 
-	_sourceIccProfile = std::move(iccProfile);
-	const bool displayed = setSourceImage(img, resetViewParameters);
-	_currentImageFormat = fileFormat;
-	return displayed;
+	const QSize imageSize = file.image.size();
+	setDecodedFile(std::move(file), imageSize, resetViewParameters ? ViewUpdate::Reset : ViewUpdate::KeepZoom, false);
+	return true;
+}
+
+CImageViewerWidget::PendingImage CImageViewerWidget::expectImage()
+{
+	closeFile();
+	_pendingState = PendingState::AwaitingImage;
+	return PendingImage{ this, ++_pendingGeneration };
+}
+
+const QImage& CImageViewerWidget::sourceImage() const noexcept
+{
+	static const QImage none;
+	return _sourceIsPreview ? none : _sourceImage;
+}
+
+CImageViewerWidget::ViewUpdate CImageViewerWidget::viewUpdateForPendingRendition(QSize imageSize) const noexcept
+{
+	return _pendingState == PendingState::ShowingPreview && aspectRatiosMatch(imageSize, _imageSize) ? ViewUpdate::KeepLayout : ViewUpdate::Reset;
+}
+
+CImageViewerWidget::PendingImage::PendingImage(CImageViewerWidget* widget, uint64_t generation) noexcept
+	: _widget{ widget }, _generation{ generation }
+{
+}
+
+CImageViewerWidget* CImageViewerWidget::PendingImage::acceptingWidget() const
+{
+	CImageViewerWidget* widget = _widget.data();
+	return widget && widget->_pendingGeneration == _generation && widget->_pendingState != PendingState::Ended ? widget : nullptr;
+}
+
+void CImageViewerWidget::PendingImage::showPreview(DecodedFile preview, QSize finalSize) const
+{
+	CImageViewerWidget* widget = acceptingWidget();
+	if (!widget)
+		return;
+	assert_and_return_r(!preview.image.isNull(), );
+
+	const QSize previewSize = preview.image.size();
+	const QSize imageSize = aspectRatiosMatch(finalSize, previewSize) ? finalSize : previewSize;
+	const ViewUpdate viewUpdate = widget->viewUpdateForPendingRendition(imageSize);
+	widget->_pendingState = PendingState::ShowingPreview;
+	widget->setDecodedFile(std::move(preview), imageSize, viewUpdate, true);
+}
+
+void CImageViewerWidget::PendingImage::showFinal(DecodedFile image) const
+{
+	CImageViewerWidget* widget = acceptingWidget();
+	if (!widget)
+		return;
+	assert_and_return_r(!image.image.isNull(), );
+
+	const QSize imageSize = image.image.size();
+	const ViewUpdate viewUpdate = widget->viewUpdateForPendingRendition(imageSize);
+	widget->_pendingState = PendingState::Ended;
+	widget->setDecodedFile(std::move(image), imageSize, viewUpdate, false);
+}
+
+void CImageViewerWidget::PendingImage::showFailure() const
+{
+	CImageViewerWidget* widget = acceptingWidget();
+	if (!widget)
+		return;
+
+	const bool previewShown = widget->_pendingState == PendingState::ShowingPreview;
+	widget->_pendingState = PendingState::Ended;
+	if (!previewShown)
+		widget->setDecodedFile({}, {}, ViewUpdate::Reset, false);
 }
 
 QString CImageViewerWidget::imageInfoString() const
@@ -199,13 +295,17 @@ QString CImageViewerWidget::imageInfoString() const
 	if (_sourceImage.isNull())
 		return QString();
 
-	const int numChannels = _sourceImage.isGrayscale() ? 1 : (3 + (_sourceImage.hasAlphaChannel() ? 1 : 0));
-	const QString imageInfo = tr("%1x%2 (%3 MP) %4×%5 bpp").
-		arg(_sourceImage.width()).
-		arg(_sourceImage.height()).
-		arg(_sourceImage.width() * _sourceImage.height() * 1e-6, 0, 'f', 1).
-		arg(numChannels).
-		arg(_sourceImage.bitPlaneCount() / numChannels);
+	QString imageInfo = tr("%1x%2 (%3 MP)").
+		arg(_imageSize.width()).
+		arg(_imageSize.height()).
+		arg(_imageSize.width() * _imageSize.height() * 1e-6, 0, 'f', 1);
+
+	// A preview's pixel layout is its own, not the final image's
+	if (!_sourceIsPreview)
+	{
+		const int numChannels = _sourceImage.isGrayscale() ? 1 : (3 + (_sourceImage.hasAlphaChannel() ? 1 : 0));
+		imageInfo += tr(" %1×%2 bpp").arg(numChannels).arg(_sourceImage.bitPlaneCount() / numChannels);
+	}
 
 	if (_currentImageFormat.isEmpty()) // Displayed from a QImage: there is no file to name a format for
 		return imageInfo;
@@ -226,8 +326,8 @@ QSize CImageViewerWidget::sizeHint() const
 	const auto maxSize = screen()->availableGeometry().size() - QSize(60, 60);
 	const qreal dpr = devicePixelRatioF();
 	return QSize{
-		std::clamp(qCeil(_sourceImage.width() / dpr), 150, maxSize.width()),
-		std::clamp(qCeil(_sourceImage.height() / dpr), 150, maxSize.height())
+		std::clamp(qCeil(_imageSize.width() / dpr), 150, maxSize.width()),
+		std::clamp(qCeil(_imageSize.height() / dpr), 150, maxSize.height())
 	};
 }
 
@@ -266,8 +366,8 @@ void CImageViewerWidget::setInfoStripCaption(QString caption)
 
 void CImageViewerWidget::copyToClipboard() noexcept
 {
-	if (!_sourceImage.isNull())
-		QApplication::clipboard()->setImage(_sourceImage);
+	if (const QImage& image = sourceImage(); !image.isNull())
+		QApplication::clipboard()->setImage(image);
 }
 
 void CImageViewerWidget::copyDisplayedToClipboard() noexcept
@@ -283,17 +383,32 @@ QSizeF CImageViewerWidget::viewportDeviceSize() const noexcept
 
 QSizeF CImageViewerWidget::scaledImageSize() const noexcept
 {
-	return QSizeF{ _sourceImage.size() } * _scale;
+	return QSizeF{ _imageSize } * _scale;
+}
+
+QSizeF CImageViewerWidget::sourceScale() const noexcept
+{
+	return QSizeF{ _scale * _imageSize.width() / _sourceImage.width(), _scale * _imageSize.height() / _sourceImage.height() };
+}
+
+QRect CImageViewerWidget::visibleImageRect() const noexcept
+{
+	return visibleRect(QSizeF{ _scale, _scale }, _imageSize);
 }
 
 QRect CImageViewerWidget::visibleSourceRect() const noexcept
 {
-	// Back-project the viewport through the inverse transform sourcePx = (devicePx - offset) / scale, clipped to the image.
+	return visibleRect(sourceScale(), _sourceImage.size());
+}
+
+QRect CImageViewerWidget::visibleRect(const QSizeF& unitScale, const QSize& bounds) const noexcept
+{
+	// Back-project the viewport through the inverse transform pos = (devicePx - offset) / unitScale, clipped to the bounds.
 	const QSizeF viewport = viewportDeviceSize();
-	const int x0 = qFloor(std::clamp(-_offset.x() / _scale, 0.0, (qreal)_sourceImage.width()));
-	const int y0 = qFloor(std::clamp(-_offset.y() / _scale, 0.0, (qreal)_sourceImage.height()));
-	const int x1 = qCeil(std::clamp((viewport.width() - _offset.x()) / _scale, 0.0, (qreal)_sourceImage.width()));
-	const int y1 = qCeil(std::clamp((viewport.height() - _offset.y()) / _scale, 0.0, (qreal)_sourceImage.height()));
+	const int x0 = qFloor(std::clamp(-_offset.x() / unitScale.width(), 0.0, (qreal)bounds.width()));
+	const int y0 = qFloor(std::clamp(-_offset.y() / unitScale.height(), 0.0, (qreal)bounds.height()));
+	const int x1 = qCeil(std::clamp((viewport.width() - _offset.x()) / unitScale.width(), 0.0, (qreal)bounds.width()));
+	const int y1 = qCeil(std::clamp((viewport.height() - _offset.y()) / unitScale.height(), 0.0, (qreal)bounds.height()));
 
 	return QRect{ x0, y0, x1 - x0, y1 - y0 };
 }
@@ -301,14 +416,14 @@ QRect CImageViewerWidget::visibleSourceRect() const noexcept
 qreal CImageViewerWidget::fitScale() const noexcept
 {
 	const QSizeF viewport = viewportDeviceSize();
-	return std::min(viewport.width() / _sourceImage.width(), viewport.height() / _sourceImage.height());
+	return std::min(viewport.width() / _imageSize.width(), viewport.height() / _imageSize.height());
 }
 
 qreal CImageViewerWidget::minScale() const noexcept
 {
 	// Zoom out until the longer side is down to kMinScaledImageSize. Fit and 1:1 lower the floor further for an image
 	// already at or below that size, so both stay reachable.
-	const qreal longerSide = (qreal)std::max(_sourceImage.width(), _sourceImage.height());
+	const qreal longerSide = (qreal)std::max(_imageSize.width(), _imageSize.height());
 	return std::min({ kMinScaledImageSize * devicePixelRatioF() / longerSide, fitScale(), 1.0 });
 }
 
@@ -356,10 +471,10 @@ void CImageViewerWidget::refitOrKeepViewCenter(const QSizeF& previousViewportDev
 		return;
 	}
 
-	const QPointF centerSource = (centerOf(previousViewportDeviceSize) - _offset) / _scale;
+	const QPointF centerImagePos = (centerOf(previousViewportDeviceSize) - _offset) / _scale;
 
 	setScale(std::clamp(_scale, minScale(), kMaxScale));
-	_offset = centerOf(viewportDeviceSize()) - centerSource * _scale;
+	_offset = centerOf(viewportDeviceSize()) - centerImagePos * _scale;
 	clampOffset();
 }
 
@@ -392,7 +507,7 @@ void CImageViewerWidget::zoomToActualPixels() noexcept
 	if (_sourceImage.isNull() || size().isEmpty())
 		return;
 
-	setScale(1.0); // 1:1 == one source pixel per one device pixel; always within [minScale(), kMaxScale].
+	setScale(1.0); // 1:1 == one image pixel per one device pixel; always within [minScale(), kMaxScale].
 	_offset = centeredOffset();
 	_viewInitialized = true;
 	update();
@@ -546,7 +661,7 @@ void CImageViewerWidget::presentPendingFrame()
 	_animation->displayedFrameNumber = _animation->reader.currentImageNumber();
 	_animation->displayedDelayMs = _animation->pendingDelayMs;
 
-	setSourceImage(_animation->pendingFrame, false, Presentation::Immediate);
+	setSourceImage(_animation->pendingFrame, _animation->pendingFrame.size(), ViewUpdate::KeepZoom, Presentation::Immediate);
 }
 
 void CImageViewerWidget::scheduleNextFrame()
@@ -584,14 +699,16 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	if (sourceRect.isEmpty())
 		return;
 
-	// The visible crop occupies sourceRect * scale device pixels; render the buffer at exactly that resolution for a 1:1 blit.
+	// The visible crop occupies sourceRect * sourceScale device pixels; render the buffer at exactly that resolution for a 1:1 blit.
+	// Scaled in source pixels, not image coordinates: the scaler's source rectangle is whole pixels.
+	const QSizeF scale = sourceScale();
 	const QSize bufferPx{
-		std::max(1, qRound(sourceRect.width() * _scale)),
-		std::max(1, qRound(sourceRect.height() * _scale))
+		std::max(1, qRound(sourceRect.width() * scale.width())),
+		std::max(1, qRound(sourceRect.height() * scale.height()))
 	};
 
 	const qreal dpr = devicePixelRatioF();
-	const Qt::TransformationMode mode = _scale / dpr >= kNearestNeighborMinScale ? Qt::FastTransformation : Qt::SmoothTransformation;
+	const Qt::TransformationMode mode = std::min(scale.width(), scale.height()) / dpr >= kNearestNeighborMinScale ? Qt::FastTransformation : Qt::SmoothTransformation;
 	// The mode is keyed: it depends on the device pixel ratio, which neither the crop nor the buffer size reflects.
 	const size_t newCacheKey = qHashMulti(4 /* true random seed, chosen by a fair dice throw */, sourceRect, bufferPx, mode);
 	if (newCacheKey != _cacheKey)
@@ -603,7 +720,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 	// Set after scaling: a scaler is free to replace the buffer.
 	_displayImage.setDevicePixelRatio(dpr);
 
-	const QPointF targetDevice = _offset + QPointF{ (qreal)sourceRect.x(), (qreal)sourceRect.y() } * _scale;
+	const QPointF targetDevice = _offset + QPointF{ sourceRect.x() * scale.width(), sourceRect.y() * scale.height() };
 	p.drawImage(snappedToDevicePixel(p, targetDevice / dpr), _displayImage);
 
 	paintNavigator(p);
@@ -662,7 +779,7 @@ QRect CImageViewerWidget::navigatorRect() const
 	if (longerSide < kNavigatorMinSize)
 		return {};
 
-	const QSize navigatorSize = _sourceImage.size().scaled(longerSide, longerSide, Qt::KeepAspectRatio);
+	const QSize navigatorSize = _imageSize.scaled(longerSide, longerSide, Qt::KeepAspectRatio);
 	if (navigatorSize.isEmpty()) // An aspect ratio past kNavigatorMaxSize:1 truncates the shorter side to nothing.
 		return {};
 
@@ -672,9 +789,9 @@ QRect CImageViewerWidget::navigatorRect() const
 
 QRect CImageViewerWidget::navigatorCropBox(const QRect& navigator) const noexcept
 {
-	const QRect crop = visibleSourceRect();
-	const qreal xScale = (qreal)navigator.width() / _sourceImage.width();
-	const qreal yScale = (qreal)navigator.height() / _sourceImage.height();
+	const QRect crop = visibleImageRect();
+	const qreal xScale = (qreal)navigator.width() / _imageSize.width();
+	const qreal yScale = (qreal)navigator.height() / _imageSize.height();
 
 	// At high magnification the crop maps to less than a navigator pixel, so the box is floored and then kept
 	// inside the navigator by position: clipping it at the far edge would leave nothing to outline.
@@ -727,12 +844,12 @@ void CImageViewerWidget::centerViewOnNavigatorPoint(QPointF widgetPos)
 	if (navigator.isEmpty())
 		return;
 
-	const QPointF sourcePos{
-		(widgetPos.x() - navigator.x()) * _sourceImage.width() / navigator.width(),
-		(widgetPos.y() - navigator.y()) * _sourceImage.height() / navigator.height()
+	const QPointF imagePos{
+		(widgetPos.x() - navigator.x()) * _imageSize.width() / navigator.width(),
+		(widgetPos.y() - navigator.y()) * _imageSize.height() / navigator.height()
 	};
 
-	_offset = centerOf(viewportDeviceSize()) - sourcePos * _scale;
+	_offset = centerOf(viewportDeviceSize()) - imagePos * _scale;
 	clampOffset();
 	update();
 }
