@@ -13,6 +13,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QRect>
 #include <QSize>
 #include <QString>
+#include <QVariantAnimation>
 #include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
@@ -52,12 +53,14 @@ public:
 		void showFinal(DecodedFile image) const;
 		// Clears the view unless a preview was shown, which then stays.
 		void showFailure() const;
+		// Shows a bar centered at the top, filled to fraction (0 to 1), until the image is shown, fails or is superseded.
+		void showProgress(double fraction) const;
 
 	private:
 		friend class CImageViewerWidget;
 		PendingImage(CImageViewerWidget* widget, uint64_t generation) noexcept;
 
-		[[nodiscard]] CImageViewerWidget* acceptingWidget() const; // null once superseded or ended
+		[[nodiscard]] CImageViewerWidget* acceptingWidget() const; // null once ended
 
 		QPointer<CImageViewerWidget> _widget;
 		uint64_t _generation = 0;
@@ -66,7 +69,7 @@ public:
 	// Converts image, scaled from the source, from the source's ICC profile for display. Only called with a profile; may replace image.
 	using DisplayColorConverter = std::function<void (QImage& image, const QByteArray& iccProfile)>;
 
-	using QWidget::QWidget;
+	explicit CImageViewerWidget(QWidget* parent = nullptr);
 
 public:
 	// Without one, every scale goes through scaleWithQt().
@@ -140,8 +143,6 @@ private:
 	//   KeepZoom - keeps the scale and the image point at the viewport center, re-clamped
 	//   KeepLayout - keeps the on-screen geometry: the new image is the same picture, laid out at another size
 	enum class ViewUpdate { Reset, KeepZoom, KeepLayout };
-	// The current PendingImage's progress
-	enum class PendingState { AwaitingImage, ShowingPreview, Ended };
 
 	// Replaces the displayed pixels, laid out at imageSize, leaving the animation and the file metadata untouched.
 	bool setSourceImage(const QImage& image, QSize imageSize, ViewUpdate viewUpdate, Presentation presentation = Presentation::Deferred);
@@ -149,6 +150,8 @@ private:
 	void setDecodedFile(DecodedFile file, QSize imageSize, ViewUpdate viewUpdate, bool isPreview);
 	// For the pending image's next rendition: KeepLayout after a preview of matching aspect ratio, Reset otherwise
 	[[nodiscard]] ViewUpdate viewUpdateForPendingRendition(QSize imageSize) const noexcept;
+	// The current PendingImage is ignored from now on and its progress bar is removed
+	void endPendingImage();
 	void setPaused(bool paused);                                                   // requires an engaged _animation
 	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
 	bool decodePrecedingFrame();                                                   // the same, for the frame before the displayed one
@@ -181,6 +184,8 @@ private:
 
 	[[nodiscard]] QString magnificationString() const;                             // on-screen size of the visible crop, and _scale as a percentage
 	void paintInfoStrip(QPainter& painter) const;
+	[[nodiscard]] QRect pendingProgressBarRect() const;                            // widget coords; empty when the widget is too narrow
+	void paintPendingProgress(QPainter& painter) const;
 
 	// The navigator: the whole image as a thumbnail in the top right corner, with the visible crop boxed on it.
 	[[nodiscard]] QRect navigatorRect() const;                                     // widget coords; empty unless the overlay is on and the view can pan
@@ -229,9 +234,12 @@ private:
 	QString _currentImageFormat;
 	std::optional<Animation> _animation;
 
-	// Bumped by every image replacement that supersedes the current PendingImage
+	// Bumped by endPendingImage(): a PendingImage of an older generation is ignored
 	uint64_t _pendingGeneration = 0;
-	PendingState _pendingState = PendingState::Ended;
+	// The current PendingImage's state; endPendingImage() resets it
+	bool _pendingPreviewShown = false;
+	bool _pendingProgressShown = false;
+	QVariantAnimation _pendingProgressAnimation; // slides the drawn fraction, its current value, to the latest one reported
 
 	qreal _scale = 1.0;    // device px per image px; 1.0 == 1:1 (native resolution)
 	QPointF _offset;       // device-px position of the image's (0,0) within the viewport

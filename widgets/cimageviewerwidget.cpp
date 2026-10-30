@@ -9,6 +9,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QColor>
 #include <QColorSpace>
 #include <QDebug>
+#include <QEasingCurve>
 #include <QFontMetrics>
 #include <QHash>
 #include <QHideEvent>
@@ -37,6 +38,9 @@ static constexpr qreal kPreviewAspectTolerance = 0.02;
 static constexpr int kNavigatorMaxSize = 100;       // logical px, longer side of the navigator
 static constexpr int kNavigatorMinSize = 40;       // below this the navigator is not shown at all: too small to aim at
 static constexpr int kNavigatorCropMinSize = 3;     // logical px; a thinner crop box would have nothing left to outline
+static constexpr int kPendingProgressBarWidth = 300; // logical px; narrowed to fit the widget
+static constexpr int kPendingProgressBarHeight = 8; // logical px
+static constexpr int kPendingProgressAnimationMs = 200; // the fill's slide to each newly reported fraction
 
 namespace
 {
@@ -103,6 +107,14 @@ namespace
 		if (colorConverter && !iccProfile.isEmpty())
 			colorConverter(dest, iccProfile);
 	}
+}
+
+CImageViewerWidget::CImageViewerWidget(QWidget* parent)
+	: QWidget{ parent }
+{
+	_pendingProgressAnimation.setDuration(kPendingProgressAnimationMs);
+	_pendingProgressAnimation.setEasingCurve(QEasingCurve::InOutSine);
+	connect(&_pendingProgressAnimation, &QVariantAnimation::valueChanged, this, [this] { update(pendingProgressBarRect()); });
 }
 
 void CImageViewerWidget::setImageScaler(ImageScaleFunction scaler) noexcept
@@ -183,7 +195,7 @@ void CImageViewerWidget::setDecodedFile(DecodedFile file, QSize imageSize, ViewU
 
 bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParameters)
 {
-	++_pendingGeneration;
+	endPendingImage();
 	_animation.reset();
 	_currentImageFormat.clear(); // No file behind a bare image
 	_sourceIccProfile = image.colorSpace().iccProfile();
@@ -194,7 +206,7 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 
 bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
-	++_pendingGeneration;
+	endPendingImage();
 
 	// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
 	_animation.emplace(imagePath);
@@ -225,8 +237,8 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 CImageViewerWidget::PendingImage CImageViewerWidget::expectImage()
 {
 	closeFile();
-	_pendingState = PendingState::AwaitingImage;
-	return PendingImage{ this, ++_pendingGeneration };
+	endPendingImage();
+	return PendingImage{ this, _pendingGeneration };
 }
 
 const QImage& CImageViewerWidget::sourceImage() const noexcept
@@ -237,7 +249,16 @@ const QImage& CImageViewerWidget::sourceImage() const noexcept
 
 CImageViewerWidget::ViewUpdate CImageViewerWidget::viewUpdateForPendingRendition(QSize imageSize) const noexcept
 {
-	return _pendingState == PendingState::ShowingPreview && aspectRatiosMatch(imageSize, _imageSize) ? ViewUpdate::KeepLayout : ViewUpdate::Reset;
+	return _pendingPreviewShown && aspectRatiosMatch(imageSize, _imageSize) ? ViewUpdate::KeepLayout : ViewUpdate::Reset;
+}
+
+void CImageViewerWidget::endPendingImage()
+{
+	++_pendingGeneration;
+	_pendingPreviewShown = false;
+	_pendingProgressAnimation.stop();
+	if (std::exchange(_pendingProgressShown, false))
+		update(pendingProgressBarRect());
 }
 
 CImageViewerWidget::PendingImage::PendingImage(CImageViewerWidget* widget, uint64_t generation) noexcept
@@ -248,7 +269,7 @@ CImageViewerWidget::PendingImage::PendingImage(CImageViewerWidget* widget, uint6
 CImageViewerWidget* CImageViewerWidget::PendingImage::acceptingWidget() const
 {
 	CImageViewerWidget* widget = _widget.data();
-	return widget && widget->_pendingGeneration == _generation && widget->_pendingState != PendingState::Ended ? widget : nullptr;
+	return widget && widget->_pendingGeneration == _generation ? widget : nullptr;
 }
 
 void CImageViewerWidget::PendingImage::showPreview(DecodedFile preview, QSize finalSize) const
@@ -261,7 +282,7 @@ void CImageViewerWidget::PendingImage::showPreview(DecodedFile preview, QSize fi
 	const QSize previewSize = preview.image.size();
 	const QSize imageSize = aspectRatiosMatch(finalSize, previewSize) ? finalSize : previewSize;
 	const ViewUpdate viewUpdate = widget->viewUpdateForPendingRendition(imageSize);
-	widget->_pendingState = PendingState::ShowingPreview;
+	widget->_pendingPreviewShown = true;
 	widget->setDecodedFile(std::move(preview), imageSize, viewUpdate, true);
 }
 
@@ -274,7 +295,7 @@ void CImageViewerWidget::PendingImage::showFinal(DecodedFile image) const
 
 	const QSize imageSize = image.image.size();
 	const ViewUpdate viewUpdate = widget->viewUpdateForPendingRendition(imageSize);
-	widget->_pendingState = PendingState::Ended;
+	widget->endPendingImage();
 	widget->setDecodedFile(std::move(image), imageSize, viewUpdate, false);
 }
 
@@ -284,10 +305,28 @@ void CImageViewerWidget::PendingImage::showFailure() const
 	if (!widget)
 		return;
 
-	const bool previewShown = widget->_pendingState == PendingState::ShowingPreview;
-	widget->_pendingState = PendingState::Ended;
+	const bool previewShown = widget->_pendingPreviewShown;
+	widget->endPendingImage();
 	if (!previewShown)
 		widget->setDecodedFile({}, {}, ViewUpdate::Reset, false);
+}
+
+void CImageViewerWidget::PendingImage::showProgress(double fraction) const
+{
+	CImageViewerWidget* widget = acceptingWidget();
+	if (!widget)
+		return;
+
+	QVariantAnimation& animation = widget->_pendingProgressAnimation;
+	const bool firstReport = !std::exchange(widget->_pendingProgressShown, true);
+	// The first report slides from empty: the animation still holds the previous pending image's last fraction
+	const double shownFraction = firstReport ? 0.0 : animation.currentValue().toDouble();
+	animation.stop();
+	animation.setStartValue(shownFraction);
+	animation.setEndValue(std::clamp(fraction, 0.0, 1.0));
+	animation.start();
+	if (firstReport)
+		widget->update(widget->pendingProgressBarRect()); // the animation repaints only when its value changes
 }
 
 QString CImageViewerWidget::imageInfoString() const
@@ -686,6 +725,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		bigFont.setPointSize(28);
 		p.setFont(bigFont);
 		p.drawText(rect(), Qt::AlignCenter, tr("No image loaded"));
+		paintPendingProgress(p);
 		return;
 	}
 
@@ -727,6 +767,8 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 
 	if (_overlayVisible)
 		paintInfoStrip(p);
+
+	paintPendingProgress(p);
 }
 
 QString CImageViewerWidget::magnificationString() const
@@ -768,6 +810,28 @@ void CImageViewerWidget::paintInfoStrip(QPainter& painter) const
 	const int infoWidth = infoRight - textRect.x();
 	if (infoWidth > 0)
 		painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fm.elidedText(imageInfoString(), Qt::ElideRight, infoWidth));
+}
+
+QRect CImageViewerWidget::pendingProgressBarRect() const
+{
+	const int padding = fontMetrics().height() / 2; // Same inset as the info strip's.
+	const int barWidth = std::min(kPendingProgressBarWidth, width() - 2 * padding);
+	return barWidth > 0 ? QRect{ (width() - barWidth) / 2, padding, barWidth, kPendingProgressBarHeight } : QRect{};
+}
+
+void CImageViewerWidget::paintPendingProgress(QPainter& painter) const
+{
+	const QRect bar = pendingProgressBarRect();
+	if (!_pendingProgressShown || bar.isEmpty())
+		return;
+
+	const double shownFraction = _pendingProgressAnimation.currentValue().toDouble();
+	// The info strip's colors
+	painter.fillRect(bar, QColor(0, 0, 0, 140));
+	painter.fillRect(QRect{ bar.topLeft(), QSize{ qRound(bar.width() * shownFraction), bar.height() } }, palette().color(QPalette::Highlight));
+	painter.setPen(QColor(0xe8, 0xe8, 0xe8));
+	painter.setBrush(Qt::NoBrush);
+	painter.drawRect(bar.adjusted(0, 0, -1, -1)); // drawRect strokes one pixel past the rect's right and bottom edges
 }
 
 QRect CImageViewerWidget::navigatorRect() const
