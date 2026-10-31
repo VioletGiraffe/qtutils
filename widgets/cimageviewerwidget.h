@@ -9,6 +9,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QIcon>
 #include <QImage>
 #include <QImageReader>
+#include <QPixelFormat>
 #include <QPointer>
 #include <QRect>
 #include <QSize>
@@ -226,6 +227,7 @@ private:
 	QImage _sourceImage;
 	QSize _imageSize;              // image coordinates' extent: the source's own size, or the final size a preview is laid out at
 	bool _sourceIsPreview = false;
+	QPixelFormat _sourcePixelFormat; // as decoded, before conversion to a displayable format
 	QByteArray _sourceIccProfile;
 	QImage _displayImage;
 	QImage _navigatorThumbnail;    // the whole source at the navigator's device size; built on first use, rebuilt on a size change or a new image

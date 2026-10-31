@@ -26,6 +26,7 @@ DISABLE_COMPILER_WARNINGS
 RESTORE_COMPILER_WARNINGS
 
 #include <algorithm>
+#include <array>
 #include <math.h>
 #include <utility>
 
@@ -78,6 +79,35 @@ namespace
 
 		const qreal aspectA = (qreal)a.width() / a.height(), aspectB = (qreal)b.width() / b.height();
 		return qAbs(aspectA - aspectB) <= kPreviewAspectTolerance * aspectB;
+	}
+
+	// Read from the format alone: QImage::isGrayscale() scans the pixels (docs/qt-image-quirks.md)
+	[[nodiscard]] QString pixelLayoutString(const QPixelFormat& format)
+	{
+		if (format.colorModel() == QPixelFormat::Indexed)
+			return CImageViewerWidget::tr("%1-bit indexed").arg(format.bitsPerPixel());
+
+		// redSize() to blackSize() read the first four fields whatever the color model; an ignored alpha field is padding
+		const std::array<int, 5> fieldBits{ format.redSize(), format.greenSize(), format.blueSize(), format.blackSize(),
+			format.alphaUsage() == QPixelFormat::UsesAlpha ? format.alphaSize() : 0 };
+		int channels = 0, totalBits = 0, firstChannelBits = 0;
+		bool uniform = true;
+		for (const int bits : fieldBits)
+		{
+			if (bits == 0)
+				continue;
+
+			if (channels++ == 0)
+				firstChannelBits = bits;
+			else if (bits != firstChannelBits)
+				uniform = false;
+			totalBits += bits;
+		}
+
+		QString layout = uniform ? CImageViewerWidget::tr("%1×%2 bpp").arg(channels).arg(firstChannelBits) : CImageViewerWidget::tr("%1 bpp").arg(totalBits);
+		if (format.typeInterpretation() == QPixelFormat::FloatingPoint)
+			layout += CImageViewerWidget::tr(" float");
+		return layout;
 	}
 
 	// Indexed and 16-bit-per-channel images are shown as 32-bit ones
@@ -186,6 +216,7 @@ bool CImageViewerWidget::setSourceImage(const QImage& image, QSize imageSize, Vi
 
 void CImageViewerWidget::setDecodedFile(DecodedFile file, QSize imageSize, ViewUpdate viewUpdate, bool isPreview)
 {
+	_sourcePixelFormat = file.image.pixelFormat();
 	convertToDisplayableFormat(file.image);
 	_sourceIccProfile = std::move(file.iccProfile);
 	_currentImageFormat = std::move(file.format);
@@ -199,6 +230,7 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 	_animation.reset();
 	_currentImageFormat.clear(); // No file behind a bare image
 	_sourceIccProfile = image.colorSpace().iccProfile();
+	_sourcePixelFormat = image.pixelFormat();
 	_sourceIsPreview = false;
 
 	return setSourceImage(image, image.size(), resetViewParameters ? ViewUpdate::Reset : ViewUpdate::KeepZoom);
@@ -341,10 +373,7 @@ QString CImageViewerWidget::imageInfoString() const
 
 	// A preview's pixel layout is its own, not the final image's
 	if (!_sourceIsPreview)
-	{
-		const int numChannels = _sourceImage.isGrayscale() ? 1 : (3 + (_sourceImage.hasAlphaChannel() ? 1 : 0));
-		imageInfo += tr(" %1×%2 bpp").arg(numChannels).arg(_sourceImage.bitPlaneCount() / numChannels);
-	}
+		imageInfo += ' ' + pixelLayoutString(_sourcePixelFormat);
 
 	if (_currentImageFormat.isEmpty()) // Displayed from a QImage: there is no file to name a format for
 		return imageInfo;

@@ -74,7 +74,8 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/widgetutils.h` | Recursive layout visibility, main-window/hierarchy lookup, non-invasive native owner handles, screen selection, centered geometry, and widget centering helpers; a callback on a window's first activation after the user returns from another application; sRGB window tagging on macOS. |
 | `string/stringutils.h` | Computes the zero-based line number at a `QString` position. |
 
-[`docs/qt-icon-quirks.md`](docs/qt-icon-quirks.md) lists known `QIcon` and `QPixmap` traps with their remedies.
+[`docs/qt-icon-quirks.md`](docs/qt-icon-quirks.md) lists known `QIcon` and `QPixmap` traps with their remedies,
+[`docs/qt-image-quirks.md`](docs/qt-image-quirks.md) those of `QImage`.
 
 ### Qt/std interoperation and small helpers
 
