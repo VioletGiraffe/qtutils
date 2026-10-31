@@ -238,8 +238,6 @@ bool CImageViewerWidget::displayFrame(const QImage& image, bool resetViewParamet
 
 bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewParameters)
 {
-	endPendingImage();
-
 	// Frame 0 is read through the animation's own reader: an animated file continues from where this read leaves it.
 	_animation.emplace(imagePath);
 	DecodedFile file;
@@ -250,6 +248,8 @@ bool CImageViewerWidget::displayImage(const QString& imagePath, bool resetViewPa
 		_animation.reset();
 		return false;
 	}
+
+	endPendingImage();
 	file.iccProfile = file.image.colorSpace().iccProfile(); // every frame of a file shares it
 
 	if (_animation->reader.supportsAnimation())
@@ -291,6 +291,11 @@ void CImageViewerWidget::endPendingImage()
 	_pendingProgressAnimation.stop();
 	if (std::exchange(_pendingProgressShown, false))
 		update(pendingProgressBarRect());
+	if (!_failureNotice.isEmpty())
+	{
+		update(failureNoticeRect());
+		_failureNotice.clear();
+	}
 }
 
 CImageViewerWidget::PendingImage::PendingImage(CImageViewerWidget* widget, uint64_t generation) noexcept
@@ -331,7 +336,7 @@ void CImageViewerWidget::PendingImage::showFinal(DecodedFile image) const
 	widget->setDecodedFile(std::move(image), imageSize, viewUpdate, false);
 }
 
-void CImageViewerWidget::PendingImage::showFailure() const
+void CImageViewerWidget::PendingImage::showFailure(QString notice) const
 {
 	CImageViewerWidget* widget = acceptingWidget();
 	if (!widget)
@@ -341,6 +346,14 @@ void CImageViewerWidget::PendingImage::showFailure() const
 	widget->endPendingImage();
 	if (!previewShown)
 		widget->setDecodedFile({}, {}, ViewUpdate::Reset, false);
+	widget->_failureNotice = std::move(notice);
+	widget->update(widget->failureNoticeRect());
+}
+
+bool CImageViewerWidget::PendingImage::isShowingPreview() const
+{
+	const CImageViewerWidget* widget = acceptingWidget();
+	return widget && widget->_pendingPreviewShown;
 }
 
 void CImageViewerWidget::PendingImage::showProgress(double fraction) const
@@ -755,6 +768,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		p.setFont(bigFont);
 		p.drawText(rect(), Qt::AlignCenter, tr("No image loaded"));
 		paintPendingProgress(p);
+		paintFailureNotice(p);
 		return;
 	}
 
@@ -798,6 +812,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		paintInfoStrip(p);
 
 	paintPendingProgress(p);
+	paintFailureNotice(p);
 }
 
 QString CImageViewerWidget::magnificationString() const
@@ -861,6 +876,35 @@ void CImageViewerWidget::paintPendingProgress(QPainter& painter) const
 	painter.setPen(QColor(0xe8, 0xe8, 0xe8));
 	painter.setBrush(Qt::NoBrush);
 	painter.drawRect(bar.adjusted(0, 0, -1, -1)); // drawRect strokes one pixel past the rect's right and bottom edges
+}
+
+QRect CImageViewerWidget::failureNoticeRect() const
+{
+	if (_failureNotice.isEmpty())
+		return {};
+
+	const QFontMetrics fm = fontMetrics();
+	const int padding = fm.height() / 2; // Same inset as the info strip's.
+	const int noticeWidth = std::min(fm.horizontalAdvance(_failureNotice) + 2 * padding, width() - 2 * padding);
+	return noticeWidth > 2 * padding ? QRect{ (width() - noticeWidth) / 2, padding, noticeWidth, fm.height() + padding } : QRect{};
+}
+
+void CImageViewerWidget::paintFailureNotice(QPainter& painter) const
+{
+	const QRect notice = failureNoticeRect();
+	if (notice.isEmpty())
+		return;
+
+	painter.save();
+	painter.setFont(font()); // failureNoticeRect() measures this font; the empty view's message set a larger one
+	const QFontMetrics fm = fontMetrics();
+	const int padding = fm.height() / 2;
+	const QRect textRect = notice.adjusted(padding, 0, -padding, 0);
+	// The info strip's colors
+	painter.fillRect(notice, QColor(0, 0, 0, 140));
+	painter.setPen(QColor(0xe8, 0xe8, 0xe8));
+	painter.drawText(textRect, Qt::AlignCenter, fm.elidedText(_failureNotice, Qt::ElideRight, textRect.width()));
+	painter.restore();
 }
 
 QRect CImageViewerWidget::navigatorRect() const

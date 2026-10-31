@@ -53,9 +53,12 @@ public:
 		// aspect ratio matches, and is refitted otherwise. Without a preview: a new image, fitted. Requires a non-null image.
 		void showFinal(DecodedFile image) const;
 		// Clears the view unless a preview was shown, which then stays.
-		void showFailure() const;
+		// notice replaces the progress bar until the next expectImage(), displayImage() or displayFrame().
+		void showFailure(QString notice) const;
 		// Shows a bar centered at the top, filled to fraction (0 to 1), until the image is shown, fails or is superseded.
 		void showProgress(double fraction) const;
+		// True from showPreview() until the image is shown, fails or is superseded
+		[[nodiscard]] bool isShowingPreview() const;
 
 	private:
 		friend class CImageViewerWidget;
@@ -84,7 +87,7 @@ public:
 	// resetViewParameters: refits and recenters on the new image; false keeps the current zoom and pan, re-clamped to it.
 	bool displayFrame(const QImage& image, bool resetViewParameters = true);
 	// Reads the file through QImageReader, which plays animated files. Reports nothing to the user: the caller owns the error UI.
-	// Fails without replacing the displayed image, but any animation already playing stops.
+	// Fails without replacing the displayed image or ending the pending one, but any animation already playing stops.
 	bool displayImage(const QString& imagePath, bool resetViewParameters = true);
 	// Supersedes the current pending image. The displayed image stays until the new one shows something.
 	// An animation ends on the frame shown and its file is closed, as closeFile() does.
@@ -151,7 +154,7 @@ private:
 	void setDecodedFile(DecodedFile file, QSize imageSize, ViewUpdate viewUpdate, bool isPreview);
 	// For the pending image's next rendition: KeepLayout after a preview of matching aspect ratio, Reset otherwise
 	[[nodiscard]] ViewUpdate viewUpdateForPendingRendition(QSize imageSize) const noexcept;
-	// The current PendingImage is ignored from now on and its progress bar is removed
+	// The current PendingImage is ignored from now on; its progress bar and the last failure notice are removed
 	void endPendingImage();
 	void setPaused(bool paused);                                                   // requires an engaged _animation
 	bool decodeNextFrame();                                                        // requires an engaged _animation; false disengages it
@@ -187,6 +190,8 @@ private:
 	void paintInfoStrip(QPainter& painter) const;
 	[[nodiscard]] QRect pendingProgressBarRect() const;                            // widget coords; empty when the widget is too narrow
 	void paintPendingProgress(QPainter& painter) const;
+	[[nodiscard]] QRect failureNoticeRect() const;                                 // widget coords, where the progress bar was; empty without a notice
+	void paintFailureNotice(QPainter& painter) const;
 
 	// The navigator: the whole image as a thumbnail in the top right corner, with the visible crop boxed on it.
 	[[nodiscard]] QRect navigatorRect() const;                                     // widget coords; empty unless the overlay is on and the view can pan
@@ -242,6 +247,7 @@ private:
 	bool _pendingPreviewShown = false;
 	bool _pendingProgressShown = false;
 	QVariantAnimation _pendingProgressAnimation; // slides the drawn fraction, its current value, to the latest one reported
+	QString _failureNotice; // set by PendingImage::showFailure(), cleared by endPendingImage()
 
 	qreal _scale = 1.0;    // device px per image px; 1.0 == 1:1 (native resolution)
 	QPointF _offset;       // device-px position of the image's (0,0) within the viewport
