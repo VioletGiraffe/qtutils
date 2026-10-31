@@ -7,6 +7,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QObject>
 #include <QString>
 #include <QStringBuilder>
+#include <QStringList>
 RESTORE_COMPILER_WARNINGS
 
 #include <cctype>
@@ -153,4 +154,12 @@ QString secondsToTimeIntervalString(uint32_t secondsTotal)
 	result += QString::number(seconds) % ' ' % QObject::tr("seconds");
 
 	return result;
+}
+
+QString wrappableOnlyAtSeparators(const QString& text, QStringView separator)
+{
+	QStringList items = text.split(separator.toString());
+	for (QString& item : items)
+		item.replace(u' ', QChar::Nbsp);
+	return items.join(separator);
 }

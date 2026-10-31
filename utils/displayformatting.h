@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QString>
+#include <QStringView>
 #include <QtGlobal>
 RESTORE_COMPILER_WARNINGS
 
@@ -28,3 +29,7 @@ template <typename T>
 [[nodiscard]] QString fileSizeToString(uint64_t size, char maxUnit = '\0', const QString& spacer = {}, int significantPlaces = 4);
 
 [[nodiscard]] QString secondsToTimeIntervalString(uint32_t secondsTotal);
+
+// The spaces inside each separator-delimited item become non-breaking: word wrap breaks lines only at the separators.
+// Text without the separator becomes one unbreakable item.
+[[nodiscard]] QString wrappableOnlyAtSeparators(const QString& text, QStringView separator);
