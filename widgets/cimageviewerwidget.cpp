@@ -270,6 +270,9 @@ CImageViewerWidget::PendingImage CImageViewerWidget::expectImage()
 {
 	closeFile();
 	endPendingImage();
+	_awaitingImage = true;
+	if (_sourceImage.isNull())
+		update(); // the empty view's text changes
 	return PendingImage{ this, _pendingGeneration };
 }
 
@@ -287,6 +290,7 @@ CImageViewerWidget::ViewUpdate CImageViewerWidget::viewUpdateForPendingRendition
 void CImageViewerWidget::endPendingImage()
 {
 	++_pendingGeneration;
+	_awaitingImage = false;
 	_pendingPreviewShown = false;
 	_pendingProgressAnimation.stop();
 	if (std::exchange(_pendingProgressShown, false))
@@ -766,7 +770,7 @@ void CImageViewerWidget::paintEvent(QPaintEvent*)
 		QFont bigFont = font();
 		bigFont.setPointSize(28);
 		p.setFont(bigFont);
-		p.drawText(rect(), Qt::AlignCenter, tr("No image loaded"));
+		p.drawText(rect(), Qt::AlignCenter, _awaitingImage ? tr("Loading...") : tr("No image loaded"));
 		paintPendingProgress(p);
 		paintFailureNotice(p);
 		return;

@@ -90,6 +90,7 @@ public:
 	// Fails without replacing the displayed image or ending the pending one, but any animation already playing stops.
 	bool displayImage(const QString& imagePath, bool resetViewParameters = true);
 	// Supersedes the current pending image. The displayed image stays until the new one shows something.
+	// An empty view reads "Loading..." until the image shows or fails.
 	// An animation ends on the frame shown and its file is closed, as closeFile() does.
 	[[nodiscard]] PendingImage expectImage();
 	// Empty while only a preview is shown.
@@ -244,6 +245,7 @@ private:
 	// Bumped by endPendingImage(): a PendingImage of an older generation is ignored
 	uint64_t _pendingGeneration = 0;
 	// The current PendingImage's state; endPendingImage() resets it
+	bool _awaitingImage = false;
 	bool _pendingPreviewShown = false;
 	bool _pendingProgressShown = false;
 	QVariantAnimation _pendingProgressAnimation; // slides the drawn fraction, its current value, to the latest one reported
