@@ -47,6 +47,7 @@ public:
 	void addLatest(const std::vector<T>& items);
 	const T& navigateBack();
 	const T& navigateForward();
+	void setCurrentIndex(size_t index);
 
 private:
 	container_type _list;
@@ -68,6 +69,13 @@ const T& CHistoryList<T>::navigateBack()
 	if (_currentIndex > 0)
 		_currentIndex = currentIndex() - 1;
 	return currentItem();
+}
+
+template <typename T>
+void CHistoryList<T>::setCurrentIndex(const size_t index)
+{
+	assert_and_return_r(index < size(), );
+	_currentIndex = index;
 }
 
 template <typename T>
