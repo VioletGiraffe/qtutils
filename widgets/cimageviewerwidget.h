@@ -95,6 +95,8 @@ public:
 	[[nodiscard]] PendingImage expectImage();
 	// Empty while only a preview is shown.
 	[[nodiscard]] const QImage& sourceImage() const noexcept;
+	// The color profile of sourceImage(), as setDisplayColorConverter() describes; empty when unknown
+	[[nodiscard]] const QByteArray& sourceIccProfile() const noexcept { return _sourceIccProfile; }
 	[[nodiscard]] QString imageInfoString() const;
 
 	[[nodiscard]] QSize sizeHint() const override;
