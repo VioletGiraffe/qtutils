@@ -1,4 +1,5 @@
 #include "cfindbar.h"
+#include "cfadingnotice.h"
 #include "chistorycombobox.h"
 #include "assert/advanced_assert.h"
 #include "theme/colorutils.h"
@@ -10,6 +11,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QPalette>
 #include <QRegularExpression>
@@ -219,17 +221,38 @@ void CFindBar::findMatch(bool backward)
 	{
 	case FindResult::NotFound:
 		_statusLabel->setText(tr("Not found"));
-		break;
+		return;
+	case FindResult::FoundAfterWrapAround:
+		showWrapAroundNotice(backward);
+		[[fallthrough]];
 	case FindResult::Found:
 		_statusLabel->clear();
 		break;
-	case FindResult::FoundAfterWrapAround:
-		_statusLabel->setText(backward ? tr("Continued from the bottom") : tr("Continued from the top"));
-		break;
 	}
 
-	if (result != FindResult::NotFound)
-		updateMatchCount();
+	updateMatchCount();
+}
+
+void CFindBar::showWrapAroundNotice(bool backward)
+{
+	QWidget* const host = parentWidget();
+	assert_and_return_r(host, );
+
+	if (!_wrapAroundNotice)
+	{
+		_wrapAroundNotice = new CFadingNotice{ host };
+		connect(this, &QObject::destroyed, _wrapAroundNotice, &QObject::deleteLater); // the host may outlive the bar
+	}
+
+	// findMatch() may have just shown the bar: its geometry is final once the host's layout has run
+	if (QLayout* const hostLayout = host->layout())
+		hostLayout->activate();
+
+	const QRect bar = geometry();
+	const QRect above{ QPoint{ 0, 0 }, QPoint{ host->width() - 1, bar.top() - 1 } };
+	const QRect below{ QPoint{ 0, bar.bottom() + 1 }, host->rect().bottomRight() };
+	const QString message = backward ? tr("Search restarted from the bottom") : tr("Search restarted from the top");
+	_wrapAroundNotice->showMessage(QStringLiteral("↻  ") + message, above.height() >= below.height() ? above : below);
 }
 
 void CFindBar::updateMatchCount()

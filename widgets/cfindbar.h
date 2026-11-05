@@ -15,6 +15,7 @@ RESTORE_COMPILER_WARNINGS
 
 #include <functional>
 
+class CFadingNotice;
 class CHistoryComboBox;
 class QAction;
 class QCheckBox;
@@ -24,6 +25,7 @@ class QShowEvent;
 
 // Find bar: a pattern field with history, previous and next, case, whole-word, regex and highlight-all toggles, a status label, a close button.
 //   Searches through the host's find functions, which must wrap around at either end.
+//   A wrap-around shows a fading notice over the larger part of the parent above or below the bar, where a top or bottom bar's content is.
 //   After a successful search, the host's count functions number the match, with a second to count per search.
 //   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
 //   Hidden until any of its actions; only Find moves the focus into it. Enter searches forward, Shift+Enter backward.
@@ -84,6 +86,7 @@ private:
 	[[nodiscard]] QTextDocument::FindFlags optionFlags() const;
 	// Tints the pattern field red while its pattern is invalid or matches nothing
 	void setPatternErrorTint(bool on);
+	void showWrapAroundNotice(bool backward);
 
 private:
 	const HostFunctions _hostFunctions;
@@ -101,5 +104,6 @@ private:
 	QCheckBox* _highlightAllBox = nullptr;
 	QLabel* _countLabel = nullptr;
 	QLabel* _statusLabel = nullptr;
+	CFadingNotice* _wrapAroundNotice = nullptr; // A child of the parent, created on the first wrap-around
 	bool _patternErrorTint = false;
 };
