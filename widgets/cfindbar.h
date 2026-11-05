@@ -65,11 +65,12 @@ public:
 	// Shows the bar and focuses the pattern field, its text selected
 	void activate();
 
-	// Clears the match count, its highlights and the search message; the host calls this when the searched content changes
+	// Clears the match count, its highlights, the search message and the pattern's error tint; the host calls this when the searched content changes
 	void clearStatus();
 
 protected:
 	bool eventFilter(QObject* watched, QEvent* event) override;
+	void changeEvent(QEvent* event) override;
 	void showEvent(QShowEvent* event) override;
 
 private:
@@ -81,6 +82,8 @@ private:
 	void updateMatchCount();
 	// FindCaseSensitively and FindWholeWords as the option boxes set them
 	[[nodiscard]] QTextDocument::FindFlags optionFlags() const;
+	// Tints the pattern field red while its pattern is invalid or matches nothing
+	void setPatternErrorTint(bool on);
 
 private:
 	const HostFunctions _hostFunctions;
@@ -98,4 +101,5 @@ private:
 	QCheckBox* _highlightAllBox = nullptr;
 	QLabel* _countLabel = nullptr;
 	QLabel* _statusLabel = nullptr;
+	bool _patternErrorTint = false;
 };

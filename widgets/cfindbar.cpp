@@ -1,6 +1,7 @@
 #include "cfindbar.h"
 #include "chistorycombobox.h"
 #include "assert/advanced_assert.h"
+#include "theme/colorutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QAction>
@@ -10,6 +11,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPalette>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QToolButton>
@@ -39,11 +41,14 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	layout->setContentsMargins(8, 4, 8, 4);
 	layout->setSpacing(2);
 
+	// The pattern field has a fixed width and the spare width goes before the close button: status text changes never move the find buttons
 	_patternBox = new CHistoryComboBox{ this };
+	_patternBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+	_patternBox->setMinimumContentsLength(20);
 	_patternBox->setCompleter(nullptr);
 	_patternBox->lineEdit()->setPlaceholderText(tr("Find"));
 	_patternBox->lineEdit()->setClearButtonEnabled(true);
-	layout->addWidget(_patternBox, 1);
+	layout->addWidget(_patternBox);
 
 	const auto addToolButton = [&](const QString& glyph, const QString& toolTip) {
 		auto* button = new QToolButton;
@@ -95,6 +100,7 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	});
 
 	layout->addWidget(_statusLabel);
+	layout->addStretch();
 
 	auto* const closeButton = addToolButton(QStringLiteral("✕"), tr("Close (Esc)"));
 	connect(closeButton, &QToolButton::clicked, this, &CFindBar::deactivate);
@@ -129,6 +135,7 @@ void CFindBar::clearStatus()
 {
 	_countLabel->clear();
 	_statusLabel->clear();
+	setPatternErrorTint(false);
 	if (_hostFunctions.clearHighlights)
 		_hostFunctions.clearHighlights();
 }
@@ -147,9 +154,21 @@ bool CFindBar::eventFilter(QObject* watched, QEvent* event)
 	return true;
 }
 
+void CFindBar::changeEvent(QEvent* event)
+{
+	QFrame::changeEvent(event);
+
+	// The tint is derived from the palette
+	if (event->type() == QEvent::PaletteChange && _patternErrorTint)
+		setPatternErrorTint(true);
+}
+
 void CFindBar::showEvent(QShowEvent* event)
 {
 	QFrame::showEvent(event);
+
+	// Reserved so the option boxes stay put as the count changes; measured here, once the bar has its final font
+	_countLabel->setMinimumWidth(_countLabel->fontMetrics().horizontalAdvance(QStringLiteral("9999/9999+")));
 
 	// Key events the focus widget and its parents ignore reach the window; installing again only moves the filter to the front
 	window()->installEventFilter(this);
@@ -187,12 +206,14 @@ void CFindBar::findMatch(bool backward)
 	if (isRegex && !regex.isValid())
 	{
 		_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
+		setPatternErrorTint(true);
 		return;
 	}
 
 	QTextDocument::FindFlags flags = optionFlags();
 	flags.setFlag(QTextDocument::FindBackward, backward);
 	const FindResult result = isRegex ? _hostFunctions.findRegex(regex, flags) : _hostFunctions.findText(pattern, flags);
+	setPatternErrorTint(result == FindResult::NotFound);
 
 	switch (result)
 	{
@@ -227,6 +248,20 @@ void CFindBar::updateMatchCount()
 
 	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
 	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
+}
+
+void CFindBar::setPatternErrorTint(bool on)
+{
+	_patternErrorTint = on;
+
+	// The field, not the combo box: the combo box's palette propagates to its history popup
+	QLineEdit* const field = _patternBox->lineEdit();
+	QPalette fieldPalette; // No roles set: the field inherits every role but the tint
+	if (on)
+		fieldPalette.setColor(QPalette::Base, ColorUtils::mix(palette().color(QPalette::Base), QColor{ 0xE0, 0x30, 0x30 }, 0.35f));
+	field->setPalette(fieldPalette);
+	// windows11 paints no panel for a combo box's field, so the field fills its own background
+	field->setAutoFillBackground(on);
 }
 
 QTextDocument::FindFlags CFindBar::optionFlags() const
