@@ -7,11 +7,13 @@ DISABLE_COMPILER_WARNINGS
 #include <QMainWindow>
 #include <QScreen>
 #include <QSettings>
+#include <QSplitter>
 #include <QStyle>
 RESTORE_COMPILER_WARNINGS
 
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
+#define SPLITTER_KEY(splitter) (_settingsPath + "_splitter_" + (splitter)->objectName())
 
 CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed, SetDefaultSize setDefaultSize) :
 	QObject(widget),
@@ -50,6 +52,12 @@ void CPersistenceEnabler::saveState() const
 	s.setValue(GEOMETRY_KEY, _widget->saveGeometry());
 	if (auto* window = dynamic_cast<QMainWindow*>(_widget))
 		s.setValue(STATE_KEY, window->saveState());
+
+	for (const QSplitter* splitter : _widget->findChildren<QSplitter*>())
+	{
+		if (!splitter->objectName().isEmpty())
+			s.setValue(SPLITTER_KEY(splitter), splitter->saveState());
+	}
 }
 
 void CPersistenceEnabler::restoreState()
@@ -59,11 +67,8 @@ void CPersistenceEnabler::restoreState()
 	auto* window = dynamic_cast<QMainWindow*>(_widget);
 	QSettings s;
 
-	if (!_widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()))
+	if (!_widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) && _setDefaultSize)
 	{
-		if (!_setDefaultSize)
-			return;
-
 		const auto* const currentScreen = QApplication::screenAt(_widget->geometry().center());
 		const auto availableGeometry = currentScreen ? currentScreen->availableGeometry() : QApplication::primaryScreen()->availableGeometry();
 		_widget->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, availableGeometry.size() / 2, availableGeometry));
@@ -71,4 +76,12 @@ void CPersistenceEnabler::restoreState()
 
 	if (window)
 		window->restoreState(s.value(STATE_KEY).toByteArray());
+
+	// Restored before the widget reaches its final size, as in Qt's saveState example: a splitter without stretch factors
+	// scales its panes in proportion when resized
+	for (QSplitter* splitter : _widget->findChildren<QSplitter*>())
+	{
+		if (!splitter->objectName().isEmpty())
+			splitter->restoreState(s.value(SPLITTER_KEY(splitter)).toByteArray());
+	}
 }

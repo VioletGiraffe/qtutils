@@ -20,6 +20,8 @@ public:
 	// Installs itself on `widget` and is parented to it.
 	// widgetSettingsPath must be application-wide unique: it is the QSettings path this widget's state and
 	// position are stored under between launches.
+	// Every QSplitter inside the widget with an objectName is persisted too: the name must be unique within the widget.
+	// A splitter created after the first show is not restored.
 	explicit CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed = Delayed{ true }, SetDefaultSize setDefaultSize = SetDefaultSize{ true });
 
 protected:
@@ -37,7 +39,7 @@ private:
 	const bool _setDefaultSize;
 };
 
-// Persists the widget's geometry and state; see the constructor for widgetSettingsPath
+// Persists the widget's geometry and state, and its named splitters; see the constructor for widgetSettingsPath
 inline void enablePersistence(QWidget* widget, QString widgetSettingsPath,
 	CPersistenceEnabler::Delayed delayed = CPersistenceEnabler::Delayed{ true },
 	CPersistenceEnabler::SetDefaultSize setDefaultSize = CPersistenceEnabler::SetDefaultSize{ true })

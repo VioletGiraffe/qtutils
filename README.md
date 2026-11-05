@@ -42,7 +42,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/clightningfastviewer_glyphs.h` | `CLightningFastViewerWidget`'s stand-in glyph tables: CP437 shapes for control characters and DEL, a shape family per high nibble for bytes 0x80-0xFF, kept only where the current font draws them one grid column wide. |
 | `widgets/cfindbar.h` | Find bar searching through host-supplied functions: pattern history, previous and next, case, whole-word, regex and highlight-all toggles, a match counter and match highlighting fed by optional host functions, a status for misses and wrap-arounds, optional `QSettings` persistence; its find actions carry host-chosen keys. |
 | `widgets/findresult.h` | Search outcome (not found, found, or found after wrapping around) and match count, shared by `CLightningFastViewerWidget` and `CFindBar`'s host functions. |
-| `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry and `QMainWindow` state through `QSettings`, with delayed first-show restoration by default. |
+| `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry, `QMainWindow` state and the sizes of named splitters inside the widget through `QSettings`, with delayed first-show restoration by default. |
 | `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |
 | `widgets/layouts/coverlaylayout.h` | Expanding layout that gives every child the same geometry, stacking items over one another. |
 
