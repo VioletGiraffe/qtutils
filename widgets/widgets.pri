@@ -3,6 +3,7 @@ HEADERS += \
     $$PWD/cimageviewerwidget.h \
     $$PWD/clabelelided.h \
     $$PWD/clineedit.h \
+    $$PWD/cfadingnotice.h \
     $$PWD/cfindbar.h \
     $$PWD/findresult.h \
     $$PWD/cclickablelabel.h \
@@ -22,6 +23,7 @@ SOURCES += \
     $$PWD/cimageviewerwidget.cpp \
     $$PWD/clabelelided.cpp \
     $$PWD/clineedit.cpp \
+    $$PWD/cfadingnotice.cpp \
     $$PWD/cfindbar.cpp \
     $$PWD/cclickablelabel.cpp \
     $$PWD/cplaintexteditwithlinenumbers.cpp \

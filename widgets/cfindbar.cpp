@@ -1,6 +1,8 @@
 #include "cfindbar.h"
+#include "cfadingnotice.h"
 #include "chistorycombobox.h"
 #include "assert/advanced_assert.h"
+#include "theme/colorutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QAction>
@@ -9,7 +11,9 @@ DISABLE_COMPILER_WARNINGS
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
+#include <QPalette>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QToolButton>
@@ -39,11 +43,14 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	layout->setContentsMargins(8, 4, 8, 4);
 	layout->setSpacing(2);
 
+	// The pattern field has a fixed width and the spare width goes before the close button: status text changes never move the find buttons
 	_patternBox = new CHistoryComboBox{ this };
+	_patternBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+	_patternBox->setMinimumContentsLength(20);
 	_patternBox->setCompleter(nullptr);
 	_patternBox->lineEdit()->setPlaceholderText(tr("Find"));
 	_patternBox->lineEdit()->setClearButtonEnabled(true);
-	layout->addWidget(_patternBox, 1);
+	layout->addWidget(_patternBox);
 
 	const auto addToolButton = [&](const QString& glyph, const QString& toolTip) {
 		auto* button = new QToolButton;
@@ -95,6 +102,7 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	});
 
 	layout->addWidget(_statusLabel);
+	layout->addStretch();
 
 	auto* const closeButton = addToolButton(QStringLiteral("✕"), tr("Close (Esc)"));
 	connect(closeButton, &QToolButton::clicked, this, &CFindBar::deactivate);
@@ -129,6 +137,7 @@ void CFindBar::clearStatus()
 {
 	_countLabel->clear();
 	_statusLabel->clear();
+	setPatternErrorTint(false);
 	if (_hostFunctions.clearHighlights)
 		_hostFunctions.clearHighlights();
 }
@@ -147,9 +156,21 @@ bool CFindBar::eventFilter(QObject* watched, QEvent* event)
 	return true;
 }
 
+void CFindBar::changeEvent(QEvent* event)
+{
+	QFrame::changeEvent(event);
+
+	// The tint is derived from the palette
+	if (event->type() == QEvent::PaletteChange && _patternErrorTint)
+		setPatternErrorTint(true);
+}
+
 void CFindBar::showEvent(QShowEvent* event)
 {
 	QFrame::showEvent(event);
+
+	// Reserved so the option boxes stay put as the count changes; measured here, once the bar has its final font
+	_countLabel->setMinimumWidth(_countLabel->fontMetrics().horizontalAdvance(QStringLiteral("9999/9999+")));
 
 	// Key events the focus widget and its parents ignore reach the window; installing again only moves the filter to the front
 	window()->installEventFilter(this);
@@ -187,28 +208,51 @@ void CFindBar::findMatch(bool backward)
 	if (isRegex && !regex.isValid())
 	{
 		_statusLabel->setText(tr("Invalid pattern: %1").arg(regex.errorString()));
+		setPatternErrorTint(true);
 		return;
 	}
 
 	QTextDocument::FindFlags flags = optionFlags();
 	flags.setFlag(QTextDocument::FindBackward, backward);
 	const FindResult result = isRegex ? _hostFunctions.findRegex(regex, flags) : _hostFunctions.findText(pattern, flags);
+	setPatternErrorTint(result == FindResult::NotFound);
 
 	switch (result)
 	{
 	case FindResult::NotFound:
 		_statusLabel->setText(tr("Not found"));
-		break;
+		return;
+	case FindResult::FoundAfterWrapAround:
+		showWrapAroundNotice(backward);
+		[[fallthrough]];
 	case FindResult::Found:
 		_statusLabel->clear();
 		break;
-	case FindResult::FoundAfterWrapAround:
-		_statusLabel->setText(backward ? tr("Continued from the bottom") : tr("Continued from the top"));
-		break;
 	}
 
-	if (result != FindResult::NotFound)
-		updateMatchCount();
+	updateMatchCount();
+}
+
+void CFindBar::showWrapAroundNotice(bool backward)
+{
+	QWidget* const host = parentWidget();
+	assert_and_return_r(host, );
+
+	if (!_wrapAroundNotice)
+	{
+		_wrapAroundNotice = new CFadingNotice{ host };
+		connect(this, &QObject::destroyed, _wrapAroundNotice, &QObject::deleteLater); // the host may outlive the bar
+	}
+
+	// findMatch() may have just shown the bar: its geometry is final once the host's layout has run
+	if (QLayout* const hostLayout = host->layout())
+		hostLayout->activate();
+
+	const QRect bar = geometry();
+	const QRect above{ QPoint{ 0, 0 }, QPoint{ host->width() - 1, bar.top() - 1 } };
+	const QRect below{ QPoint{ 0, bar.bottom() + 1 }, host->rect().bottomRight() };
+	const QString message = backward ? tr("Search restarted from the bottom") : tr("Search restarted from the top");
+	_wrapAroundNotice->showMessage(QStringLiteral("↻  ") + message, above.height() >= below.height() ? above : below);
 }
 
 void CFindBar::updateMatchCount()
@@ -227,6 +271,20 @@ void CFindBar::updateMatchCount()
 
 	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
 	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
+}
+
+void CFindBar::setPatternErrorTint(bool on)
+{
+	_patternErrorTint = on;
+
+	// The field, not the combo box: the combo box's palette propagates to its history popup
+	QLineEdit* const field = _patternBox->lineEdit();
+	QPalette fieldPalette; // No roles set: the field inherits every role but the tint
+	if (on)
+		fieldPalette.setColor(QPalette::Base, ColorUtils::mix(palette().color(QPalette::Base), QColor{ 0xE0, 0x30, 0x30 }, 0.35f));
+	field->setPalette(fieldPalette);
+	// windows11 paints no panel for a combo box's field, so the field fills its own background
+	field->setAutoFillBackground(on);
 }
 
 QTextDocument::FindFlags CFindBar::optionFlags() const
