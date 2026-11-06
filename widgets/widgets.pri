@@ -5,6 +5,7 @@ HEADERS += \
     $$PWD/clineedit.h \
     $$PWD/cfadingnotice.h \
     $$PWD/cfindbar.h \
+    $$PWD/cfindmatchespopup.h \
     $$PWD/findresult.h \
     $$PWD/cclickablelabel.h \
     $$PWD/cplaintexteditwithlinenumbers.h \
@@ -25,6 +26,7 @@ SOURCES += \
     $$PWD/clineedit.cpp \
     $$PWD/cfadingnotice.cpp \
     $$PWD/cfindbar.cpp \
+    $$PWD/cfindmatchespopup.cpp \
     $$PWD/cclickablelabel.cpp \
     $$PWD/cplaintexteditwithlinenumbers.cpp \
     $$PWD/layouts/cflowlayout.cpp \

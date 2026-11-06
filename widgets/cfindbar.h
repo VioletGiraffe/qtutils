@@ -16,17 +16,20 @@ RESTORE_COMPILER_WARNINGS
 #include <functional>
 
 class CFadingNotice;
+class CFindMatchesPopup;
 class CHistoryComboBox;
 class QAction;
 class QCheckBox;
 class QLabel;
 class QRegularExpression;
 class QShowEvent;
+class QToolButton;
 
 // Find bar: a pattern field with history, previous and next, case, whole-word, regex and highlight-all toggles, a status label, a close button.
 //   Searches through the host's find functions, which must wrap around at either end.
 //   A wrap-around shows a fading notice over the larger part of the parent above or below the bar, where a top or bottom bar's content is.
 //   After a successful search, the host's count functions number the match, with a second to count per search.
+//   With a count, the list button opens the matches the host's list functions find, numbered as the count numbers them; see CFindMatchesPopup.
 //   The host must add findActions() to a visible widget of its window, e.g. a menu: shortcuts on the hidden bar never fire.
 //   Hidden until any of its actions; only Find moves the focus into it. Enter searches forward, Shift+Enter backward.
 //   While visible, the bar takes Esc from its window's shortcuts and hides on it; a widget that handles Esc itself still gets it first.
@@ -40,6 +43,12 @@ public:
 	// highlight: also highlight the counted matches, until the next count or clearHighlights
 	using CountText = std::function<MatchCount (const QString& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline, bool highlight)>;
 	using CountRegex = std::function<MatchCount (const QRegularExpression& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline, bool highlight)>;
+	using ListText = std::function<MatchList (const QString& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
+	using ListRegex = std::function<MatchList (const QRegularExpression& pattern, QTextDocument::FindFlags flags, QDeadlineTimer deadline)>;
+	// contextLength: the most characters of the match's line to include on either side of the match
+	using DescribeMatch = std::function<MatchDescription (MatchRange match, int64_t contextLength)>;
+	// Makes the match the current one, as a search stopping at it does
+	using SelectMatch = std::function<void (MatchRange match)>;
 
 	struct HostFunctions
 	{
@@ -49,6 +58,11 @@ public:
 		CountText countText;
 		CountRegex countRegex;
 		std::function<void ()> clearHighlights; // Optional
+		// Optional: without one, searches of that kind offer no match list. Either one requires describeMatch and selectMatch.
+		ListText listText;
+		ListRegex listRegex;
+		DescribeMatch describeMatch;
+		SelectMatch selectMatch;
 	};
 
 	struct Keys
@@ -84,9 +98,14 @@ private:
 	void updateMatchCount();
 	// FindCaseSensitively and FindWholeWords as the option boxes set them
 	[[nodiscard]] QTextDocument::FindFlags optionFlags() const;
+	void clearMatchCount();
+	void showMatchCount(const MatchCount& count);
 	// Tints the pattern field red while its pattern is invalid or matches nothing
 	void setPatternErrorTint(bool on);
+	// The larger part of the parent above or below the bar, where a top or bottom bar's content is; in the parent's coordinates
+	[[nodiscard]] QRect contentArea() const;
 	void showWrapAroundNotice(bool backward);
+	void openMatchList();
 
 private:
 	const HostFunctions _hostFunctions;
@@ -103,7 +122,10 @@ private:
 	QCheckBox* _regexBox = nullptr;
 	QCheckBox* _highlightAllBox = nullptr;
 	QLabel* _countLabel = nullptr;
+	QToolButton* _listMatchesButton = nullptr; // Null without host list functions
 	QLabel* _statusLabel = nullptr;
 	CFadingNotice* _wrapAroundNotice = nullptr; // A child of the parent, created on the first wrap-around
+	QPointer<CFindMatchesPopup> _matchesPopup;
+	MatchCount _matchCount; // As _countLabel shows it; all zero while it is empty
 	bool _patternErrorTint = false;
 };

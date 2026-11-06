@@ -47,6 +47,13 @@ public:
 	// Stops at 'deadline'. A later call for the same pattern resumes only while the current match lies past the counted part.
 	[[nodiscard]] MatchCount countMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
 	[[nodiscard]] MatchCount countMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
+	// The matches countMatches() has counted, after counting on until 'deadline' as it does; capped at a million
+	[[nodiscard]] MatchList listMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
+	[[nodiscard]] MatchList listMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline);
+	// The location is the line number in text mode and the offset in hex mode. A text mode excerpt stays within the match's line.
+	[[nodiscard]] MatchDescription describeMatch(MatchRange match, qsizetype contextLength) const;
+	// Makes 'match' the current match, as find() stopping at it does
+	void selectMatch(MatchRange match);
 	// Paints the matches counted so far, besides the current one
 	void setCountedMatchesHighlighted(bool highlighted);
 	void moveToStart();
@@ -148,11 +155,6 @@ private:
 	// Offsets in hex mode, line numbers in text mode. Painted last: the band covers the content scrolled under it.
 	void drawLineLabelColumn(QPainter& painter, qsizetype firstLine, qsizetype lastLine);
 	void contentChanged();
-	struct MatchRange
-	{
-		qsizetype start = 0;
-		qsizetype length = 0;
-	};
 
 	// The match find() stopped at, while the cursor stays unselected at its start
 	[[nodiscard]] std::optional<MatchRange> currentMatch() const;
@@ -181,6 +183,8 @@ private:
 	// scanFrom(offset, onMatch) counts on until its deadline and returns the offset it stopped at
 	template <typename ScanFrom>
 	[[nodiscard]] MatchCount continueMatchCount(MatchCounting& counting, qsizetype haystackSize, ScanFrom scanFrom);
+	// The stored matches of the count countMatches() just returned
+	[[nodiscard]] MatchList countedMatchList(const MatchCount& count) const;
 
 	// Hex mode methods
 	void calculateHexLayout();

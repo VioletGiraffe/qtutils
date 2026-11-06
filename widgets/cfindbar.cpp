@@ -1,5 +1,6 @@
 #include "cfindbar.h"
 #include "cfadingnotice.h"
+#include "cfindmatchespopup.h"
 #include "chistorycombobox.h"
 #include "assert/advanced_assert.h"
 #include "theme/colorutils.h"
@@ -73,6 +74,15 @@ CFindBar::CFindBar(HostFunctions hostFunctions, const Keys& keys, QString settin
 	_countLabel = new QLabel;
 	layout->addWidget(_countLabel);
 
+	if (_hostFunctions.listText || _hostFunctions.listRegex)
+	{
+		assert_r(_hostFunctions.describeMatch && _hostFunctions.selectMatch);
+		const QString text = tr("Show &list") + QStringLiteral(" ≡");
+		_listMatchesButton = addToolButton(text, tr("List the matches found so far (%1)").arg(QKeySequence::mnemonic(text).toString(QKeySequence::NativeText)));
+		_listMatchesButton->setEnabled(false);
+		connect(_listMatchesButton, &QToolButton::clicked, this, &CFindBar::openMatchList);
+	}
+
 	_statusLabel = new QLabel;
 
 	const auto addOptionBox = [&](const QString& text, const QString& settingName, bool checkedByDefault = false) {
@@ -135,7 +145,10 @@ void CFindBar::activate()
 
 void CFindBar::clearStatus()
 {
-	_countLabel->clear();
+	if (_matchesPopup) // It lists the matches being cleared
+		_matchesPopup->close();
+
+	clearMatchCount();
 	_statusLabel->clear();
 	setPatternErrorTint(false);
 	if (_hostFunctions.clearHighlights)
@@ -201,7 +214,7 @@ void CFindBar::findMatch(bool backward)
 	// Before the search: rebuilding the history rewrites the pattern text, which clears the status
 	_patternBox->addToHistory(pattern);
 
-	_countLabel->clear();
+	clearMatchCount();
 
 	const bool isRegex = _regexBox->isChecked();
 	const QRegularExpression regex{ isRegex ? pattern : QString{} };
@@ -244,6 +257,15 @@ void CFindBar::showWrapAroundNotice(bool backward)
 		connect(this, &QObject::destroyed, _wrapAroundNotice, &QObject::deleteLater); // the host may outlive the bar
 	}
 
+	const QString message = backward ? tr("Search restarted from the bottom") : tr("Search restarted from the top");
+	_wrapAroundNotice->showMessage(QStringLiteral("↻  ") + message, contentArea());
+}
+
+QRect CFindBar::contentArea() const
+{
+	QWidget* const host = parentWidget();
+	assert_and_return_r(host, {});
+
 	// findMatch() may have just shown the bar: its geometry is final once the host's layout has run
 	if (QLayout* const hostLayout = host->layout())
 		hostLayout->activate();
@@ -251,8 +273,68 @@ void CFindBar::showWrapAroundNotice(bool backward)
 	const QRect bar = geometry();
 	const QRect above{ QPoint{ 0, 0 }, QPoint{ host->width() - 1, bar.top() - 1 } };
 	const QRect below{ QPoint{ 0, bar.bottom() + 1 }, host->rect().bottomRight() };
-	const QString message = backward ? tr("Search restarted from the bottom") : tr("Search restarted from the top");
-	_wrapAroundNotice->showMessage(QStringLiteral("↻  ") + message, above.height() >= below.height() ? above : below);
+	return above.height() >= below.height() ? above : below;
+}
+
+static constexpr int64_t matchExcerptContextLength = 60;
+
+void CFindBar::openMatchList()
+{
+	const bool isRegex = _regexBox->isChecked();
+	assert_and_return_r(parentWidget() && (isRegex ? bool{ _hostFunctions.listRegex } : bool{ _hostFunctions.listText }), );
+
+	const QString pattern = _patternBox->currentText();
+	const QDeadlineTimer deadline{ matchCountingBudget };
+	MatchList list = isRegex ? _hostFunctions.listRegex(QRegularExpression{ pattern }, optionFlags(), deadline) : _hostFunctions.listText(pattern, optionFlags(), deadline);
+	if (list.matches.empty())
+		return;
+
+	// The list may reach further than the count did
+	if (const auto listed = static_cast<int64_t>(list.matches.size()); listed > _matchCount.total || list.complete)
+	{
+		_matchCount.total = listed;
+		_matchCount.complete = list.complete;
+		showMatchCount(_matchCount);
+	}
+
+	QRect popupArea = contentArea();
+	const bool contentAbove = popupArea.bottom() < geometry().top();
+	// Half the content's height at most, against the bar
+	if (contentAbove)
+		popupArea.setTop(popupArea.bottom() + 1 - popupArea.height() / 2);
+	else
+		popupArea.setHeight(popupArea.height() / 2);
+	popupArea.moveTopLeft(parentWidget()->mapToGlobal(popupArea.topLeft()));
+
+	_matchesPopup = new CFindMatchesPopup{
+		std::move(list.matches),
+		_matchCount.number - 1,
+		[this](MatchRange match) { return _hostFunctions.describeMatch(match, matchExcerptContextLength); },
+		[this](int64_t index, MatchRange match) {
+			_hostFunctions.selectMatch(match);
+			_matchCount.number = index + 1;
+			showMatchCount(_matchCount);
+		},
+		this
+	};
+	_matchesPopup->popUp(popupArea, contentAbove ? Qt::BottomEdge : Qt::TopEdge);
+}
+
+void CFindBar::clearMatchCount()
+{
+	_matchCount = {};
+	_countLabel->clear();
+	if (_listMatchesButton)
+		_listMatchesButton->setEnabled(false);
+}
+
+void CFindBar::showMatchCount(const MatchCount& count)
+{
+	_matchCount = count;
+	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
+	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
+	if (_listMatchesButton)
+		_listMatchesButton->setEnabled(count.total > 0 && (_regexBox->isChecked() ? bool{ _hostFunctions.listRegex } : bool{ _hostFunctions.listText }));
 }
 
 void CFindBar::updateMatchCount()
@@ -269,8 +351,7 @@ void CFindBar::updateMatchCount()
 	else
 		return;
 
-	const QString number = count.number > 0 ? QString::number(count.number) : QStringLiteral("?");
-	_countLabel->setText(QStringLiteral("%1/%2%3").arg(number, QString::number(count.total), count.complete ? QString{} : QStringLiteral("+")));
+	showMatchCount(count);
 }
 
 void CFindBar::setPatternErrorTint(bool on)

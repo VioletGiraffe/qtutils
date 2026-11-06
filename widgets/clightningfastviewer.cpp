@@ -1540,7 +1540,7 @@ static std::tuple<qsizetype, qsizetype, FindResult> matchWithWrapAround(SearchFr
 	return { wrappedPos, wrappedLength, wrappedPos >= 0 ? FindResult::FoundAfterWrapAround : FindResult::NotFound };
 }
 
-std::optional<CLightningFastViewerWidget::MatchRange> CLightningFastViewerWidget::currentMatch() const
+std::optional<MatchRange> CLightningFastViewerWidget::currentMatch() const
 {
 	if (_currentMatch && !_selection.hasSelection() && _selection.cursor == _currentMatch->start)
 		return _currentMatch;
@@ -1684,6 +1684,61 @@ MatchCount CLightningFastViewerWidget::countMatches(const QRegularExpression& ex
 	return continueMatchCount(matchCountingFor(rx, options), haystack.size(), [&](qsizetype from, auto onMatch) {
 		return countRegexMatches(rx, haystack, from, matchAcceptor(haystack, wholeWords), onMatch, deadline);
 	});
+}
+
+MatchList CLightningFastViewerWidget::listMatches(const QString& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline)
+{
+	return countedMatchList(countMatches(exp, options, deadline));
+}
+
+MatchList CLightningFastViewerWidget::listMatches(const QRegularExpression& exp, QTextDocument::FindFlags options, QDeadlineTimer deadline)
+{
+	return countedMatchList(countMatches(exp, options, deadline));
+}
+
+MatchList CLightningFastViewerWidget::countedMatchList(const MatchCount& count) const
+{
+	if (count.total == 0) // Also for a pattern countMatches() rejects, which leaves _matchCounting to an earlier one
+		return MatchList{ .complete = count.complete };
+
+	assert_and_return_r(_matchCounting, {});
+	const std::vector<MatchRange>& matches = _matchCounting->matches;
+	return MatchList{ .matches = matches, .complete = count.complete && static_cast<int64_t>(matches.size()) == count.total };
+}
+
+MatchDescription CLightningFastViewerWidget::describeMatch(MatchRange match, qsizetype contextLength) const
+{
+	const qsizetype matchEnd = match.start + match.length;
+
+	if (_mode == Mode::Hex)
+	{
+		const qsizetype from = std::max<qsizetype>(match.start - contextLength, 0);
+		const qsizetype to = std::min<qsizetype>(matchEnd + contextLength, _data.size());
+		QString excerpt = QString::fromLatin1(_data.mid(from, to - from));
+		for (QChar& ch : excerpt)
+		{
+			if (ch.unicode() < 0x20 || ch.unicode() >= 0x7F)
+				ch = QLatin1Char{ '.' };
+		}
+		return { tr("offset %1").arg(match.start), excerpt, match.start - from, match.length };
+	}
+
+	const auto isLineBreak = [](QChar ch) { return ch == QLatin1Char{ '\n' } || ch == QLatin1Char{ '\r' }; };
+	qsizetype from = match.start;
+	while (from > 0 && match.start - from < contextLength && !isLineBreak(_text[from - 1]))
+		--from;
+	qsizetype to = matchEnd;
+	while (to < _text.size() && to - matchEnd < contextLength && !isLineBreak(_text[to]))
+		++to;
+
+	const qsizetype line = findLineContainingOffset(match.start);
+	const QString location = line >= 0 ? tr("line %1").arg(_logicalLineNumbers[line]) : QString{};
+	return { location, _text.mid(from, to - from), match.start - from, match.length };
+}
+
+void CLightningFastViewerWidget::selectMatch(MatchRange match)
+{
+	setCurrentMatch(match.start, match.length);
 }
 
 CLightningFastViewerWidget::MatchCounting& CLightningFastViewerWidget::matchCountingFor(std::variant<QString, QRegularExpression> pattern, QTextDocument::FindFlags options)
