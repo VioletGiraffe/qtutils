@@ -4,6 +4,7 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+#include <QHeaderView>
 #include <QMainWindow>
 #include <QScreen>
 #include <QSettings>
@@ -14,6 +15,22 @@ RESTORE_COMPILER_WARNINGS
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
 #define SPLITTER_KEY(splitter) (_settingsPath + "_splitter_" + (splitter)->objectName())
+
+namespace {
+
+// Empty for a header without sections or with an unnamed view.
+// The section count is part of the key: QHeaderView::restoreState does not check it, and would apply a state saved for
+// other columns.
+QString headerKey(const QString& settingsPath, const QHeaderView* header)
+{
+	const QWidget* view = header->parentWidget();
+	if (!view || view->objectName().isEmpty() || header->count() == 0)
+		return {};
+
+	return settingsPath + "_header_" + view->objectName() + (header->orientation() == Qt::Horizontal ? "_h" : "_v") + QString::number(header->count());
+}
+
+} // namespace
 
 CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed, SetDefaultSize setDefaultSize) :
 	QObject(widget),
@@ -58,6 +75,12 @@ void CPersistenceEnabler::saveState() const
 		if (!splitter->objectName().isEmpty())
 			s.setValue(SPLITTER_KEY(splitter), splitter->saveState());
 	}
+
+	for (const QHeaderView* header : _widget->findChildren<QHeaderView*>())
+	{
+		if (const QString key = headerKey(_settingsPath, header); !key.isEmpty())
+			s.setValue(key, header->saveState());
+	}
 }
 
 void CPersistenceEnabler::restoreState()
@@ -83,5 +106,11 @@ void CPersistenceEnabler::restoreState()
 	{
 		if (!splitter->objectName().isEmpty())
 			splitter->restoreState(s.value(SPLITTER_KEY(splitter)).toByteArray());
+	}
+
+	for (QHeaderView* header : _widget->findChildren<QHeaderView*>())
+	{
+		if (const QString key = headerKey(_settingsPath, header); !key.isEmpty())
+			header->restoreState(s.value(key).toByteArray());
 	}
 }

@@ -21,7 +21,9 @@ public:
 	// widgetSettingsPath must be application-wide unique: it is the QSettings path this widget's state and
 	// position are stored under between launches.
 	// Every QSplitter inside the widget with an objectName is persisted too: the name must be unique within the widget.
-	// A splitter created after the first show is not restored.
+	// So is the header of every item view with an objectName: its column widths, order and sort indicator. A header's state is
+	// kept per section count, so a view whose columns changed starts from its defaults.
+	// A splitter or a view created after the first show is not restored, nor a view that has no columns yet at that point.
 	explicit CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed = Delayed{ true }, SetDefaultSize setDefaultSize = SetDefaultSize{ true });
 
 protected:
@@ -39,7 +41,8 @@ private:
 	const bool _setDefaultSize;
 };
 
-// Persists the widget's geometry and state, and its named splitters; see the constructor for widgetSettingsPath
+// Persists the widget's geometry and state, its named splitters and the headers of its named views; see the constructor for
+// widgetSettingsPath
 inline void enablePersistence(QWidget* widget, QString widgetSettingsPath,
 	CPersistenceEnabler::Delayed delayed = CPersistenceEnabler::Delayed{ true },
 	CPersistenceEnabler::SetDefaultSize setDefaultSize = CPersistenceEnabler::SetDefaultSize{ true })
