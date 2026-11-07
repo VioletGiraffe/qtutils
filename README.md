@@ -99,6 +99,12 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `taskbarprogress/taskbarprogress/ctaskbarprogress.h` | Native taskbar progress state/value abstraction. Windows implements normal, paused, error, indeterminate, and hidden states for one top-level window; macOS, Linux, and FreeBSD are currently no-ops. |
 | `taskbarprogress/cprogressbartaskbar.h` | `QProgressBar` that mirrors its range, value, visibility, and state to a linked native taskbar button. |
 
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/svg_to_icons.py` | Renders a square, full-bleed SVG into a Windows `.ico` or a macOS `.icns`, chosen by the output's extension, each size rendered from the SVG, not scaled from another. The `.ico` has every size Windows draws an app icon at, BMP below 256 and PNG at 256; the `.icns` places the SVG on Apple's icon grid. Needs Python with Pillow and `resvg-py`. |
+
 ## Building
 
 Build `qtutils.pro` with qmake after making `cpputils` and `cpp-template-utils` available at the sibling paths expected by the project. The library links Qt Core, Gui, and Widgets; taskbar progress adds a native implementation only on Windows. The theming module, and any app including `theme/cthemeiconhandler.h`, needs Qt's private Core headers (`QT += core-private`); an app using `CTintedSvgIconEngine` must add `QT += svg` itself.
