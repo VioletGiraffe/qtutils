@@ -16,15 +16,20 @@ class CPersistenceEnabler final : public QObject
 public:
 	DECLARE_NAMED_BOOL_TYPE(Delayed);
 	DECLARE_NAMED_BOOL_TYPE(SetDefaultSize);
+	DECLARE_NAMED_BOOL_TYPE(PersistViewHeaders);
 
 	// Installs itself on `widget` and is parented to it.
 	// widgetSettingsPath must be application-wide unique: it is the QSettings path this widget's state and
 	// position are stored under between launches.
-	// Every QSplitter inside the widget with an objectName is persisted too: the name must be unique within the widget.
+	// Every QSplitter inside the widget with an objectName is persisted too.
 	// So is the header of every item view with an objectName: its column widths, order and sort indicator. A header's state is
 	// kept per section count, so a view whose columns changed starts from its defaults.
+	// A splitter or view is keyed by its name and those of its named ancestors: that chain must be unique within the widget.
+	// Splitters and views inside another window, such as a dialog parented to the widget, are left to that window.
+	// PersistViewHeaders{ false } skips the headers, for views whose owner keeps their state itself.
 	// A splitter or a view created after the first show is not restored, nor a view that has no columns yet at that point.
-	explicit CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed = Delayed{ true }, SetDefaultSize setDefaultSize = SetDefaultSize{ true });
+	explicit CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed = Delayed{ true }, SetDefaultSize setDefaultSize = SetDefaultSize{ true },
+		PersistViewHeaders persistViewHeaders = PersistViewHeaders{ true });
 
 protected:
 	bool eventFilter(QObject *watched, QEvent *event) override;
@@ -39,13 +44,15 @@ private:
 	bool _stateRestored = false;
 	const bool _delayed;
 	const bool _setDefaultSize;
+	const bool _persistViewHeaders;
 };
 
 // Persists the widget's geometry and state, its named splitters and the headers of its named views; see the constructor for
-// widgetSettingsPath
+// the parameters
 inline void enablePersistence(QWidget* widget, QString widgetSettingsPath,
 	CPersistenceEnabler::Delayed delayed = CPersistenceEnabler::Delayed{ true },
-	CPersistenceEnabler::SetDefaultSize setDefaultSize = CPersistenceEnabler::SetDefaultSize{ true })
+	CPersistenceEnabler::SetDefaultSize setDefaultSize = CPersistenceEnabler::SetDefaultSize{ true },
+	CPersistenceEnabler::PersistViewHeaders persistViewHeaders = CPersistenceEnabler::PersistViewHeaders{ true })
 {
-	new CPersistenceEnabler{ std::move(widgetSettingsPath), widget, delayed, setDefaultSize }; // parented to the widget, which owns it from here
+	new CPersistenceEnabler{ std::move(widgetSettingsPath), widget, delayed, setDefaultSize, persistViewHeaders }; // parented to the widget, which owns it from here
 }

@@ -4,40 +4,81 @@
 
 DISABLE_COMPILER_WARNINGS
 #include <QApplication>
+#include <QDockWidget>
 #include <QHeaderView>
 #include <QMainWindow>
 #include <QScreen>
+#include <QSet>
 #include <QSettings>
 #include <QSplitter>
+#include <QStringList>
 #include <QStyle>
 RESTORE_COMPILER_WARNINGS
 
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
-#define SPLITTER_KEY(splitter) (_settingsPath + "_splitter_" + (splitter)->objectName())
 
 namespace {
 
-// Empty for a header without sections or with an unnamed view.
-// The section count is part of the key: QHeaderView::restoreState does not check it, and would apply a state saved for
-// other columns.
-QString headerKey(const QString& settingsPath, const QHeaderView* header)
+// A floating dock widget is a window, but its contents belong to the main window's state
+bool isSeparateWindow(const QWidget* widget)
 {
-	const QWidget* view = header->parentWidget();
-	if (!view || view->objectName().isEmpty() || header->count() == 0)
+	return widget->isWindow() && !qobject_cast<const QDockWidget*>(widget);
+}
+
+// The child's objectName, preceded by those of its named ancestors below root.
+// Empty for an unnamed child, or one inside another window such as a dialog parented to root: that window persists its own state.
+QString namePath(const QWidget* root, const QWidget* child)
+{
+	if (child == root || child->objectName().isEmpty())
+		return child->objectName();
+
+	QStringList names;
+	for (const QWidget* widget = child; widget != root; widget = widget->parentWidget())
+	{
+		if (isSeparateWindow(widget))
+			return {};
+		if (!widget->objectName().isEmpty())
+			names.prepend(widget->objectName());
+	}
+
+	return names.join('.');
+}
+
+// Empty for a splitter namePath() excludes
+QString splitterKey(const QString& settingsPath, const QWidget* root, const QSplitter* splitter)
+{
+	const QString path = namePath(root, splitter);
+	if (path.isEmpty())
 		return {};
 
-	return settingsPath + "_header_" + view->objectName() + (header->orientation() == Qt::Horizontal ? "_h" : "_v") + QString::number(header->count());
+	return settingsPath + "_splitter_" + path;
+}
+
+// Empty for a header without sections, or of a view namePath() excludes.
+// The section count is part of the key: QHeaderView::restoreState does not check it, and would apply a state saved for
+// other columns.
+QString headerKey(const QString& settingsPath, const QWidget* root, const QHeaderView* header)
+{
+	if (header->count() == 0)
+		return {};
+
+	const QString path = namePath(root, header->parentWidget());
+	if (path.isEmpty())
+		return {};
+
+	return settingsPath + "_header_" + path + (header->orientation() == Qt::Horizontal ? "_h" : "_v") + QString::number(header->count());
 }
 
 } // namespace
 
-CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed, SetDefaultSize setDefaultSize) :
+CPersistenceEnabler::CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed, SetDefaultSize setDefaultSize, PersistViewHeaders persistViewHeaders) :
 	QObject(widget),
 	_settingsPath{std::move(widgetSettingsPath)},
 	_widget{ widget },
 	_delayed{ delayed },
-	_setDefaultSize{ setDefaultSize }
+	_setDefaultSize{ setDefaultSize },
+	_persistViewHeaders{ persistViewHeaders }
 {
 	assert_and_return_r(_widget, );
 	_widget->installEventFilter(this);
@@ -70,16 +111,26 @@ void CPersistenceEnabler::saveState() const
 	if (auto* window = dynamic_cast<QMainWindow*>(_widget))
 		s.setValue(STATE_KEY, window->saveState());
 
+	QSet<QString> childKeys;
+	const auto saveChildState = [&](const QString& key, const QByteArray& state) {
+		assert_message_r(!childKeys.contains(key), QString{ "Persisted children share the key " + key + ": rename one of them or an ancestor" }.toStdString());
+		childKeys.insert(key);
+		s.setValue(key, state);
+	};
+
 	for (const QSplitter* splitter : _widget->findChildren<QSplitter*>())
 	{
-		if (!splitter->objectName().isEmpty())
-			s.setValue(SPLITTER_KEY(splitter), splitter->saveState());
+		if (const QString key = splitterKey(_settingsPath, _widget, splitter); !key.isEmpty())
+			saveChildState(key, splitter->saveState());
 	}
+
+	if (!_persistViewHeaders)
+		return;
 
 	for (const QHeaderView* header : _widget->findChildren<QHeaderView*>())
 	{
-		if (const QString key = headerKey(_settingsPath, header); !key.isEmpty())
-			s.setValue(key, header->saveState());
+		if (const QString key = headerKey(_settingsPath, _widget, header); !key.isEmpty())
+			saveChildState(key, header->saveState());
 	}
 }
 
@@ -104,13 +155,16 @@ void CPersistenceEnabler::restoreState()
 	// scales its panes in proportion when resized
 	for (QSplitter* splitter : _widget->findChildren<QSplitter*>())
 	{
-		if (!splitter->objectName().isEmpty())
-			splitter->restoreState(s.value(SPLITTER_KEY(splitter)).toByteArray());
+		if (const QString key = splitterKey(_settingsPath, _widget, splitter); !key.isEmpty())
+			splitter->restoreState(s.value(key).toByteArray());
 	}
+
+	if (!_persistViewHeaders)
+		return;
 
 	for (QHeaderView* header : _widget->findChildren<QHeaderView*>())
 	{
-		if (const QString key = headerKey(_settingsPath, header); !key.isEmpty())
+		if (const QString key = headerKey(_settingsPath, _widget, header); !key.isEmpty())
 			header->restoreState(s.value(key).toByteArray());
 	}
 }
