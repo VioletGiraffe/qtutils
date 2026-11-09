@@ -1,17 +1,43 @@
-#include "displayformatting.h"
+#pragma once
 
 #include "compiler/compiler_warnings_control.h"
-#include "lang/type_traits_fast.hpp"
 
 DISABLE_COMPILER_WARNINGS
 #include <QObject>
 #include <QString>
 #include <QStringBuilder>
 #include <QStringList>
+#include <QStringView>
+#include <QtGlobal>
 RESTORE_COMPILER_WARNINGS
 
 #include <cctype>
 #include <iterator>
+#include <stdint.h>
+
+// The argument for the platform built for; otherText covers every platform but Windows and macOS.
+// All three deduce one T: mixing plain literals with QString takes textForPlatform<QString>(...).
+template <typename T>
+[[nodiscard]] T textForPlatform([[maybe_unused]] T windowsText, [[maybe_unused]] T macText, [[maybe_unused]] T otherText)
+{
+#ifdef Q_OS_WIN
+	return windowsText;
+#elif defined Q_OS_MACOS
+	return macText;
+#else
+	return otherText;
+#endif
+}
+
+// IEC units. maxUnit caps the unit by its first letter ('B', 'K', 'M', ...); spacer separates thousands in the whole part.
+// significantPlaces: the smallest unit whose whole part fits this many digits is used; 0 selects the largest unit that fits.
+[[nodiscard]] inline QString fileSizeToString(uint64_t size, char maxUnit = '\0', const QString& spacer = {}, int significantPlaces = 4);
+
+[[nodiscard]] inline QString secondsToTimeIntervalString(uint32_t secondsTotal);
+
+// The spaces inside each separator-delimited item become non-breaking: word wrap breaks lines only at the separators.
+// Text without the separator becomes one unbreakable item.
+[[nodiscard]] inline QString wrappableOnlyAtSeparators(const QString& text, QStringView separator);
 
 QString fileSizeToString(uint64_t size, const char maxUnit, const QString& spacer, int significantPlaces)
 {
@@ -42,7 +68,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 			if (u.label[0] == maxUnitUpper)
 				return u.threshold;
 		}
-		return uint64_max;
+		return UINT64_MAX;
 	}();
 
 	// First pass: try to satisfy significantPlaces (if non-zero)

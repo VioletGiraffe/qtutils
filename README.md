@@ -67,7 +67,6 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | Header | Facility |
 |---|---|
 | `utils/ciconengineqimage.h` | `QIconEngine` that renders each requested physical size directly from a source `QImage`, preserves aspect ratio with transparent padding, caches by size/mode, and accepts a custom scaler. |
-| `utils/displayformatting.h` | Text for display: file sizes in IEC units, time intervals, the variant of a UI string for the platform built for, and text that word wrap breaks only between its separator-delimited items. |
 | `utils/filemanager.h` | Reveals an entry selected in the platform file manager, through a link or at the link itself, with the platform's menu wording; opens a folder's contents. Callers on Linux and FreeBSD need `QT += dbus`. |
 | `utils/naturalsorting/cnaturalsorterqcollator.h` | Locale-aware numeric `QStringView` ordering with case-sensitive and case-insensitive comparators backed by thread-local `QCollator`s. |
 | `utils/painterutils.h` | `snappedToDevicePixel`: the nearest logical point on a whole device pixel of a painter's surface. |
@@ -84,6 +83,7 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | Header | Facility |
 |---|---|
 | `qtcore_helpers/catch_qt.hpp` | Catch2 with printers for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
+| `qtcore_helpers/displayformatting.hpp` | Text for display: file sizes in IEC units, time intervals, the variant of a UI string for the platform built for, and text that word wrap breaks only between its separator-delimited items. |
 | `qtcore_helpers/qdatetime_helpers.hpp` | Converts between `QDateTime` and Unix `time_t` seconds. |
 | `qtcore_helpers/qdebug_helpers.hpp` | `QDebug` output for `std::string` and hexadecimal `std::array` data. |
 | `qtcore_helpers/qstring_hash.hpp` | `QStringHash`: transparent, avalanching rapidhash of the UTF-16 data; with `std::equal_to<>`, a `QString`-keyed hash map finds keys by `QStringView`. |

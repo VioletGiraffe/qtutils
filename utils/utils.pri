@@ -1,6 +1,5 @@
 HEADERS += \
 	$$PWD/ciconengineqimage.h \
-	$$PWD/displayformatting.h \
 	$$PWD/filemanager.h \
 	$$PWD/naturalsorting/cnaturalsorterqcollator.h \
 	$$PWD/painterutils.h \
@@ -9,6 +8,5 @@ HEADERS += \
 
 SOURCES += \
 	$$PWD/ciconengineqimage.cpp \
-	$$PWD/displayformatting.cpp \
 	$$PWD/filemanager.cpp \
 	$$PWD/resources.cpp
