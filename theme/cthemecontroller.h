@@ -1,5 +1,6 @@
 #pragma once
 
+#include "assert/advanced_assert.h"
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
@@ -7,10 +8,13 @@ DISABLE_COMPILER_WARNINGS
 #include <QString>
 RESTORE_COMPILER_WARNINGS
 
+#include <algorithm>
+#include <ranges>
+
 // Persists the user's theming choices and announces when the theme in effect changes: a scheme
 // preference (system / light / dark) and one theme name per polarity. The names are stored as opaque
-// strings - the app owns the theme list and resolves a name against it, including falling back when
-// a stored name no longer names anything. This never sees a theme, let alone a colour.
+// strings - the app owns the theme list, and selectedTheme() resolves the stored name against it.
+// Of a theme, this reads the name and the polarity only.
 //
 // Qt owns the polarity itself, through QStyleHints::setColorScheme(), so the platform follows too -
 // on Windows that includes the title bar. The preference is kept separately because Qt reports the
@@ -37,6 +41,23 @@ public:
 	// that no longer exists.
 	[[nodiscard]] QString themeName(bool dark) const;
 	void setThemeName(bool dark, const QString& name);
+
+	// The theme of 'themes' in effect: the one stored for the polarity on screen, or else the first of that polarity.
+	// A fresh install and a stored name that outlived its theme both resolve to that first one.
+	// A theme type has `name` and `dark` members. Requires a theme of each polarity. Returns a reference into 'themes'.
+	template <std::ranges::forward_range Themes>
+	[[nodiscard]] const std::ranges::range_value_t<Themes>& selectedTheme(const Themes& themes) const
+	{
+		const bool dark = darkActive();
+		const QString storedName = themeName(dark);
+
+		auto theme = std::ranges::find_if(themes, [&](const auto& t) { return t.dark == dark && t.name == storedName; });
+		if (theme == std::ranges::end(themes))
+			theme = std::ranges::find_if(themes, [dark](const auto& t) { return t.dark == dark; });
+
+		assert_and_return_r(theme != std::ranges::end(themes), *std::ranges::begin(themes));
+		return *theme;
+	}
 
 signals:
 	// The polarity flipped, or the on-screen polarity's selection changed. The app re-resolves and

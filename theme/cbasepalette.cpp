@@ -30,6 +30,13 @@ CBasePalette resolvedPalette(CBasePalette p)
 		p.accentFg = ColorUtils::contrastRatio(p.accent, p.surface) >= ColorUtils::contrastRatio(p.accent, p.text) ? p.surface : p.text;
 	}
 
+	// Fixed per polarity, never drawn toward the accent: an error must read as red in every theme.
+	if (!p.errorText.isValid())
+	{
+		const bool dark = ColorUtils::relativeLuminance(p.text) > ColorUtils::relativeLuminance(p.surface);
+		p.errorText = dark ? QColor{ 0xe5, 0x73, 0x6b } : QColor{ 0xc0, 0x39, 0x2b };
+	}
+
 	return p;
 }
 

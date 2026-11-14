@@ -11,9 +11,8 @@ class QPalette;
 // The colour vocabulary every app using this framework shares. Apps keep their own tokens beside it;
 // only these are understood here, and only these feed the QPalette mapping below.
 //
-// The nine core fields must be authored. The seven derived fields may be left default-constructed,
-// and resolvedPalette() computes them from the core - author one only where a palette genuinely
-// differs from what the derivation produces.
+// The core fields must be authored. The derived fields may be left default-constructed, and resolvedPalette()
+// computes them from the core - author one only where a palette genuinely differs from what the derivation produces.
 struct CBasePalette
 {
 	// Core - required.
@@ -35,6 +34,7 @@ struct CBasePalette
 	QColor accentText;    // accent-coloured text on an ordinary surface
 	QColor accentBg;      // accent-tinted surface
 	QColor buttonBorder;
+	QColor errorText;     // error messages and invalid input, on an ordinary surface
 };
 
 // Fills in every derived field left default-constructed, leaving authored ones untouched. Idempotent,
