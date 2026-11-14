@@ -31,7 +31,8 @@ template <typename T>
 
 // IEC units. maxUnit caps the unit by its first letter ('B', 'K', 'M', ...); spacer separates thousands in the whole part.
 // significantPlaces: the smallest unit whose whole part fits this many digits is used; 0 selects the largest unit that fits.
-[[nodiscard]] inline QString fileSizeToString(uint64_t size, char maxUnit = '\0', const QString& spacer = {}, int significantPlaces = 4);
+// decimalPlaces: the digits after the point; a size in bytes has none.
+[[nodiscard]] inline QString fileSizeToString(uint64_t size, char maxUnit = '\0', const QString& spacer = {}, int significantPlaces = 4, int decimalPlaces = 1);
 
 [[nodiscard]] inline QString secondsToTimeIntervalString(uint32_t secondsTotal);
 
@@ -39,7 +40,7 @@ template <typename T>
 // Text without the separator becomes one unbreakable item.
 [[nodiscard]] inline QString wrappableOnlyAtSeparators(const QString& text, QStringView separator);
 
-QString fileSizeToString(uint64_t size, const char maxUnit, const QString& spacer, int significantPlaces)
+QString fileSizeToString(uint64_t size, const char maxUnit, const QString& spacer, int significantPlaces, int decimalPlaces)
 {
 	static constexpr uint64_t KB = 1024ULL;
 	static constexpr uint64_t MB = 1024ULL * KB;
@@ -132,7 +133,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 	else
 	{
 		double n = static_cast<double>(size) / static_cast<double>(chosen->threshold);
-		numeric = QString::number(n, 'f', 1);
+		numeric = QString::number(n, 'f', decimalPlaces);
 	}
 
 	// Insert thousands spacer into whole part only
