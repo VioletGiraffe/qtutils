@@ -847,7 +847,7 @@ void CImageViewerWidget::paintInfoStrip(QPainter& painter) const
 
 	// Centered on the strip: it stays put as the magnification text changes width.
 	const int center = strip.center().x();
-	const int captionHalfWidth = std::min((fm.horizontalAdvance(_infoStripCaption) + 1) / 2, infoRight - center);
+	const int captionHalfWidth = std::min((roundedUpTextWidth(painter.font(), _infoStripCaption) + 1) / 2, infoRight - center);
 	if (captionHalfWidth > 0)
 	{
 		const QRect captionRect{ center - captionHalfWidth, textRect.y(), 2 * captionHalfWidth, textRect.height() };
@@ -889,7 +889,7 @@ QRect CImageViewerWidget::failureNoticeRect() const
 
 	const QFontMetrics fm = fontMetrics();
 	const int padding = fm.height() / 2; // Same inset as the info strip's.
-	const int noticeWidth = std::min(fm.horizontalAdvance(_failureNotice) + 2 * padding, width() - 2 * padding);
+	const int noticeWidth = std::min(roundedUpTextWidth(font(), _failureNotice) + 2 * padding, width() - 2 * padding);
 	return noticeWidth > 2 * padding ? QRect{ (width() - noticeWidth) / 2, padding, noticeWidth, fm.height() + padding } : QRect{};
 }
 

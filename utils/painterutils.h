@@ -3,8 +3,11 @@
 #include "compiler/compiler_warnings_control.h"
 
 DISABLE_COMPILER_WARNINGS
+#include <QFont>
+#include <QFontMetricsF>
 #include <QPainter>
 #include <QPointF>
+#include <QString>
 #include <QTransform>
 RESTORE_COMPILER_WARNINGS
 
@@ -18,4 +21,10 @@ RESTORE_COMPILER_WARNINGS
 	const QTransform& toDevice = painter.deviceTransform();
 	const QPointF device = toDevice.map(logical);
 	return toDevice.inverted().map(QPointF(std::round(device.x()), std::round(device.y())));
+}
+
+// The width of a rect that holds the text whole: see docs/qt-text-quirks.md for why not QFontMetrics::horizontalAdvance()
+[[nodiscard]] inline int roundedUpTextWidth(const QFont& font, const QString& text)
+{
+	return static_cast<int>(std::ceil(QFontMetricsF{ font }.horizontalAdvance(text)));
 }

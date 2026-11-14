@@ -1,4 +1,5 @@
 #include "chistorycombobox.h"
+#include "utils/painterutils.h"
 #include "container/set_operations.hpp"
 
 DISABLE_COMPILER_WARNINGS
@@ -139,8 +140,9 @@ QSize CHistoryComboBox::sizeHintForText(const QString& text) const
 	const QLineEdit* const editor = lineEdit();
 	if (editor)
 		editor->ensurePolished(); // a stylesheet may give the editor its own font
-	const QFontMetrics metrics = editor ? editor->fontMetrics() : fontMetrics();
-	int contentWidth = metrics.horizontalAdvance(text);
+	const QFont textFont = editor ? editor->font() : font();
+	const QFontMetrics metrics{ textFont };
+	int contentWidth = roundedUpTextWidth(textFont, text);
 	if (editor)
 	{
 		// QLineEdit insets its text by 2 px a side and needs room for the cursor

@@ -4,6 +4,7 @@
 #include "chistorycombobox.h"
 #include "assert/advanced_assert.h"
 #include "theme/colorutils.h"
+#include "utils/painterutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QAction>
@@ -183,7 +184,7 @@ void CFindBar::showEvent(QShowEvent* event)
 	QFrame::showEvent(event);
 
 	// Reserved so the option boxes stay put as the count changes; measured here, once the bar has its final font
-	_countLabel->setMinimumWidth(_countLabel->fontMetrics().horizontalAdvance(QStringLiteral("9999/9999+")));
+	_countLabel->setMinimumWidth(roundedUpTextWidth(_countLabel->font(), QStringLiteral("9999/9999+")));
 
 	// Key events the focus widget and its parents ignore reach the window; installing again only moves the filter to the front
 	window()->installEventFilter(this);

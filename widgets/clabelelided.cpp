@@ -1,4 +1,5 @@
 #include "clabelelided.h"
+#include "utils/painterutils.h"
 
 DISABLE_COMPILER_WARNINGS
 #include <QEvent>
@@ -102,8 +103,7 @@ QSize CLabelElided::minimumSizeHint() const
 		return QLabel::minimumSizeHint();
 
 	constexpr QChar ellipsis{0x2026}; // What QFontMetrics::elidedText substitutes
-	const QFontMetrics fm(font());
-	const int textWidth = fm.horizontalAdvance(_minimumTextSample.isEmpty() ? QString{ ellipsis } : _minimumTextSample);
+	const int textWidth = roundedUpTextWidth(font(), _minimumTextSample.isEmpty() ? QString{ ellipsis } : _minimumTextSample);
 	const int widthUnavailableForText = width() - textRect().width();
 	return { textWidth + widthUnavailableForText, QLabel::minimumSizeHint().height() };
 }
@@ -149,7 +149,7 @@ bool CLabelElided::isTextFullyVisible() const
 
 	for (const TextLine& paragraph : paragraphs)
 	{
-		if (fm.horizontalAdvance(fullText.mid(paragraph.start, paragraph.length)) > textArea.width())
+		if (roundedUpTextWidth(font(), fullText.mid(paragraph.start, paragraph.length)) > textArea.width())
 			return false;
 	}
 
@@ -225,7 +225,7 @@ void CLabelElided::paintText(QPainter& painter, const QRect& textArea)
 
 	const auto drawLine = [&](const QString& lineText) {
 		if (!_textIsTruncated)
-			_textIsTruncated = fm.horizontalAdvance(lineText) > textArea.width(); // Also covers ElideNone, which elides nothing
+			_textIsTruncated = roundedUpTextWidth(font(), lineText) > textArea.width(); // Also covers ElideNone, which elides nothing
 
 		const QRect lineRect{ textArea.left(), y, textArea.width(), lineHeight };
 		const QString elidedText = fm.elidedText(lineText, _elideMode, textArea.width(), flags & Qt::TextShowMnemonic);

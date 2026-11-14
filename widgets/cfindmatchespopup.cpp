@@ -1,4 +1,5 @@
 #include "cfindmatchespopup.h"
+#include "utils/painterutils.h"
 #include "assert/advanced_assert.h"
 
 DISABLE_COMPILER_WARNINGS
@@ -73,12 +74,12 @@ void MatchRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
 	// Matches are in content order, so the last row has the widest line number or offset
 	if (_locationColumnWidth < 0)
-		_locationColumnWidth = metrics.horizontalAdvance(_describeRow(_rowCount - 1).location);
+		_locationColumnWidth = roundedUpTextWidth(opt.font, _describeRow(_rowCount - 1).location);
 
 	const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, nullptr, widget) + 1;
 	const QRect textRect = opt.rect.adjusted(textMargin, 0, -textMargin, 0);
 	const int gap = 2 * metrics.horizontalAdvance(QLatin1Char{ ' ' });
-	const int numberColumnWidth = metrics.horizontalAdvance(QString::number(_rowCount));
+	const int numberColumnWidth = roundedUpTextWidth(opt.font, QString::number(_rowCount));
 	int x = textRect.left();
 	const auto remainingWidth = [&] { return std::max(textRect.right() + 1 - x, 0); };
 
@@ -94,7 +95,7 @@ void MatchRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 	painter->setPen(dimColor);
 	drawText(QString::number(index.row() + 1), numberColumnWidth, Qt::AlignRight);
 	x += gap;
-	drawText(description.location, std::max(_locationColumnWidth, metrics.horizontalAdvance(description.location)));
+	drawText(description.location, std::max(_locationColumnWidth, roundedUpTextWidth(opt.font, description.location)));
 	x += gap;
 
 	QString excerpt = description.excerpt;
@@ -110,11 +111,11 @@ void MatchRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 	const QString after = excerpt.mid(matchStart + match.size());
 
 	// The match keeps its place in view: the text before it is elided first
-	const int matchWidth = std::min(boldMetrics.horizontalAdvance(match), remainingWidth());
+	const int matchWidth = std::min(roundedUpTextWidth(boldFont, match), remainingWidth());
 	const QString shownBefore = metrics.elidedText(before, Qt::ElideLeft, remainingWidth() - matchWidth);
 
 	painter->setPen(textColor);
-	drawText(shownBefore, metrics.horizontalAdvance(shownBefore));
+	drawText(shownBefore, roundedUpTextWidth(opt.font, shownBefore));
 	painter->setFont(boldFont);
 	drawText(boldMetrics.elidedText(match, Qt::ElideRight, matchWidth), matchWidth);
 	painter->setFont(opt.font);
