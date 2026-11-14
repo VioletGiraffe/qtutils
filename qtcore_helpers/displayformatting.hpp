@@ -29,10 +29,16 @@ template <typename T>
 #endif
 }
 
-// IEC units. maxUnit caps the unit by its first letter ('B', 'K', 'M', ...); spacer separates thousands in the whole part.
-// significantPlaces: the smallest unit whose whole part fits this many digits is used; 0 selects the largest unit that fits.
-// decimalPlaces: the digits after the point; a size in bytes has none.
-[[nodiscard]] inline QString fileSizeToString(uint64_t size, char maxUnit = '\0', const QString& spacer = {}, int significantPlaces = 4, int decimalPlaces = 1);
+struct FileSizeFormat
+{
+	char maxUnit = '\0'; // the largest unit allowed, by its first letter: 'B', 'K', 'M', ...
+	QString thousandsSeparator; // inserted into the whole part
+	int significantPlaces = 4; // the smallest unit whose whole part fits this many digits is used; 0 selects the largest unit that fits
+	int decimalPlaces = 1; // a size in bytes has none
+};
+
+// IEC units
+[[nodiscard]] inline QString fileSizeToString(uint64_t size, const FileSizeFormat& format = {});
 
 [[nodiscard]] inline QString secondsToTimeIntervalString(uint32_t secondsTotal);
 
@@ -40,7 +46,7 @@ template <typename T>
 // Text without the separator becomes one unbreakable item.
 [[nodiscard]] inline QString wrappableOnlyAtSeparators(const QString& text, QStringView separator);
 
-QString fileSizeToString(uint64_t size, const char maxUnit, const QString& spacer, int significantPlaces, int decimalPlaces)
+QString fileSizeToString(uint64_t size, const FileSizeFormat& format)
 {
 	static constexpr uint64_t KB = 1024ULL;
 	static constexpr uint64_t MB = 1024ULL * KB;
@@ -60,7 +66,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 		{ 0ULL, "B" }
 	};
 
-	const char maxUnitUpper = static_cast<char>(std::toupper(static_cast<unsigned char>(maxUnit)));
+	const char maxUnitUpper = static_cast<char>(std::toupper(static_cast<unsigned char>(format.maxUnit)));
 
 	const uint64_t maxUnitSize = [maxUnitUpper]() -> uint64_t {
 		if (maxUnitUpper == 'B')
@@ -74,7 +80,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 
 	// First pass: try to satisfy significantPlaces (if non-zero)
 	const Unit* chosen = nullptr;
-	if (significantPlaces > 0)
+	if (format.significantPlaces > 0)
 	{
 		// iterate from smallest to largest unit
 		for (int i = std::size(units) - 1; i >= 0; --i)
@@ -95,7 +101,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 			int digits = 1;
 			for (uint64_t tmp = whole; tmp >= 10; tmp /= 10, ++digits) {}
 
-			if (digits <= significantPlaces)
+			if (digits <= format.significantPlaces)
 			{
 				chosen = &u;
 				break; // smallest unit that fits
@@ -124,7 +130,7 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 		chosen = &units[6]; // bytes entry
 	}
 
-	// Build numeric string separately so we can insert the spacer into the whole part only
+	// Build numeric string separately so we can insert the separator into the whole part only
 	QString numeric;
 	if (chosen->threshold == 0ULL)
 	{
@@ -133,16 +139,16 @@ QString fileSizeToString(uint64_t size, const char maxUnit, const QString& space
 	else
 	{
 		double n = static_cast<double>(size) / static_cast<double>(chosen->threshold);
-		numeric = QString::number(n, 'f', decimalPlaces);
+		numeric = QString::number(n, 'f', format.decimalPlaces);
 	}
 
-	// Insert thousands spacer into whole part only
-	if (!spacer.isEmpty())
+	// Insert thousands separator into whole part only
+	if (!format.thousandsSeparator.isEmpty())
 	{
 		const qsizetype dotPos = numeric.indexOf('.');
 		const qsizetype wholeLen = (dotPos == -1) ? numeric.size() : dotPos;
 		for (qsizetype pos = wholeLen - 3; pos > 0; pos -= 3)
-			numeric.insert(pos, spacer);
+			numeric.insert(pos, format.thousandsSeparator);
 	}
 
 	QString result;
