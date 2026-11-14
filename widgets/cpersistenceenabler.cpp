@@ -155,8 +155,14 @@ void CPersistenceEnabler::restoreState()
 	// scales its panes in proportion when resized
 	for (QSplitter* splitter : _widget->findChildren<QSplitter*>())
 	{
-		if (const QString key = splitterKey(_settingsPath, _widget, splitter); !key.isEmpty())
-			splitter->restoreState(s.value(key).toByteArray());
+		const QString key = splitterKey(_settingsPath, _widget, splitter);
+		if (key.isEmpty())
+			continue;
+
+		// The saved state includes a handle width; the splitter's own one comes from its form or the style
+		const int handleWidth = splitter->handleWidth();
+		if (splitter->restoreState(s.value(key).toByteArray()))
+			splitter->setHandleWidth(handleWidth);
 	}
 
 	if (!_persistViewHeaders)
