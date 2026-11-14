@@ -25,6 +25,13 @@ public:
 
 	[[nodiscard]] QStringList items() const;
 
+	// The size hints follow the current text, not the widest entry: a field as wide as the one value it shows.
+	// The popup is then at least as wide as its widest entry.
+	void setSizedToCurrentText(bool sized);
+	[[nodiscard]] QSize sizeHint() const override;
+	[[nodiscard]] QSize minimumSizeHint() const override;
+	void showPopup() override;
+
 public slots:
 	// Switch to the next combobox item, which is the previous entry in the history
 	void selectPreviousItem();
@@ -45,7 +52,11 @@ private:
 
 	void saveState();
 
+	// The base class's size hint, as wide as showing text takes
+	[[nodiscard]] QSize sizeHintForText(const QString& text) const;
+
 private:
 	QString _settingsKey;
 	bool _bClearEditorOnItemActivation = false;
+	bool _sizedToCurrentText = false;
 };
