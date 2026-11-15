@@ -44,7 +44,8 @@ Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagn
 | `widgets/cfindmatchespopup.h` | `CFindBar`'s popup list of matches: numbered rows with each match's location and an excerpt, selecting the current row's match in the host as the row changes. |
 | `widgets/findresult.h` | Search outcome (not found, found, or found after wrapping around), match count, and the match ranges, lists and descriptions a match list needs, shared by `CLightningFastViewerWidget` and `CFindBar`'s host functions. |
 | `widgets/cpersistenceenabler.h` | Event-filter helper that restores and saves widget geometry, `QMainWindow` state, the sizes of named splitters inside the widget and, unless turned off, the column widths, order and sort indicator of named item views, through `QSettings`, with delayed first-show restoration by default. |
-| `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing. |
+| `widgets/ctabstrip.h` | Tab bar with `QTabBar`'s index-based interface whose tabs wrap into rows at its width and keep their order: push buttons a stylesheet can style, each with a close button, reordered by dragging. |
+| `widgets/layouts/cflowlayout.h` | Height-for-width layout that wraps items into rows using explicit, inherited, or style spacing; an item wider than a row is narrowed to it. |
 | `widgets/layouts/coverlaylayout.h` | Expanding layout that gives every child the same geometry, stacking items over one another. |
 
 ### Theming

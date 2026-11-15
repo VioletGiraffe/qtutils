@@ -13,6 +13,8 @@ public:
 	~CFlowLayout() override;
 
 	void addItem(QLayoutItem *item) override;
+	// An index out of range appends
+	void insertWidget(int index, QWidget *widget);
 	[[nodiscard]] int spacing() const override;
 	void setSpacing(int spacing) override;
 	[[nodiscard]] int horizontalSpacing() const;

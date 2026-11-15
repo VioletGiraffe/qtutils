@@ -3,6 +3,7 @@
 DISABLE_COMPILER_WARNINGS
 #include <QStyle>
 #include <QWidget>
+#include <QWidgetItem>
 RESTORE_COMPILER_WARNINGS
 
 namespace {
@@ -37,6 +38,16 @@ void CFlowLayout::addItem(QLayoutItem *item)
 	if (QLayout *childLayout = item->layout())
 		addChildLayout(childLayout);
 	m_itemList.append(item);
+}
+
+void CFlowLayout::insertWidget(int index, QWidget *widget)
+{
+	if (index < 0 || index > m_itemList.size())
+		index = static_cast<int>(m_itemList.size());
+
+	addChildWidget(widget);
+	m_itemList.insert(index, new QWidgetItem(widget));
+	invalidate();
 }
 
 int CFlowLayout::spacing() const
@@ -147,19 +158,21 @@ int CFlowLayout::doLayout(const QRect &rect, bool testOnly) const
 				spaceY = style ? style->layoutSpacing(QSizePolicy::PushButton, QSizePolicy::PushButton, Qt::Vertical) : 0;
 		}
 
-		int nextX = x + item->sizeHint().width() + spaceX;
+		// An item wider than a row is narrowed to the row
+		const QSize itemSize = item->sizeHint().boundedTo(QSize(qMax(effectiveRect.width(), 0), QWIDGETSIZE_MAX));
+		int nextX = x + itemSize.width() + spaceX;
 		if (nextX - spaceX > effectiveRect.right() && lineHeight > 0) {
 			x = effectiveRect.x();
 			y = y + lineHeight + spaceY;
-			nextX = x + item->sizeHint().width() + spaceX;
+			nextX = x + itemSize.width() + spaceX;
 			lineHeight = 0;
 		}
 
 		if (!testOnly)
-			item->setGeometry(QRect(QPoint(x, y), item->sizeHint()));
+			item->setGeometry(QRect(QPoint(x, y), itemSize));
 
 		x = nextX;
-		lineHeight = qMax(lineHeight, item->sizeHint().height());
+		lineHeight = qMax(lineHeight, itemSize.height());
 	}
 	return y + lineHeight - rect.y() + bottom;
 }
