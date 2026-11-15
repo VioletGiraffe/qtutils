@@ -26,6 +26,8 @@ public:
 	// kept per section count, so a view whose columns changed starts from its defaults.
 	// A splitter or view is keyed by its name and those of its named ancestors: that chain must be unique within the widget.
 	// Splitters and views inside another window, such as a dialog parented to the widget, are left to that window.
+	// SetDefaultSize: without a saved geometry, the widget is centred at half the screen's available area, at least 720x550 or the
+	// whole area where it is smaller, and no smaller than the widget's minimum.
 	// PersistViewHeaders{ false } skips the headers, for views whose owner keeps their state itself.
 	// A splitter or a view created after the first show is not restored, nor a view that has no columns yet at that point.
 	explicit CPersistenceEnabler(QString widgetSettingsPath, QWidget* widget, Delayed delayed = Delayed{ true }, SetDefaultSize setDefaultSize = SetDefaultSize{ true },

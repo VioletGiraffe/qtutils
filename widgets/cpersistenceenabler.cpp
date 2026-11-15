@@ -6,6 +6,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QApplication>
 #include <QDockWidget>
 #include <QHeaderView>
+#include <QLayout>
 #include <QMainWindow>
 #include <QScreen>
 #include <QSet>
@@ -14,6 +15,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QStringList>
 #include <QStyle>
 RESTORE_COMPILER_WARNINGS
+
+#include <algorithm>
 
 #define GEOMETRY_KEY (_settingsPath + "_geometry")
 #define STATE_KEY (_settingsPath + "_state")
@@ -144,8 +147,15 @@ void CPersistenceEnabler::restoreState()
 	if (!_widget->restoreGeometry(s.value(GEOMETRY_KEY).toByteArray()) && _setDefaultSize)
 	{
 		const auto* const currentScreen = QApplication::screenAt(_widget->geometry().center());
-		const auto availableGeometry = currentScreen ? currentScreen->availableGeometry() : QApplication::primaryScreen()->availableGeometry();
-		_widget->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, availableGeometry.size() / 2, availableGeometry));
+		const QRect available = currentScreen ? currentScreen->availableGeometry() : QApplication::primaryScreen()->availableGeometry();
+		static constexpr QSize minimumDefaultSize{ 720, 550 };
+		const QSize preferredSize = (available.size() / 2).expandedTo(minimumDefaultSize.boundedTo(available.size()));
+		// Centred at its final size: resize() raises a size below the widget's minimum without moving the widget
+		const QSize size = QLayout::closestAcceptableSize(_widget, preferredSize);
+		const QRect centred = QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size, available);
+		_widget->resize(size);
+		// move() positions the frame, so the title bar stays on the area, as does the top left corner of a widget larger than it
+		_widget->move(std::max(centred.x(), available.x()), std::max(centred.y(), available.y()));
 	}
 
 	if (window)
