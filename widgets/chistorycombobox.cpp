@@ -1,15 +1,10 @@
 #include "chistorycombobox.h"
-#include "utils/painterutils.h"
 #include "container/set_operations.hpp"
 
 DISABLE_COMPILER_WARNINGS
-#include <QAbstractItemView>
-#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QLineEdit>
-#include <QMargins>
 #include <QSettings>
-#include <QSize>
 #include <QStyle>
 #include <QStyleOptionComboBox>
 #include <QWheelEvent>
@@ -22,11 +17,6 @@ CHistoryComboBox::CHistoryComboBox(QWidget* parent) :
 	setEditable(true);
 	// Qt inserts nothing on Enter: the owner records entries
 	setInsertPolicy(QComboBox::NoInsert);
-
-	connect(this, &QComboBox::currentTextChanged, this, [this] {
-		if (_sizedToCurrentText)
-			updateGeometry();
-	});
 }
 
 CHistoryComboBox::~CHistoryComboBox()
@@ -98,66 +88,6 @@ QStringList CHistoryComboBox::items() const
 		itemsList.push_back(itemText(i));
 
 	return itemsList;
-}
-
-void CHistoryComboBox::setSizedToCurrentText(const bool sized)
-{
-	if (_sizedToCurrentText == sized)
-		return;
-
-	_sizedToCurrentText = sized;
-	if (!sized)
-		view()->window()->setMinimumWidth(0); // showPopup() set it
-	updateGeometry();
-}
-
-void CHistoryComboBox::showPopup()
-{
-	// QComboBox makes the popup as wide as itself, or as the popup window's minimum width if that is larger
-	if (_sizedToCurrentText)
-	{
-		const int scrollBarWidth = style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, this);
-		view()->window()->setMinimumWidth(view()->sizeHintForColumn(0) + 2 * view()->frameWidth() + scrollBarWidth);
-	}
-
-	QComboBox::showPopup();
-}
-
-QSize CHistoryComboBox::sizeHint() const
-{
-	return _sizedToCurrentText ? sizeHintForText(currentText()) : QComboBox::sizeHint();
-}
-
-QSize CHistoryComboBox::minimumSizeHint() const
-{
-	return _sizedToCurrentText ? sizeHintForText({}) : QComboBox::minimumSizeHint();
-}
-
-QSize CHistoryComboBox::sizeHintForText(const QString& text) const
-{
-	ensurePolished();
-
-	const QLineEdit* const editor = lineEdit();
-	if (editor)
-		editor->ensurePolished(); // a stylesheet may give the editor its own font
-	const QFont textFont = editor ? editor->font() : font();
-	const QFontMetrics metrics{ textFont };
-	int contentWidth = roundedUpTextWidth(textFont, text);
-	if (editor)
-	{
-		// QLineEdit insets its text by 2 px a side and needs room for the cursor
-		static constexpr int textInset = 2 * 2 + 2;
-		const QMargins textMargins = editor->textMargins(), frameMargins = editor->contentsMargins();
-		contentWidth += textInset + textMargins.left() + textMargins.right() + frameMargins.left() + frameMargins.right();
-	}
-
-	QStyleOptionComboBox option;
-	initStyleOption(&option);
-
-	// The height stays the base class's
-	QSize hint = QComboBox::sizeHint();
-	hint.setWidth(style()->sizeFromContents(QStyle::CT_ComboBox, &option, QSize{ contentWidth, metrics.height() }, this).width());
-	return hint;
 }
 
 // Keys arrive here, not at the line edit: QComboBox is its focus proxy
