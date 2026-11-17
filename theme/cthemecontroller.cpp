@@ -117,3 +117,16 @@ void CThemeController::setThemeName(bool dark, const QString& name)
 	if (dark == darkActive())
 		emit themeChanged(); // the other polarity's theme is not on screen, so nothing to redraw
 }
+
+CThemeController::Selection CThemeController::selection() const
+{
+	return { _schemePreference, _lightThemeName, _darkThemeName };
+}
+
+void CThemeController::setSelection(const Selection& selection)
+{
+	// Names before the scheme: a polarity flip then announces the theme being restored, not one about to be replaced
+	setThemeName(false, selection.lightThemeName);
+	setThemeName(true, selection.darkThemeName);
+	setSchemePreference(selection.schemePreference);
+}

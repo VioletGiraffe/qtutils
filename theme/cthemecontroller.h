@@ -42,6 +42,17 @@ public:
 	[[nodiscard]] QString themeName(bool dark) const;
 	void setThemeName(bool dark, const QString& name);
 
+	struct Selection
+	{
+		Qt::ColorScheme schemePreference = Qt::ColorScheme::Unknown;
+		QString lightThemeName;
+		QString darkThemeName;
+	};
+
+	// For a settings dialog that applies the choices as they are picked: restoring the saved selection undoes them on cancel.
+	[[nodiscard]] Selection selection() const;
+	void setSelection(const Selection& selection);
+
 	// The theme of 'themes' in effect: the one stored for the polarity on screen, or else the first of that polarity.
 	// A fresh install and a stored name that outlived its theme both resolve to that first one.
 	// A theme type has `name` and `dark` members. Requires a theme of each polarity. Returns a reference into 'themes'.

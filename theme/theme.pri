@@ -11,7 +11,6 @@ HEADERS += \
     $$PWD/cstylesheettokens.h \
     $$PWD/cthemecontroller.h \
     $$PWD/cthemeiconhandler.h \
-    $$PWD/cthemeselectioncontrols.h \
     $$PWD/ctintedsvgiconengine.h \
     $$PWD/widgetcolorreport.h
 
@@ -21,6 +20,5 @@ SOURCES += \
     $$PWD/cstylesheettokens.cpp \
     $$PWD/cthemecontroller.cpp \
     $$PWD/cthemeiconhandler.cpp \
-    $$PWD/cthemeselectioncontrols.cpp \
     $$PWD/ctintedsvgiconengine.cpp \
     $$PWD/widgetcolorreport.cpp
