@@ -105,7 +105,7 @@ those of `QFontMetrics`.
 
 | Script | Purpose |
 |---|---|
-| `scripts/svg_to_icons.py` | Renders a square, full-bleed SVG into a Windows `.ico` or a macOS `.icns`, chosen by the output's extension, each size rendered from the SVG, not scaled from another. The `.ico` has every size Windows draws an app icon at, BMP below 256 and PNG at 256; the `.icns` places the SVG on Apple's icon grid. Needs Python with Pillow and `resvg-py`. |
+| `scripts/svg_to_icons.py` | Renders a square, full-bleed SVG into a Windows `.ico`, a macOS `.icns` or a 256 px Linux `.png`, chosen by the output's extension, each size rendered from the SVG, not scaled from another. The `.ico` has the sizes Windows draws an app icon at up to 64 px, and 256 for the larger ones, BMP below 256 and PNG at 256; the `.icns` places the SVG on Apple's icon grid. Needs Python with Pillow and `resvg-py`. |
 
 ## Building
 

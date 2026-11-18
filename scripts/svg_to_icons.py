@@ -1,5 +1,5 @@
-# Renders a square SVG into a Windows .ico or a macOS .icns, each size from the SVG itself so no frame is resampled from another.
-# Requires Pillow and resvg-py. Run: python svg_to_icons.py <input.svg> <output.ico|output.icns>
+# Renders a square SVG into a Windows .ico, a macOS .icns or a Linux .png, each size from the SVG itself so no frame is resampled from another.
+# Requires Pillow and resvg-py. Run: python svg_to_icons.py <input.svg> <output.ico|output.icns|output.png>
 
 import base64
 import io
@@ -10,30 +10,36 @@ from pathlib import Path
 import resvg_py
 from PIL import Image
 
-USAGE = 'Usage: python svg_to_icons.py <input.svg> <output.ico|output.icns>'
+USAGE = 'Usage: python svg_to_icons.py <input.svg> <output.ico|output.icns|output.png>'
 
 # Windows icon sizes by scaling, per Microsoft's "Construct your Windows app's icon":
-#   context                        100%  125%  150%  200%
-#   title bar, context menu, tray    16    20    24    32
-#   taskbar, search, Start list      24    30    36    48
-#   Start pins                       32    40    48    64
+#   context                        100%  125%  150%  200%  250%  300%  400%
+#   title bar, context menu, tray    16    20    24    32    40    48    64
+#   taskbar, search, Start list      24    30    36    48    60    72    96
+#   Start pins                       32    40    48    64    80    96   256
 # Windows uses an exact size when present, else downscales the next larger one; 256 is the largest, so it never upscales.
-ICO_SIZES = [16, 20, 24, 30, 32, 36, 40, 48, 64, 256]
+# 72, 80 and 96 are left to the 256 frame. 60 has a frame: Windows would otherwise downscale the 64 one for it.
+ICO_SIZES = [16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 256]
 ICO_PNG_MIN_SIZE = 256  # smaller frames are stored as uncompressed BMP
 
-# ICNS entry types by pixel size: an @2x type holds the same image as the 1x type of twice its point size.
+# ICNS entry types by pixel size, one per slot of a macOS icon set: an @2x type holds the same image as the 1x type of twice its point size.
 ICNS_TYPES = {
-	16: [b'icp4'],
-	32: [b'icp5', b'ic11'],
-	64: [b'icp6', b'ic12'],
+	16: [b'ic04'],
+	32: [b'ic05', b'ic11'],
+	64: [b'ic12'],
 	128: [b'ic07'],
 	256: [b'ic08', b'ic13'],
 	512: [b'ic09', b'ic14'],
 	1024: [b'ic10'],
 }
+# These hold ARGB data, the rest PNG. macOS draws a PNG in a 16 or 32 px type garbled when the file is an application's icon.
+ICNS_ARGB_TYPES = {b'ic04', b'ic05'}
 # Apple's icon grid: the tile is 824 px of a 1024 px canvas, centred, so a full-bleed SVG is scaled into it.
 MACOS_CANVAS = 1024
 MACOS_TILE = 824
+
+# The size the AppImage specification recommends for a PNG icon, and the size of a hicolor 256x256 icon
+PNG_SIZE = 256
 
 
 def render(svg: str, size: int) -> Image.Image:
@@ -88,13 +94,41 @@ def write_ico(path: Path, frames: list[Image.Image]) -> None:
 	path.write_bytes(bytes(directory) + b''.join(blobs))
 
 
+def encode_icns_rle(plane: bytes) -> bytes:
+	"""A control byte below 128 precedes control + 1 literal bytes; any other, one byte to repeat control - 125 times."""
+	encoded = bytearray()
+	position = 0
+	while position < len(plane):
+		run = 1
+		while run < 130 and position + run < len(plane) and plane[position + run] == plane[position]:
+			run += 1
+		if run >= 3:
+			encoded += bytes((run + 125, plane[position]))
+			position += run
+			continue
+
+		# Literals end where a run of three starts
+		start = position
+		while position < len(plane) and position - start < 128 and plane[position:position + 3] != plane[position:position + 1] * 3:
+			position += 1
+		encoded += bytes((position - start - 1,)) + plane[start:position]
+	return bytes(encoded)
+
+
+def encode_argb(image: Image.Image) -> bytes:
+	"""The tag 'ARGB', then the alpha, red, green and blue planes, each run-length encoded on its own."""
+	red, green, blue, alpha = image.split()
+	return b'ARGB' + b''.join(encode_icns_rle(plane.tobytes()) for plane in (alpha, red, green, blue))
+
+
 def write_icns(path: Path, frames: dict[int, Image.Image]) -> None:
-	"""Every entry is a PNG; the file has no table of contents, which is optional."""
+	"""The file has no table of contents, which is optional."""
 	body = bytearray()
 	for size, types in ICNS_TYPES.items():
 		png = encode_png(frames[size])
 		for icns_type in types:
-			body += icns_type + struct.pack('>I', 8 + len(png)) + png
+			data = encode_argb(frames[size]) if icns_type in ICNS_ARGB_TYPES else png
+			body += icns_type + struct.pack('>I', 8 + len(data)) + data
 	path.write_bytes(b'icns' + struct.pack('>I', 8 + len(body)) + bytes(body))
 
 
@@ -110,6 +144,8 @@ def main() -> None:
 			render(svg, 16)  # exits on a non-square SVG, which the grid's embedded image would letterbox
 			tile = on_macos_grid(svg)
 			write_icns(output, {size: render(tile, size) for size in ICNS_TYPES})
+		case '.png':
+			output.write_bytes(encode_png(render(svg, PNG_SIZE)))
 		case _:
 			sys.exit(USAGE)
 	print(f'Wrote {output}')
