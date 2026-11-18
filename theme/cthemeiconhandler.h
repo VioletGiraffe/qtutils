@@ -2,12 +2,34 @@
 
 #include "compiler/compiler_warnings_control.h"
 
+#include <memory>
+#include <type_traits>
+
+class QAbstractFileEngineIterator;
+
+// qabstractfileengine_p.h destroys a unique_ptr<QAbstractFileEngineIterator> in an inline function above the class definition: MSVC 14.52 rejects default_delete of the incomplete type there.
+// Must be declared before that header: its inline function instantiates default_delete.
+// operator() is defined below the include, where the class is complete.
+// Qt's own binaries use the primary template: both deleters are empty and delete through the virtual destructor, so layout and behaviour match.
+template <>
+struct std::default_delete<QAbstractFileEngineIterator>
+{
+	constexpr default_delete() noexcept = default;
+	template <class U> requires std::is_convertible_v<U*, QAbstractFileEngineIterator*>
+	constexpr default_delete(const std::default_delete<U>&) noexcept {}
+
+	void operator()(QAbstractFileEngineIterator* iterator) const noexcept;
+};
+
 DISABLE_COMPILER_WARNINGS
 #include <private/qabstractfileengine_p.h> // private API; see the class comment
 #include <QString>
 RESTORE_COMPILER_WARNINGS
 
-#include <memory>
+inline void std::default_delete<QAbstractFileEngineIterator>::operator()(QAbstractFileEngineIterator* iterator) const noexcept
+{
+	delete iterator;
+}
 
 class QColor;
 
