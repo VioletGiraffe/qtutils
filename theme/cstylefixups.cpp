@@ -10,6 +10,8 @@ DISABLE_COMPILER_WARNINGS
 #include <QPen>
 #include <QPushButton>
 #include <QStyleOption>
+#include <QVariant>
+#include <QWidget>
 RESTORE_COMPILER_WARNINGS
 
 #include <utility>
@@ -74,6 +76,14 @@ bool CSplitterHandleHoverEnabler::eventFilter(QObject* watched, QEvent* event)
 	if (event->type() == QEvent::Polish && watched->isWidgetType() && watched->inherits("QSplitterHandle"))
 		static_cast<QWidget*>(watched)->setAttribute(Qt::WA_Hover);
 	return QObject::eventFilter(watched, event);
+}
+
+int CTextCursorHidingStyle::pixelMetric(const PixelMetric metric, const QStyleOption* option, const QWidget* widget) const
+{
+	if (metric == PM_TextCursorWidth && widget && widget->property(hiddenNativeTextCursorProperty).toBool())
+		return 0;
+
+	return QProxyStyle::pixelMetric(metric, option, widget);
 }
 
 CFocusFrameStyle::CFocusFrameStyle(OutsetProvider outset, QStyle* baseStyle) :

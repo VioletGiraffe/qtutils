@@ -42,9 +42,14 @@ public:
 
 	// -1 where no tab is
 	[[nodiscard]] int tabAt(QPoint pos) const;
+	// In the strip's coordinates
+	[[nodiscard]] QRect tabRect(int index) const;
 
 	// Between tabs, across and down
 	void setSpacing(int spacing);
+
+	// Whether the tabs show their close buttons; true by default. A middle click requests closing either way.
+	void setTabsClosable(bool closable);
 
 signals:
 	// Not emitted when a removal or a move only shifts the current tab's index
@@ -52,6 +57,8 @@ signals:
 	void tabCloseRequested(int index);
 	// `to` is the index after the move
 	void tabMoved(int from, int to);
+	// The current tab moved or changed size within the strip
+	void currentTabGeometryChanged();
 
 private:
 	class Tab;
@@ -70,6 +77,7 @@ private:
 	void tabDragged(QPoint pos);
 	void tabReleased(QPoint pos);
 	void requestTabClosing(const Tab& tab);
+	void tabGeometryChanged(const Tab& tab);
 	void endDrag();
 
 private:
@@ -77,6 +85,7 @@ private:
 	QFrame* _dropMarker = nullptr;
 	std::vector<Tab*> _tabs;
 	Tab* _currentTab = nullptr;
+	bool _tabsClosable = true;
 	// The tab under a held left button, and where it was pressed
 	Tab* _pressedTab = nullptr;
 	QPoint _pressPos;

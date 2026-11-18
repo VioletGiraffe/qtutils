@@ -2,7 +2,9 @@ HEADERS += \
     $$PWD/chighlightoverlay.h \
     $$PWD/cimageviewerwidget.h \
     $$PWD/clabelelided.h \
+    $$PWD/cglowunderlay.h \
     $$PWD/clineedit.h \
+    $$PWD/cmenubar.h \
     $$PWD/cfadingnotice.h \
     $$PWD/cfindbar.h \
     $$PWD/cfindmatchespopup.h \
@@ -24,7 +26,9 @@ SOURCES += \
     $$PWD/chighlightoverlay.cpp \
     $$PWD/cimageviewerwidget.cpp \
     $$PWD/clabelelided.cpp \
+    $$PWD/cglowunderlay.cpp \
     $$PWD/clineedit.cpp \
+    $$PWD/cmenubar.cpp \
     $$PWD/cfadingnotice.cpp \
     $$PWD/cfindbar.cpp \
     $$PWD/cfindmatchespopup.cpp \

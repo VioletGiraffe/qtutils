@@ -7,6 +7,7 @@ DISABLE_COMPILER_WARNINGS
 #include <QFrame>
 #include <QIcon>
 #include <QMouseEvent>
+#include <QMoveEvent>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QStyle>
@@ -33,6 +34,7 @@ public:
 	Tab(CTabStrip& strip, const QString& text);
 
 	void setFullText(const QString& text);
+	void setClosable(bool closable);
 
 	qulonglong tabData = 0;
 
@@ -41,6 +43,7 @@ public:
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
+	void moveEvent(QMoveEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
 	void mousePressEvent(QMouseEvent* event) override;
 	void mouseMoveEvent(QMouseEvent* event) override;
@@ -82,6 +85,13 @@ void CTabStrip::Tab::setFullText(const QString& text)
 	update();
 }
 
+void CTabStrip::Tab::setClosable(const bool closable)
+{
+	_closeButton->setHidden(!closable);
+	updateGeometry();
+	update();
+}
+
 QSize CTabStrip::Tab::sizeHint() const
 {
 	ensurePolished();
@@ -98,7 +108,9 @@ QSize CTabStrip::Tab::minimumSizeHint() const
 QSize CTabStrip::Tab::sizeForTextWidth(const int textWidth) const
 {
 	const QSize closeSize = _closeButton->sizeHint();
-	const QSize contentsSize{ textWidth + kCloseButtonGap + closeSize.width(), std::max(fontMetrics().height(), closeSize.height()) };
+	const int closeWidth = _closeButton->isHidden() ? 0 : kCloseButtonGap + closeSize.width();
+	// The height counts a hidden close button too: the rows keep their height when the tabs' closability changes
+	const QSize contentsSize{ textWidth + closeWidth, std::max(fontMetrics().height(), closeSize.height()) };
 
 	QStyleOptionButton option;
 	initStyleOption(&option);
@@ -121,21 +133,31 @@ void CTabStrip::Tab::paintEvent(QPaintEvent* /*event*/)
 
 	// The text is drawn as a label beside the close button, at the text colour the stylesheet gives this state
 	option.rect = contentsRectFromStyle();
-	const QRect closeRect = _closeButton->geometry();
-	if (isRightToLeft())
-		option.rect.setLeft(closeRect.right() + 1 + kCloseButtonGap);
-	else
-		option.rect.setRight(closeRect.left() - 1 - kCloseButtonGap);
+	if (!_closeButton->isHidden())
+	{
+		const QRect closeRect = _closeButton->geometry();
+		if (isRightToLeft())
+			option.rect.setLeft(closeRect.right() + 1 + kCloseButtonGap);
+		else
+			option.rect.setRight(closeRect.left() - 1 - kCloseButtonGap);
+	}
 
 	// A '&' is doubled so that the style draws it instead of taking it as a mnemonic
 	option.text = option.fontMetrics.elidedText(_fullText, Qt::ElideMiddle, option.rect.width()).replace(QLatin1Char('&'), QStringLiteral("&&"));
 	painter.drawControl(QStyle::CE_PushButtonLabel, option);
 }
 
+void CTabStrip::Tab::moveEvent(QMoveEvent* event)
+{
+	QPushButton::moveEvent(event);
+	_strip.tabGeometryChanged(*this);
+}
+
 void CTabStrip::Tab::resizeEvent(QResizeEvent* event)
 {
 	QPushButton::resizeEvent(event);
 	_closeButton->setGeometry(QStyle::alignedRect(layoutDirection(), Qt::AlignRight | Qt::AlignVCenter, _closeButton->sizeHint(), contentsRectFromStyle()));
+	_strip.tabGeometryChanged(*this);
 }
 
 void CTabStrip::Tab::mousePressEvent(QMouseEvent* event)
@@ -170,6 +192,7 @@ CTabStrip::CTabStrip(QWidget* parent) :
 int CTabStrip::addTab(const QString& text)
 {
 	auto* tab = new Tab(*this, text);
+	tab->setClosable(_tabsClosable);
 	_tabs.push_back(tab);
 	_layout->addWidget(tab);
 
@@ -250,9 +273,25 @@ int CTabStrip::tabAt(const QPoint pos) const
 	return tab != _tabs.end() ? (int)(tab - _tabs.begin()) : -1;
 }
 
+QRect CTabStrip::tabRect(const int index) const
+{
+	assert_and_return_r(index >= 0 && index < count(), {});
+	return _tabs[(size_t)index]->geometry();
+}
+
 void CTabStrip::setSpacing(const int spacing)
 {
 	_layout->setSpacing(spacing);
+}
+
+void CTabStrip::setTabsClosable(const bool closable)
+{
+	if (closable == _tabsClosable)
+		return;
+
+	_tabsClosable = closable;
+	for (Tab* tab : _tabs)
+		tab->setClosable(closable);
 }
 
 CTabStrip::DropTarget CTabStrip::dropTargetAt(const QPoint pos) const
@@ -348,6 +387,12 @@ void CTabStrip::tabReleased(const QPoint pos)
 void CTabStrip::requestTabClosing(const Tab& tab)
 {
 	emit tabCloseRequested(indexOf(tab));
+}
+
+void CTabStrip::tabGeometryChanged(const Tab& tab)
+{
+	if (&tab == _currentTab)
+		emit currentTabGeometryChanged();
 }
 
 void CTabStrip::endDrag()

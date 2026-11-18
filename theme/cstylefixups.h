@@ -44,6 +44,20 @@ public:
 	bool eventFilter(QObject* watched, QEvent* event) override;
 };
 
+// A widget with this property set to true draws its own text cursor: CTextCursorHidingStyle makes the native one 0 px wide.
+inline constexpr char hiddenNativeTextCursorProperty[] = "hiddenNativeTextCursor";
+
+// Hides the native text cursor of the widgets marked with hiddenNativeTextCursorProperty. Install via QApplication::setStyle().
+// The cursor's width is the style's to set; its colour is not: QTextLayout draws it by inverting the pixels under it.
+class CTextCursorHidingStyle final : public QProxyStyle
+{
+public:
+	// The base-style argument follows QProxyStyle: null proxies the application's default style.
+	using QProxyStyle::QProxyStyle;
+
+	[[nodiscard]] int pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const override;
+};
+
 // Widens the base style's text-hugging QPushButton focus frame by outset() pixels a side.
 // Install via QApplication::setStyle().
 class CFocusFrameStyle final : public QProxyStyle

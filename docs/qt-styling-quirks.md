@@ -140,6 +140,21 @@ In Qt 6.11, `QWindows11Style` paints a selected or hovered item (`CE_ItemViewIte
 - A QSS `::item:selected` rule with a background or color hands selected items to `QStyleSheetStyle`, which paints them from the rule. Unselected items stay with the base style and keep its hover.
 - A `QTableView` sets `State_MouseOver` on the hovered index only, so an `::item:hover` rule fills one cell of a row-selection table. `QTreeView` sets it on the whole row.
 
+## Menu bar labels
+
+As of Qt 6.11, a proxy style cannot recolour part of a menu bar item's label under a stylesheet.
+
+- When a `QMenuBar::item` rule draws something, such as a background, `QStyleSheetStyle` draws the item through `QCommonStyle` and never calls the base style's `drawControl(CE_MenuBarItem)`.
+- The label then reaches the base style only through `drawItemText()`, which has no widget argument: menu bar text cannot be told from any other.
+
+`CMenuBar` ([`widgets/cmenubar.h`](../widgets/cmenubar.h)) has the style draw each item without its label, then draws the label with the mnemonic letter in a colour of its own.
+
+## Text cursor
+
+`QLineEdit` takes its cursor's width from `PM_TextCursorWidth`, per widget, at every paint. `QTextLayout::drawCursor` draws the cursor with `RasterOp_NotDestination`: it inverts the pixels under it, so neither the pen nor the palette sets its colour.
+
+A cursor in a colour of its own is the widget's to paint. `CTextCursorHidingStyle` ([`theme/cstylefixups.h`](../theme/cstylefixups.h)) makes the native one 0 px wide on the widgets marked for it; `CLineEdit::setBlockCursor()` is the working example.
+
 ## Palette and selection
 
 - `palette(role)` follows a palette change automatically. QSS values generated from theme colors require rebuilding
