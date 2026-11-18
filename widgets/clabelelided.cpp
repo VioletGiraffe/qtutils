@@ -97,15 +97,42 @@ QString CLabelElided::minimumTextSample() const
 	return _minimumTextSample;
 }
 
+void CLabelElided::setPreferredWidthFollowsText(bool follows)
+{
+	if (follows == _preferredWidthFollowsText)
+		return;
+
+	_preferredWidthFollowsText = follows;
+	updateGeometry();
+}
+
+bool CLabelElided::preferredWidthFollowsText() const
+{
+	return _preferredWidthFollowsText;
+}
+
+QSize CLabelElided::sizeHint() const
+{
+	const QSize labelHint = QLabel::sizeHint();
+	if (_preferredWidthFollowsText)
+		return labelHint;
+
+	return { minimumSizeHint().width(), labelHint.height() };
+}
+
 QSize CLabelElided::minimumSizeHint() const
 {
+	const QSize labelMinimum = QLabel::minimumSizeHint(); // Polishes, so the font measured below is final
 	if (_elideMode == Qt::ElideNone)
-		return QLabel::minimumSizeHint();
+		return labelMinimum;
 
 	constexpr QChar ellipsis{0x2026}; // What QFontMetrics::elidedText substitutes
 	const int textWidth = roundedUpTextWidth(font(), _minimumTextSample.isEmpty() ? QString{ ellipsis } : _minimumTextSample);
-	const int widthUnavailableForText = width() - textRect().width();
-	return { textWidth + widthUnavailableForText, QLabel::minimumSizeHint().height() };
+	const QRect textArea = textRect();
+	const int widthUnavailableForText = width() - textArea.width();
+	// QLabel reports zero height for a label that has never had text
+	const int oneLineHeight = fontMetrics().height() + height() - textArea.height();
+	return { textWidth + widthUnavailableForText, std::max(labelMinimum.height(), oneLineHeight) };
 }
 
 bool CLabelElided::hasHeightForWidth() const
