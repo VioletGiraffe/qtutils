@@ -301,12 +301,13 @@ std::expected<void, QString> AppImageDesktopEntry::uninstall()
 	return removeFile(icon);
 }
 
-void AppImageDesktopEntry::addToggleAction(QMenu& menu, QWidget* dialogParent)
+void AppImageDesktopEntry::addToggleAction(QMenu& menu, QWidget* dialogParent, QAction* before)
 {
 	if (!runningFromAppImage())
 		return;
 
-	QAction* action = menu.addAction(QString{});
+	auto* action = new QAction{ &menu };
+	menu.insertAction(before, action);
 	const auto updateText = [action] {
 		action->setText(installedForThisAppImage() ? QObject::tr("Uninstall desktop entry") : QObject::tr("Install desktop entry"));
 	};
