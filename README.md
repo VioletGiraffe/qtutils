@@ -101,6 +101,12 @@ those of `QFontMetrics`.
 | `taskbarprogress/taskbarprogress/ctaskbarprogress.h` | Native taskbar progress state/value abstraction. Windows implements normal, paused, error, indeterminate, and hidden states for one top-level window; macOS, Linux, and FreeBSD are currently no-ops. |
 | `taskbarprogress/cprogressbartaskbar.h` | `QProgressBar` that mirrors its range, value, visibility, and state to a linked native taskbar button. |
 
+### Linux AppImage
+
+| Header | Facility |
+|---|---|
+| `appimage/appimagedesktopentry.h` | Installs and uninstalls the user's applications menu entry for the running AppImage: its own desktop file and icon, pointed at the AppImage file and hidden by `TryExec` once that file is gone. Adds a Help menu toggle and asks once whether to install. The entry's file ID is `QGuiApplication::desktopFileName()`. |
+
 ### Scripts
 
 | Script | Purpose |

@@ -98,6 +98,7 @@ linux*|mac*|freebsd{
 
 include(logger/logger.pri)
 include(appdialogs/appdialogs.pri)
+include(appimage/appimage.pri)
 include(settings/settings.pri)
 include(taskbarprogress/taskbarprogress.pri)
 include(utils/utils.pri)
