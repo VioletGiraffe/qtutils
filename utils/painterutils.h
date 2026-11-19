@@ -44,7 +44,7 @@ inline void paintGlow(QPainter& painter, const QPainterPath& shape, const QColor
 	// At a distance d from the outline the halo's opacity is opacity * erfc(d / (sigma * sqrt(2))): a Gaussian-blurred edge.
 	// sigma is a third of the radius, where the opacity is down to 0.3 % of the outline's.
 	const double sigma = radius / 3.0;
-	const auto opacityAt = [&](const double distance) { return opacity * color.alphaF() * std::erfc(distance / (sigma * std::sqrt(2.0))); };
+	const auto opacityAt = [&](const double distance) { return opacity * qreal{ color.alphaF() } * std::erfc(distance / (sigma * std::sqrt(2.0))); };
 
 	painter.save();
 	painter.setRenderHint(QPainter::Antialiasing);
