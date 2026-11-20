@@ -309,7 +309,7 @@ void AppImageDesktopEntry::addToggleAction(QMenu& menu, QWidget* dialogParent, Q
 	auto* action = new QAction{ &menu };
 	menu.insertAction(before, action);
 	const auto updateText = [action] {
-		action->setText(installedForThisAppImage() ? QObject::tr("Uninstall desktop entry") : QObject::tr("Install desktop entry"));
+		action->setText(installedForThisAppImage() ? QObject::tr("Uninstall Desktop Entry") : QObject::tr("Install Desktop Entry"));
 	};
 	updateText();
 	// Read on every opening: the entry file can change outside this process
