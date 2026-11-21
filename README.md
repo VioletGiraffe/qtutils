@@ -1,6 +1,6 @@
 # qtutils
 
-Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagnostics, and custom widgets. The library targets C++23 and Qt 6, and depends on `cpputils` plus the header-only `cpp-template-utils`.
+Reusable Qt Core/Gui/Widgets facilities for application plumbing, dialogs, diagnostics, and custom widgets. The library targets C++23 and Qt 6.8+, and depends on `cpputils` plus the header-only `cpp-template-utils`.
 
 ## Facilities
 

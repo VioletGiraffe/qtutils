@@ -111,7 +111,7 @@ QString execOfThisAppImage(QStringView value)
 	if (programEnd < 0 || programEnd > value.size())
 		programEnd = value.size();
 
-	return escapedExecArgument(appImagePath()) + value.sliced(programEnd);
+	return escapedExecArgument(appImagePath()).append(value.sliced(programEnd));
 }
 
 QString tryExecLine()
