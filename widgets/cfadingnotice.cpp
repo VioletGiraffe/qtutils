@@ -30,7 +30,7 @@ CFadingNotice::CFadingNotice(QWidget* parent) :
 	connect(_opacityAnimation, &QVariantAnimation::finished, this, &QWidget::hide);
 }
 
-void CFadingNotice::showMessage(const QString& text, const QRect& area)
+void CFadingNotice::showMessage(const QString& text, const QRect& area, const Duration duration)
 {
 	_text = text;
 
@@ -48,7 +48,8 @@ void CFadingNotice::showMessage(const QString& text, const QRect& area)
 	setGeometry(noticeRect);
 
 	_opacityAnimation->stop(); // start() does nothing on a running animation
-	_opacityAnimation->start();
+	if (duration == Duration::Brief)
+		_opacityAnimation->start();
 	raise();
 	show();
 	update();
@@ -60,7 +61,8 @@ void CFadingNotice::paintEvent(QPaintEvent*)
 	fill.setAlpha(FillAlpha);
 
 	QPainter painter{ this };
-	painter.setOpacity(_opacityAnimation->currentValue().toReal());
+	// A stopped animation can hold a finished fade's zero: an UntilHidden message paints opaque
+	painter.setOpacity(_opacityAnimation->state() == QAbstractAnimation::Running ? _opacityAnimation->currentValue().toReal() : 1.0);
 	painter.setRenderHint(QPainter::Antialiasing);
 	painter.setPen(Qt::NoPen);
 	painter.setBrush(fill);
