@@ -84,7 +84,7 @@ those of `QFontMetrics`.
 
 | Header | Facility |
 |---|---|
-| `qtcore_helpers/catch_qt.hpp` | Catch2 with printers for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
+| `qtcore_helpers/catch_qt.hpp` | Catch2 with printers and `std::ostream` operators for `QString`, `QStringView`, `QLatin1StringView`, `QByteArray` and `QChar`; test sources that use Qt include it instead of `catch.hpp`. Header-only: a test build adds qtutils to its include path without linking it. |
 | `qtcore_helpers/displayformatting.hpp` | Text for display: file sizes in IEC units, time intervals, the variant of a UI string for the platform built for, and text that word wrap breaks only between its separator-delimited items. |
 | `qtcore_helpers/qdatetime_helpers.hpp` | Converts between `QDateTime` and Unix `time_t` seconds. |
 | `qtcore_helpers/qdebug_helpers.hpp` | `QDebug` output for `std::string` and hexadecimal `std::array` data. |

@@ -1,6 +1,7 @@
 #pragma once
 
 // Catch2 with printers for the Qt Core types assertions compare. Containers of them, such as QStringList, print as ranges.
+// INFO, WARN and FAIL messages stream these types too: they bypass the printers and use operator<<.
 // A test binary that uses Qt includes this instead of catch.hpp in every source: a StringMaker specialization must be
 // visible wherever its type is printed.
 // Catch2's implementation is compiled elsewhere: in catch2_runner, or in the one source that includes test_main.hpp first (cpp-template-utils).
@@ -18,7 +19,38 @@ DISABLE_COMPILER_WARNINGS
 #include <QStringView>
 RESTORE_COMPILER_WARNINGS
 
+#include <ostream>
 #include <string>
+
+// In QString's namespace, for argument-dependent lookup: Catch's own operator<< overloads hide the global scope from ordinary lookup
+QT_BEGIN_NAMESPACE
+
+inline std::ostream& operator<<(std::ostream& stream, const QString& value)
+{
+	return stream << value.toStdString();
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const QStringView value)
+{
+	return stream << value.toString().toStdString();
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const QLatin1StringView value)
+{
+	return stream << value.toString().toStdString();
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const QByteArray& value)
+{
+	return stream << value.toStdString();
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const QChar value)
+{
+	return stream << QString{ value }.toStdString();
+}
+
+QT_END_NAMESPACE
 
 namespace Catch {
 
